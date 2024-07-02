@@ -46,14 +46,14 @@ typedef struct {
 #pragma GCC diagnostic pop
 
 #include "lv2/core/lv2.h"
+#include "lv2/core/lv2_util.h"
+#include "lv2/log/log.h"
+#include "lv2/log/logger.h"
+#include "lv2/urid/urid.h"
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-# include "lv2/core/lv2_util.h"
 # include "lv2/atom/util.h"
 # include "lv2/atom/atom.h"
-# include "lv2/log/log.h"
-# include "lv2/log/logger.h"
 # include "lv2/midi/midi.h"
-# include "lv2/urid/urid.h"
 #endif
 #ifdef DATA_UI
 # include "lv2/ui/ui.h"
@@ -102,9 +102,9 @@ typedef struct {
 #endif
 	void *				mem;
 	char *				bundle_path;
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
-	LV2_URID_Map *			map;
 	LV2_Log_Logger			logger;
+	LV2_URID_Map *			map;
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	LV2_URID			uri_midi_MidiEvent;
 #endif
 } plugin_instance;
@@ -126,7 +126,6 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
 
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUT_N > 0
 	// from https://lv2plug.in/book
 	const char* missing = lv2_features_query(features,
 		LV2_LOG__log,	&instance->logger.log,	false,
@@ -139,9 +138,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		goto err_urid;
 	}
 
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
-#else
-	(void)features;
 #endif
 
 	plugin_callbacks cbs = {
