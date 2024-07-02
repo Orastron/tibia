@@ -73,7 +73,7 @@ static struct {
 } param_data[PARAMETERS_N] = {
 {{~it.product.parameters :p:i}}
 	{
-		/* .id		= */ "{{=it.cmd.parameterIds[i]}}",
+		/* .id		= */ "{{=p.id}}",
 		/* .out		= */ {{=p.direction == "output" ? 1 : 0}},
 		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
 		/* .min		= */ {{=p.minimum.toExponential()}}f,

@@ -89,20 +89,16 @@ module.exports = function (data, api, outputCommon, outputData) {
 			var b = buses[bi];
 			if (b.type == "audio") {
 				if (b.channels == "mono") {
-					var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional, busIndex: bi };
-					e.symbol = data.lv2.busSymbols[bi];
+					var e = { type: "audio", direction: b.direction, name: b.name, sidechain: b.sidechain, cv: b.cv, optional: b.optional, busIndex: bi, id: b.id };
 					audioPorts.push(e);
 				} else {
-					var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
-					e.symbol = data.lv2.busSymbols[bi] + "_L";
+					var e = { type: "audio", direction: b.direction, name: b.name + " Left", shortName: b.shortName + " L", sidechain: b.sidechain, cv: b.cv, busIndex: bi, id: b.id + "_l" };
 					audioPorts.push(e);
-					var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi };
-					e.symbol = data.lv2.busSymbols[bi] + "_R";
+					var e = { type: "audio", direction: b.direction, name: b.name + " Right", shortName: b.shortName + " R", sidechain: b.sidechain, cv: b.cv, busIndex: bi, id: b.id + "_r" };
 					audioPorts.push(e);
 				}
 			} else {
-				var e =	{ type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional, busIndex: bi };
-				e.symbol = data.lv2.busSymbols[bi];
+				var e =	{ type: "midi", direction: b.direction, name: b.name, sidechain: b.sidechain, control: b.control, optional: b.optional, busIndex: bi, id: b.id };
 				midiPorts.push(e);
 			}
 		}
@@ -116,7 +112,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 			var p = data.product.parameters[i];
 			var e = Object.create(p);
 			e.type = "control";
-			e.symbol = data.lv2.parameterSymbols[i];
 			e.paramIndex = i;
 			ports.push(e);
 		}

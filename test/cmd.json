@@ -1,6 +1,0 @@
-{
-	"cmd": {
-		"busIds": [ "input", "output", "midi_in" ],
-		"parameterIds": [ "gain", "delay", "cutoff", "bypass", "yz1" ]
-	}
-}

@@ -60,6 +60,13 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+			id:
+				bus unique id string, required
+				VST3; not used
+				LV2: manifest.ttl lv2:port lv2:symbol (resulting ports can have _l or _r appended)
+				web: not used
+				cmd: not used
+				android: not used
 			direction:
 				"input" or "output", required
 				VST3: BusInfo flags - lots of implications
@@ -126,6 +133,13 @@ product {
 				LV2: manifest.ttl lv2:port lv2:shortName
 				web: not used
 				cmd: not used
+				android: not used
+			id:
+				parameter unique id string, required
+				VST3; not used
+				LV2: manifest.ttl lv2:port lv2:symbol (bypass ports used "enabled")
+				web: not used
+				cmd: command line parameter name etc.
 				android: not used
 			direction:
 				"input" or "output", required

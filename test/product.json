@@ -11,6 +11,7 @@
 				"channels": "mono",
 				"name": "Input",
 				"shortName": "Input",
+				"id": "input",
 				"sidechain": false,
 				"cv": false,
 				"optional": false
@@ -21,6 +22,7 @@
 				"channels": "mono",
 				"name": "Output",
 				"shortName": "Output",
+				"id": "output",
 				"sidechain": false,
 				"cv": false,
 				"optional": false
@@ -30,6 +32,7 @@
 				"direction": "input",
 				"name": "MIDI input",
 				"shortName": "MIDI input",
+				"id": "midi_in",
 				"sidechain": true,
 				"control": true,
 				"optional": true
@@ -39,6 +42,7 @@
 			{
 				"name": "Gain",
 				"shortName": "Gain",
+				"id": "gain",
 				"direction": "input",
 				"isBypass": false,
 				"isLatency": false,
@@ -60,6 +64,7 @@
 			{
 				"name": "Delay",
 				"shortName": "Delay",
+				"id": "delay",
 				"direction": "input",
 				"isBypass": false,
 				"isLatency": false,
@@ -76,6 +81,7 @@
 			{
 				"name": "Cutoff",
 				"shortName": "Cutoff",
+				"id": "cutoff",
 				"direction": "input",
 				"isBypass": false,
 				"isLatency": false,
@@ -92,6 +98,7 @@
 			{
 				"name": "Bypass",
 				"shortName": "Bypass",
+				"id": "bypass",
 				"direction": "input",
 				"isBypass": true,
 				"isLatency": false,
@@ -112,6 +119,7 @@
 			{
 				"name": "yz1",
 				"shortName": "yz1",
+				"id": "yz1",
 				"direction": "output",
 				"isBypass": false,
 				"isLatency": false,
