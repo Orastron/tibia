@@ -109,16 +109,16 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	if (mutex.try_lock()) {
 # if PARAMETERS_N > 0
 		for (size_t i = 0; i < PARAMETERS_N; i++) {
-			if (param_data[i].out) {
+            if (param_data[i].out) {
 #  ifdef PARAM_OUT_CPU_INDEX
-				if (i == PARAM_OUT_CPU_INDEX) {
-					param_values_prev[i] = param_values[i] = cpu_meter;
-					continue;
-				}
+                if (i == PARAM_OUT_CPU_INDEX) {
+                    param_values_prev[i] = param_values[i] = cpu_meter;
+                    continue;
+                }
 #  endif
-				param_values_prev[i] = param_values[i] = plugin_get_parameter(&instance, i);
-			}
-			else if (param_values_prev[i] != param_values[i]) {
+                param_values_prev[i] = param_values[i] = plugin_get_parameter(&instance, i);
+            }
+            else if (param_values_prev[i] != param_values[i]) {
 				plugin_set_parameter(&instance, i, param_values[i]);
 				param_values_prev[i] = param_values[i];
 			}
@@ -178,10 +178,10 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 #endif
     
 #ifdef PARAM_OUT_CPU_INDEX
-	const unsigned long long processTimeEnd = fatica_time_process();
-	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
-	const double processTimeS = ((double) processTime100n) * 1.0e-7;
-	cpu_meter = cpu_meter * 0.9f + ((float) (processTimeS * sample_rate)) * 0.1f;
+    const unsigned long long processTimeEnd = fatica_time_process();
+    const unsigned long long processTime100n = processTimeEnd - processTimeStart;
+    const double processTimeS = ((double) processTime100n) * 1.0e-7;
+    cpu_meter = cpu_meter * 0.9f + ((float) (processTimeS * sample_rate)) * 0.1f;
 #endif
 }
 
@@ -301,10 +301,7 @@ char audioStart() {
 #endif
 	
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
-#ifdef PARAM_OUT_CPU_INDEX
-	sample_rate = (float)device.sampleRate;
-#endif
-
+    sample_rate = (float)device.sampleRate;
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
