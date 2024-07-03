@@ -31,6 +31,7 @@ SOURCES := \
 	$(COMMON_DIR)/src/native.mm \
 	$(COMMON_DIR)/src/app-Bridging-Header.h \
 	$(PLUGIN_DIR)/plugin.h \
+	$(PLUGIN_DIR)/fatica.h \
 	$(C_SRCS_EXTRA) \
 	$(CXX_SRCS_EXTRA) \
 	$(SRCS_EXTRA)

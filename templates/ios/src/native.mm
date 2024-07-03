@@ -31,16 +31,19 @@ typedef struct {
 #include "data.h"
 #include "plugin.h"
 #if PARAMETERS_N > 0
-#include <algorithm>
+# include <algorithm>
 #endif
 #if PARAMETERS_N + NUM_MIDI_INPUTS > 0
-#include <mutex>
+# include <mutex>
 #endif
 #include <vector>
 #define MINIAUDIO_IMPLEMENTATION
 #define MA_NO_RUNTIME_LINKING
 #include "miniaudio.h"
 #define BLOCK_SIZE  32
+#ifdef PARAM_OUT_CPU_INDEX
+# include "fatica.h"
+#endif
 
 static ma_device        device;
 static ma_device_config deviceConfig;
@@ -84,10 +87,18 @@ MIDIPortRef             midiPort = NULL;
 uint8_t                 midiBuffer[MIDIBUFFERLEN];
 int                     midiBuffer_i = 0;
 #endif
+#ifdef PARAM_OUT_CPU_INDEX
+float                   cpu_meter = 0.f;
+float                   sample_rate = 1.f;
+#endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
-	
+
+#ifdef PARAM_OUT_CPU_INDEX
+    const unsigned long long processTimeStart = fatica_time_process();
+#endif
+    
 #if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -98,9 +109,16 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	if (mutex.try_lock()) {
 # if PARAMETERS_N > 0
 		for (size_t i = 0; i < PARAMETERS_N; i++) {
-			if (param_data[i].out)
-				param_values_prev[i] = param_values[i] = plugin_get_parameter(&instance, i);
-			else if (param_values_prev[i] != param_values[i]) {
+            if (param_data[i].out) {
+#  ifdef PARAM_OUT_CPU_INDEX
+                if (i == PARAM_OUT_CPU_INDEX) {
+                    param_values_prev[i] = param_values[i] = cpu_meter;
+                    continue;
+                }
+#  endif
+                param_values_prev[i] = param_values[i] = plugin_get_parameter(&instance, i);
+            }
+            else if (param_values_prev[i] != param_values[i]) {
 				plugin_set_parameter(&instance, i, param_values[i]);
 				param_values_prev[i] = param_values[i];
 			}
@@ -157,6 +175,13 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 
 #if defined(__aarch64__)
 	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
+#endif
+    
+#ifdef PARAM_OUT_CPU_INDEX
+    const unsigned long long processTimeEnd = fatica_time_process();
+    const unsigned long long processTime100n = processTimeEnd - processTimeStart;
+    const double processTimeS = ((double) processTime100n) * 1.0e-7;
+    cpu_meter = cpu_meter * 0.9f + ((float) (processTimeS * sample_rate)) * 0.1f;
 #endif
 }
 
@@ -276,7 +301,8 @@ char audioStart() {
 #endif
 	
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
-
+    sample_rate = (float)device.sampleRate;
+    
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
