@@ -162,6 +162,14 @@ product {
 				web: not (yet) used
 				cmd: not (yet) used
 				android: not (yet) used
+			isCpumeter:
+				parameter is output cpu meter? boolean
+				VST3: TODO
+				LV2: data.h, lv2.c
+				web: TODO
+				cmd: TODO
+				android: TODO
+				ios: TODO
 			defaultValue:
 				default value, number, mapped, required for non-bypass
 				VST3: ParameterInfo defaultNormalizedValue, controller initialize

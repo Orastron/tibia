@@ -132,6 +132,24 @@
 				"list": false,
 				"unit": "",
 				"map": "linear"
+			},
+			{
+				"name": "cpu",
+				"shortName": "cpu",
+				"id": "cpu",
+				"direction": "output",
+				"isBypass": false,
+				"isLatency": false,
+				"isCpumeter": true,
+				"defaultValue": 0.0,
+				"minimum": 0.0,
+				"maximum": 1.0,
+				"toggled": false,
+				"optional": false,
+				"integer": false,
+				"list": false,
+				"unit": "%",
+				"map": "linear"
 			}
 		],
 		"ui": {
