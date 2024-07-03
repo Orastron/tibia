@@ -422,8 +422,8 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 
 	plugin_ui_callbacks cbs = {
 		/* .handle        = */ (void *)instance,
-		/* .format.       = */ "lv2",
-		/* .get_bindir.   = */ ui_get_bundle_path_cb,
+		/* .format        = */ "lv2",
+		/* .get_bindir    = */ ui_get_bundle_path_cb,
 		/* .get_datadir   = */ ui_get_bundle_path_cb,
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 		/* .set_parameter = */ ui_set_parameter_cb
