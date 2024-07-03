@@ -22,17 +22,17 @@
 #include <stdint.h>
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 } plugin_callbacks;
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 	void (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
@@ -66,6 +66,10 @@ typedef struct {
 # include <pmmintrin.h>
 #endif
 
+#ifdef PARAM_OUT_CPU_INDEX
+# include "fatica.h"
+#endif
+
 static inline float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
 }
@@ -81,31 +85,35 @@ static float adjust_param(size_t index, float value) {
 }
 
 typedef struct {
-	plugin				p;
+	plugin                   p;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	const float *			x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
+	const float             *x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	float *				y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
+	float                   *y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
 #endif
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
-	const LV2_Atom_Sequence *	x_midi[DATA_PRODUCT_MIDI_INPUTS_N];
+	const LV2_Atom_Sequence *x_midi[DATA_PRODUCT_MIDI_INPUTS_N];
 #endif
 #if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-	LV2_Atom_Sequence *		y_midi[DATA_PRODUCT_MIDI_OUTPUTS_N];
+	LV2_Atom_Sequence       *y_midi[DATA_PRODUCT_MIDI_OUTPUTS_N];
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
-	float *				c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
+	float *                  c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
 #endif
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	float				params[DATA_PRODUCT_CONTROL_INPUTS_N];
+	float                    params[DATA_PRODUCT_CONTROL_INPUTS_N];
 #endif
-	void *				mem;
-	char *				bundle_path;
-	LV2_Log_Logger			logger;
-	LV2_URID_Map *			map;
+	void                    *mem;
+	char                    *bundle_path;
+	LV2_Log_Logger           logger;
+	LV2_URID_Map            *map;
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-	LV2_URID			uri_midi_MidiEvent;
+	LV2_URID                 uri_midi_MidiEvent;
+#endif
+#ifdef PARAM_OUT_CPU_INDEX
+	float                    cpu_meter;
+	float                    sample_rate;
 #endif
 } plugin_instance;
 
@@ -128,8 +136,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 
 	// from https://lv2plug.in/book
 	const char* missing = lv2_features_query(features,
-		LV2_LOG__log,	&instance->logger.log,	false,
-		LV2_URID__map,	&instance->map,		true,
+		LV2_LOG__log,  &instance->logger.log, false,
+		LV2_URID__map, &instance->map,        true,
 		NULL);
 
 	lv2_log_logger_set_map(&instance->logger, instance->map);
@@ -143,10 +151,10 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #endif
 
 	plugin_callbacks cbs = {
-		/* .handle		= */ (void *)instance,
-		/* .format		= */ "lv2",
-		/* .get_bindir		= */ get_bundle_path_cb,
-		/* .get_datadir		= */ get_bundle_path_cb
+		/* .handle      = */ (void *)instance,
+		/* .format      = */ "lv2",
+		/* .get_bindir  = */ get_bundle_path_cb,
+		/* .get_datadir = */ get_bundle_path_cb
 	};
 	plugin_init(&instance->p, &cbs);
 
@@ -181,6 +189,10 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
 		instance->c[i] = NULL;
+#endif
+#ifdef PARAM_OUT_CPU_INDEX
+	instance->cpu_meter = 0.f;
+	instance->sample_rate = sample_rate;
 #endif
 
 	return instance;
@@ -244,6 +256,10 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeStart = fatica_time_process();
+#endif
+
 #if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -298,8 +314,15 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {
 		uint32_t k = param_out_index[j];
-		if (i->c[k] != NULL)
+		if (i->c[k] != NULL) {
+# ifdef PARAM_OUT_CPU_INDEX
+			if (k == PARAM_OUT_CPU_INDEX) {
+				*i->c[k] = i->cpu_meter;
+				continue;
+			}
+# endif
 			*i->c[k] = plugin_get_parameter(&i->p, k);
+		}
 	}
 #else
 	(void)plugin_get_parameter;
@@ -311,6 +334,14 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
 #endif
+
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeEnd = fatica_time_process();
+	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
+	const double processTimeS = ((double) processTime100n) * 1.0e-7;
+	i->cpu_meter = i->cpu_meter * 0.9f + ((float) (processTimeS * i->sample_rate)) * 0.1f;
+#endif
+
 }
 
 static void cleanup(LV2_Handle instance) {
@@ -323,14 +354,14 @@ static void cleanup(LV2_Handle instance) {
 }
 
 static const LV2_Descriptor descriptor = {
-	/* .URI			= */ DATA_LV2_URI,
-	/* .instantiate		= */ instantiate,
-	/* .connect_port	= */ connect_port,
-	/* .activate		= */ activate,
-	/* .run			= */ run,
-	/* .deactivate		= */ NULL,
-	/* .cleanup		= */ cleanup,
-	/* .extension_data	= */ NULL
+	/* .URI            = */ DATA_LV2_URI,
+	/* .instantiate    = */ instantiate,
+	/* .connect_port   = */ connect_port,
+	/* .activate       = */ activate,
+	/* .run            = */ run,
+	/* .deactivate     = */ NULL,
+	/* .cleanup        = */ cleanup,
+	/* .extension_data = */ NULL
 };
 
 LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
@@ -339,11 +370,11 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 
 #ifdef DATA_UI
 typedef struct {
-	plugin_ui *		ui;
-	char *			bundle_path;
+	plugin_ui            *ui;
+	char                 *bundle_path;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	LV2UI_Write_Function	write;
-	LV2UI_Controller	controller;
+	LV2UI_Write_Function  write;
+	LV2UI_Controller      controller;
 # endif
 } ui_instance;
 
@@ -390,14 +421,14 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 		goto err_bundle_path;
 
 	plugin_ui_callbacks cbs = {
-		/* .handle		= */ (void *)instance,
-		/* .format		= */ "lv2",
-		/* .get_bindir		= */ ui_get_bundle_path_cb,
-		/* .get_datadir		= */ ui_get_bundle_path_cb,
+		/* .handle        = */ (void *)instance,
+		/* .format.       = */ "lv2",
+		/* .get_bindir.   = */ ui_get_bundle_path_cb,
+		/* .get_datadir   = */ ui_get_bundle_path_cb,
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-		/* .set_parameter	= */ ui_set_parameter_cb
+		/* .set_parameter = */ ui_set_parameter_cb
 # else
-		/* .set_parameter	= */ NULL
+		/* .set_parameter = */ NULL
 # endif
 	};
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -458,15 +489,15 @@ static const void * ui_extension_data(const char * uri) {
 }
 
 static const LV2UI_Descriptor ui_descriptor = {
-	/* .URI			= */ DATA_LV2_UI_URI,
-	/* .instantiate		= */ ui_instantiate,
-	/* .cleanup		= */ ui_cleanup,
+	/* .URI            = */ DATA_LV2_UI_URI,
+	/* .instantiate    = */ ui_instantiate,
+	/* .cleanup        = */ ui_cleanup,
 # if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
-	/* .port_event		= */ ui_port_event,
+	/* .port_event     = */ ui_port_event,
 # else
-	/* .port_event		= */ NULL,
+	/* .port_event     = */ NULL,
 # endif
-	/* .extension_data	= */ ui_extension_data
+	/* .extension_data = */ ui_extension_data
 };
 
 LV2_SYMBOL_EXPORT const LV2UI_Descriptor * lv2ui_descriptor(uint32_t index) {

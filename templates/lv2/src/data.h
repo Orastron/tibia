@@ -63,6 +63,9 @@ static struct {
 static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control" && x.direction == "output") :p}}{{=p.paramIndex}}, {{~}}
 };
+{{?it.product.parameters.find(x => x.direction == "output" && x.isCpumeter)}}
+# define PARAM_OUT_CPU_INDEX {{=it.product.parameters.indexOf(it.product.parameters.find(x => x.direction == "output" && x.isCpumeter))}}
+{{?}}
 #endif
 
 {{?it.lv2.ui}}
