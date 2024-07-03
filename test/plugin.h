@@ -19,19 +19,19 @@
  */
 
 typedef struct plugin {
-	float	sample_rate;
-	size_t	delay_line_length;
+	float   sample_rate;
+	size_t  delay_line_length;
 
-	float	gain;
-	float	delay;
-	float	cutoff;
-	char	bypass;
+	float   gain;
+	float   delay;
+	float   cutoff;
+	char    bypass;
 
-	float *	delay_line;
-	size_t	delay_line_cur;
-	float	z1;
-	float	cutoff_k;
-	float	yz1;
+	float  *delay_line;
+	size_t  delay_line_cur;
+	float   z1;
+	float   cutoff_k;
+	float   yz1;
 } plugin;
 
 static void plugin_init(plugin *instance, plugin_callbacks *cbs) {
