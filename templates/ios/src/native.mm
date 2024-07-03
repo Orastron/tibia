@@ -22,10 +22,10 @@
 #include <stdint.h>
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 } plugin_callbacks;
 
 #include "data.h"
@@ -42,47 +42,47 @@ typedef struct {
 #include "miniaudio.h"
 #define BLOCK_SIZE  32
 
-static ma_device	device;
-static ma_device_config	deviceConfig;
-char			device_inited = 0;
-static plugin		instance;
-static void *		mem;
+static ma_device        device;
+static ma_device_config deviceConfig;
+char                    device_inited = 0;
+static plugin           instance;
+static void            *mem;
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
-float			zero[BLOCK_SIZE];
+float                   zero[BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_IN > 0
-float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
-float *			x_in[NUM_CHANNELS_IN];
+float                   x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float                  *x_in[NUM_CHANNELS_IN];
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
-const float *		x[NUM_ALL_CHANNELS_IN];
+const float            *x[NUM_ALL_CHANNELS_IN];
 #else
-const float **		x;
+const float           **x;
 #endif
 #if NUM_NON_OPT_CHANNELS_OUT > 0
-float			y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
+float                   y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_OUT > 0
-float *			y_out[NUM_CHANNELS_OUT];
+float                  *y_out[NUM_CHANNELS_OUT];
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *			y[NUM_ALL_CHANNELS_OUT];
+float                  *y[NUM_ALL_CHANNELS_OUT];
 #else
-float **		y;
+float                 **y;
 #endif
 #if PARAMETERS_N > 0
-std::mutex		mutex;
-float			param_values[PARAMETERS_N];
-float			param_values_prev[PARAMETERS_N];
+std::mutex              mutex;
+float                   param_values[PARAMETERS_N];
+float                   param_values_prev[PARAMETERS_N];
 #endif
 #if NUM_MIDI_INPUTS > 0
-CFStringRef		midiClientName = NULL;
-MIDIClientRef		midiClient = NULL;
-CFStringRef		midiInputName = NULL;
-MIDIPortRef		midiPort = NULL;
+CFStringRef             midiClientName = NULL;
+MIDIClientRef           midiClient = NULL;
+CFStringRef             midiInputName = NULL;
+MIDIPortRef             midiPort = NULL;
 #define MIDIBUFFERLEN 1023
-uint8_t			midiBuffer[MIDIBUFFERLEN];
-int			midiBuffer_i = 0;
+uint8_t                 midiBuffer[MIDIBUFFERLEN];
+int                     midiBuffer_i = 0;
 #endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -182,7 +182,7 @@ void (^midiReceiveBlock)(const MIDIEventList *evtlist, void *srcConnRefCon) = ^(
 				continue;
 			mutex.lock();
 			if (midiBuffer_i < MIDIBUFFERLEN - 3) {
-				midiBuffer[midiBuffer_i	] = t[2];
+				midiBuffer[midiBuffer_i    ] = t[2];
 				midiBuffer[midiBuffer_i + 1] = t[1];
 				midiBuffer[midiBuffer_i + 2] = t[0];
 				midiBuffer_i += 3;
@@ -208,26 +208,26 @@ char audioStart() {
 	deviceConfig = ma_device_config_init(ma_device_type_playback);
 #endif
 
-	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
-	deviceConfig.periods			= 1;
-	deviceConfig.performanceProfile		= ma_performance_profile_low_latency;
-	deviceConfig.noPreSilencedOutputBuffer  = 1;
-	deviceConfig.noClip			= 0;
-	deviceConfig.noDisableDenormals		= 0;
-	deviceConfig.noFixedSizedCallback	= 1;
-	deviceConfig.dataCallback		= data_callback;
-	deviceConfig.capture.pDeviceID		= NULL;
-	deviceConfig.capture.format		= ma_format_f32;
-	deviceConfig.capture.channels		= NUM_CHANNELS_IN;
-	deviceConfig.capture.shareMode		= ma_share_mode_shared;
-	deviceConfig.playback.pDeviceID		= NULL;
-	deviceConfig.playback.format		= ma_format_f32;
+	deviceConfig.periodSizeInFrames        = BLOCK_SIZE;
+	deviceConfig.periods                   = 1;
+	deviceConfig.performanceProfile        = ma_performance_profile_low_latency;
+	deviceConfig.noPreSilencedOutputBuffer = 1;
+	deviceConfig.noClip                    = 0;
+	deviceConfig.noDisableDenormals        = 0;
+	deviceConfig.noFixedSizedCallback      = 1;
+	deviceConfig.dataCallback              = data_callback;
+	deviceConfig.capture.pDeviceID         = NULL;
+	deviceConfig.capture.format            = ma_format_f32;
+	deviceConfig.capture.channels          = NUM_CHANNELS_IN;
+	deviceConfig.capture.shareMode         = ma_share_mode_shared;
+	deviceConfig.playback.pDeviceID        = NULL;
+	deviceConfig.playback.format           = ma_format_f32;
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
-	deviceConfig.playback.channels		= NUM_CHANNELS_OUT;
+	deviceConfig.playback.channels         = NUM_CHANNELS_OUT;
 #else
-	deviceConfig.playback.channels		= 1; // Fake & muted
+	deviceConfig.playback.channels         = 1; // Fake & muted
 #endif
-	deviceConfig.playback.shareMode		= ma_share_mode_shared;
+	deviceConfig.playback.shareMode        = ma_share_mode_shared;
 
 	if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
 		return false;
@@ -260,10 +260,10 @@ char audioStart() {
 #endif
 
 	plugin_callbacks cbs = {
-		/* .handle		= */ NULL,
-		/* .format		= */ "ios",
-		/* .get_bindir		= */ NULL,
-		/* .get_datadir		= */ NULL
+		/* .handle      = */ NULL,
+		/* .format      = */ "ios",
+		/* .get_bindir  = */ NULL,
+		/* .get_datadir = */ NULL
 	};
 	plugin_init(&instance, &cbs);
 
