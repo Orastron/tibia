@@ -22,18 +22,18 @@
 #include <stdint.h>
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 } plugin_callbacks;
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
-	void (*set_parameter)(void *handle, size_t index, float value);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
+	void        (*set_parameter)(void *handle, size_t index, float value);
 } plugin_ui_callbacks;
 
 #pragma GCC diagnostic push
@@ -83,8 +83,8 @@ typedef struct Steinberg_ITimerHandlerVtbl
 {
 	/* methods derived from "Steinberg_FUnknown": */
 	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
 
 	/* methods derived from "Steinberg_ITimerHandler": */
 	void (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
@@ -101,8 +101,8 @@ typedef struct Steinberg_IEventHandlerVtbl
 {
 	/* methods derived from "Steinberg_FUnknown": */
 	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
 
 	/* methods derived from "Steinberg_IEventHandler": */
 	void (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
@@ -120,8 +120,8 @@ typedef struct Steinberg_IRunLoopVtbl
 {
 	/* methods derived from "Steinberg_FUnknown": */
 	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
+	Steinberg_uint32  (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
 
 	/* methods derived from "Steinberg_IRunLoop": */
 	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler, int fd);
@@ -193,35 +193,35 @@ static double parameterAdjust(int i, double v) {
 }
 
 typedef struct pluginInstance {
-	Steinberg_Vst_IComponentVtbl *			vtblIComponent;
-	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
-	Steinberg_Vst_IProcessContextRequirementsVtbl *	vtblIProcessContextRequirements;
-	Steinberg_uint32				refs;
-	Steinberg_FUnknown *				context;
-	plugin						p;
-	float						sampleRate;
+	Steinberg_Vst_IComponentVtbl                  *vtblIComponent;
+	Steinberg_Vst_IAudioProcessorVtbl             *vtblIAudioProcessor;
+	Steinberg_Vst_IProcessContextRequirementsVtbl *vtblIProcessContextRequirements;
+	Steinberg_uint32                               refs;
+	Steinberg_FUnknown                            *context;
+	plugin                                         p;
+	float                                          sampleRate;
 #if DATA_PRODUCT_PARAMETERS_N > 0
-	float						parameters[DATA_PRODUCT_PARAMETERS_N];
+	float                                          parameters[DATA_PRODUCT_PARAMETERS_N];
 #endif
 #if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
-	const float *					inputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
+	const float                                   *inputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
 #endif
 #if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
-	float *						outputs[DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N];
+	float                                         *outputs[DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N];
 #endif
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
-	char						inputsActive[DATA_PRODUCT_BUSES_AUDIO_INPUT_N];
+	char                                           inputsActive[DATA_PRODUCT_BUSES_AUDIO_INPUT_N];
 #endif
 #if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
-	char						outputsActive[DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N];
+	char                                           outputsActive[DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N];
 #endif
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	char						midiInputsActive[DATA_PRODUCT_BUSES_MIDI_INPUT_N];
+	char                                           midiInputsActive[DATA_PRODUCT_BUSES_MIDI_INPUT_N];
 #endif
 #if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
-	char						midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
+	char                                           midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
 #endif
-	void *						mem;
+	void                                          *mem;
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -290,10 +290,10 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	p->context = context;
 
 	plugin_callbacks cbs = {
-		/* .handle		= */ (void *)p,
-		/* .format		= */ "vst3",
-		/* .get_bindir		= */ get_bindir_cb,
-		/* .get_datadir		= */ get_datadir_cb
+		/* .handle      = */ (void *)p,
+		/* .format      = */ "vst3",
+		/* .get_bindir  = */ get_bindir_cb,
+		/* .get_datadir = */ get_datadir_cb
 	};
 	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_N > 0
@@ -555,24 +555,24 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent = {
 	/* FUnknown */
-	/* .queryInterface		= */ pluginIComponentQueryInterface,
-	/* .addRef			= */ pluginIComponentAddRef,
-	/* .release			= */ pluginIComponentRelease,
+	/* .queryInterface       = */ pluginIComponentQueryInterface,
+	/* .addRef               = */ pluginIComponentAddRef,
+	/* .release              = */ pluginIComponentRelease,
 
 	/* IPluginBase */
-	/* .initialize			= */ pluginInitialize,
-	/* .terminate			= */ pluginTerminate,
+	/* .initialize           = */ pluginInitialize,
+	/* .terminate            = */ pluginTerminate,
 
 	/* IComponent */
-	/* .getControllerClassId	= */ pluginGetControllerClassId,
-	/* .setIoMode			= */ pluginSetIoMode,
-	/* .getBusCount			= */ pluginGetBusCount,
-	/* .getBusInfo			= */ pluginGetBusInfo,
-	/* .getRoutingInfo		= */ pluginGetRoutingInfo,
-	/* .activateBus			= */ pluginActivateBus,
-	/* .setActive			= */ pluginSetActive,
-	/* .setState			= */ pluginSetState,
-	/* .getState			= */ pluginGetState
+	/* .getControllerClassId = */ pluginGetControllerClassId,
+	/* .setIoMode            = */ pluginSetIoMode,
+	/* .getBusCount          = */ pluginGetBusCount,
+	/* .getBusInfo           = */ pluginGetBusInfo,
+	/* .getRoutingInfo       = */ pluginGetRoutingInfo,
+	/* .activateBus          = */ pluginActivateBus,
+	/* .setActive            = */ pluginSetActive,
+	/* .setState             = */ pluginSetState,
+	/* .getState             = */ pluginGetState
 };
 
 static Steinberg_tresult pluginIAudioProcessorQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -850,19 +850,19 @@ static Steinberg_uint32 pluginGetTailSamples(void* thisInterface) {
 
 static Steinberg_Vst_IAudioProcessorVtbl pluginVtblIAudioProcessor = {
 	/* FUnknown */
-	/* .queryInterface		= */ pluginIAudioProcessorQueryInterface,
-	/* .addRef			= */ pluginIAudioProcessorAddRef,
-	/* .release			= */ pluginIAudioProcessorRelease,
+	/* .queryInterface       = */ pluginIAudioProcessorQueryInterface,
+	/* .addRef               = */ pluginIAudioProcessorAddRef,
+	/* .release              = */ pluginIAudioProcessorRelease,
 
 	/* IAudioProcessor */
-	/* .setBusArrangements		= */ pluginSetBusArrangements,
-	/*. getBusArrangement		= */ pluginGetBusArrangement,
-	/* .canProcessSampleSize	= */ pluginCanProcessSampleSize,
-	/* .getLatencySamples		= */ pluginGetLatencySamples,
-	/* .setupProcessing		= */ pluginSetupProcessing,
-	/* .setProcessing		= */ pluginSetProcessing,
-	/* .process			= */ pluginProcess,
-	/* .getTailSamples		= */ pluginGetTailSamples
+	/* .setBusArrangements   = */ pluginSetBusArrangements,
+	/*. getBusArrangement    = */ pluginGetBusArrangement,
+	/* .canProcessSampleSize = */ pluginCanProcessSampleSize,
+	/* .getLatencySamples    = */ pluginGetLatencySamples,
+	/* .setupProcessing      = */ pluginSetupProcessing,
+	/* .setProcessing        = */ pluginSetProcessing,
+	/* .process              = */ pluginProcess,
+	/* .getTailSamples       = */ pluginGetTailSamples
 };
 
 static Steinberg_tresult pluginIProcessContextRequirementsQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -889,31 +889,31 @@ static Steinberg_uint32 pluginGetProcessContextRequirements(void* thisInterface)
 
 static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRequirements = {
 	/* FUnknown */
-	/* .queryInterface			= */ pluginIProcessContextRequirementsQueryInterface,
-	/* .addRef				= */ pluginIProcessContextRequirementsAddRef,
-	/* .release				= */ pluginIProcessContextRequirementsRelease,
+	/* .queryInterface                = */ pluginIProcessContextRequirementsQueryInterface,
+	/* .addRef                        = */ pluginIProcessContextRequirementsAddRef,
+	/* .release                       = */ pluginIProcessContextRequirementsRelease,
 
 	/* IProcessContextRequirements */
-	/* .getProcessContextRequirements	= */ pluginGetProcessContextRequirements
+	/* .getProcessContextRequirements = */ pluginGetProcessContextRequirements
 };
 
 typedef struct plugView plugView;
 
 typedef struct controller {
-	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController;
-	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
+	Steinberg_Vst_IEditControllerVtbl      *vtblIEditController;
+	Steinberg_Vst_IMidiMappingVtbl         *vtblIMidiMapping;
 #ifdef DATA_UI
 	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
 #endif
-	Steinberg_uint32				refs;
-	Steinberg_FUnknown *				context;
+	Steinberg_uint32                        refs;
+	Steinberg_FUnknown                     *context;
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	double						parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
+	double                                  parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
 #endif
-	struct Steinberg_Vst_IComponentHandler *	componentHandler;
+	struct Steinberg_Vst_IComponentHandler *componentHandler;
 #ifdef DATA_UI
-	plugView **					views;
-	size_t						viewsCount;
+	plugView                              **views;
+	size_t                                  viewsCount;
 #endif
 } controller;
 
@@ -926,10 +926,10 @@ static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 #  include <X11/Xlib.h>
 
 typedef struct {
-	Steinberg_ITimerHandlerVtbl *	vtblITimerHandler;
-	Steinberg_uint32		refs;
-	void *				data;
-	void				(*cb)(void *data);
+	Steinberg_ITimerHandlerVtbl *vtblITimerHandler;
+	Steinberg_uint32             refs;
+	void                        *data;
+	void                         (*cb)(void *data);
 } timerHandler;
 
 static Steinberg_tresult timerHandlerQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -980,12 +980,12 @@ static void timerHandlerOnTimer(void* thisInterface) {
 
 static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 	/* FUnknown */
-	/* .queryInterface	= */ timerHandlerQueryInterface,
-	/* .addRef		= */ timerHandlerAddRef,
-	/* .release		= */ timerHandlerRelease,
+	/* .queryInterface = */ timerHandlerQueryInterface,
+	/* .addRef         = */ timerHandlerAddRef,
+	/* .release        = */ timerHandlerRelease,
 
 	/* ITimerHandler */
-	/* .onTimer		= */ timerHandlerOnTimer
+	/* .onTimer        = */ timerHandlerOnTimer
 };
 
 # elif defined(__APPLE__)
@@ -998,19 +998,19 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 # endif
 
 typedef struct plugView {
-	Steinberg_IPlugViewVtbl *	vtblIPlugView;
-	Steinberg_uint32		refs;
-	Steinberg_IPlugFrame *		frame;
-	plugin_ui *			ui;
-	controller *			ctrl;
+	Steinberg_IPlugViewVtbl *vtblIPlugView;
+	Steinberg_uint32         refs;
+	Steinberg_IPlugFrame    *frame;
+	plugin_ui               *ui;
+	controller              *ctrl;
 # ifdef __linux__
-	Steinberg_IRunLoop *		runLoop;
-	timerHandler			timer;
-	Display *			display;
+	Steinberg_IRunLoop      *runLoop;
+	timerHandler             timer;
+	Display                 *display;
 # elif defined(__APPLE__)
-	CFRunLoopTimerRef		timer;
+	CFRunLoopTimerRef        timer;
 # elif defined(_WIN32) || defined(__CYGWIN__)
-	UINT_PTR			timer;
+	UINT_PTR                 timer;
 # endif
 } plugView;
 
@@ -1132,14 +1132,14 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		return Steinberg_kInvalidArgument;
 
 	plugin_ui_callbacks cbs = {
-		/* .handle		= */ (void *)v,
-		/* .format		= */ "vst3",
-		/* .get_bindir		= */ get_bindir_cb,
-		/* .get_datadir		= */ get_datadir_cb,
+		/* .handle        = */ (void *)v,
+		/* .format        = */ "vst3",
+		/* .get_bindir    = */ get_bindir_cb,
+		/* .get_datadir   = */ get_datadir_cb,
 # if DATA_PRODUCT_PARAMETERS_N > 0
-		/* .set_parameter	= */ plugViewSetParameterCb
+		/* .set_parameter = */ plugViewSetParameterCb
 # else
-		/* .set_parameter	= */ NULL
+		/* .set_parameter = */ NULL
 # endif
 	};
 	v->ui = plugin_ui_create(1, parent, &cbs);
@@ -1161,11 +1161,11 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	}
 # elif defined(__APPLE__)
 	CFRunLoopTimerContext ctx = {
-		/* .version		= */ 0,
-		/* .info		= */ v,
-		/* .retain		= */ NULL,
-		/* .release		= */ NULL,
-		/* .copyDescription	= */ NULL
+		/* .version         = */ 0,
+		/* .info            = */ v,
+		/* .retain          = */ NULL,
+		/* .release         = */ NULL,
+		/* .copyDescription = */ NULL
 	};
 	v->timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(), 20.0 / 1000.0, 0, 0, plugViewTimerCb, &ctx);
 	CFRunLoopAddTimer(CFRunLoopGetCurrent(), v->timer, kCFRunLoopCommonModes);
@@ -1354,23 +1354,23 @@ static void plugViewOnTimer(void *thisInterface) {
 
 static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 	/* FUnknown */
-	/* .queryInterface		= */ plugViewQueryInterface,
-	/* .addRef			= */ plugViewAddRef,
-	/* .release			= */ plugViewRelease,
+	/* .queryInterface          = */ plugViewQueryInterface,
+	/* .addRef                  = */ plugViewAddRef,
+	/* .release                 = */ plugViewRelease,
 
 	/* IPlugView */
-	/* .isPlatformTypeSupported	= */ plugViewIsPlatformTypeSupported,
-	/* .attached			= */ plugViewAttached,
-	/* .removed			= */ plugViewRemoved,
-	/* .onWheel			= */ plugViewOnWheel,
-	/* .onKeyDown			= */ plugViewOnKeyDown,
-	/* .onKeyUp			= */ plugViewOnKeyUp,
-	/* .getSize			= */ plugViewGetSize,
-	/* .onSize			= */ plugViewOnSize,
-	/* .onFocus			= */ plugViewOnFocus,
-	/* .setFrame			= */ plugViewSetFrame,
-	/* .canResize			= */ plugViewCanResize,
-	/* .checkSizeConstraint		= */ plugViewCheckSizeConstraint
+	/* .isPlatformTypeSupported = */ plugViewIsPlatformTypeSupported,
+	/* .attached                = */ plugViewAttached,
+	/* .removed                 = */ plugViewRemoved,
+	/* .onWheel                 = */ plugViewOnWheel,
+	/* .onKeyDown               = */ plugViewOnKeyDown,
+	/* .onKeyUp                 = */ plugViewOnKeyUp,
+	/* .getSize                 = */ plugViewGetSize,
+	/* .onSize                  = */ plugViewOnSize,
+	/* .onFocus                 = */ plugViewOnFocus,
+	/* .setFrame                = */ plugViewSetFrame,
+	/* .canResize               = */ plugViewCanResize,
+	/* .checkSizeConstraint     = */ plugViewCheckSizeConstraint
 };
 #endif
 
@@ -1455,7 +1455,7 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 #endif
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	for (int i = DATA_PRODUCT_PARAMETERS_N; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i += 3) {
-		c->parameters[i] = 0.0;
+		c->parameters[i    ] = 0.0;
 		c->parameters[i + 1] = 0.5;
 		c->parameters[i + 2] = 0.0;
 	}
@@ -1739,28 +1739,28 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController = {
 	/* FUnknown */
-	/* .queryInterface		= */ controllerIEditControllerQueryInterface,
-	/* .addRef			= */ controllerIEditControllerAddRef,
-	/* .release			= */ controllerIEditControllerRelease,
+	/* .queryInterface         = */ controllerIEditControllerQueryInterface,
+	/* .addRef                 = */ controllerIEditControllerAddRef,
+	/* .release                = */ controllerIEditControllerRelease,
 
 	/* IPluginBase */
-	/* .initialize			= */ controllerInitialize,
-	/* .terminate			= */ controllerTerminate,
+	/* .initialize             = */ controllerInitialize,
+	/* .terminate              = */ controllerTerminate,
 
 	/* IEditController */
-	/* .setComponentState		= */ controllerSetComponentState,
-	/* .setState			= */ controllerSetState,
-	/* .getState			= */ controllerGetState,
-	/* .getParameterCount		= */ controllerGetParameterCount,
-	/* .getParameterInfo		= */ controllerGetParameterInfo,
-	/* .getParamStringByValue	= */ controllerGetParamStringByValue,
-	/* .getParamValueByString	= */ controllerGetParamValueByString,
-	/* .normalizedParamToPlain	= */ controllerNormalizedParamToPlain,
-	/* .plainParamToNormalized	= */ controllerPlainParamToNormalized,
-	/* .getParamNormalized		= */ controllerGetParamNormalized,
-	/* .setParamNormalized		= */ controllerSetParamNormalized,
-	/* .setComponentHandler		= */ controllerSetComponentHandler,
-	/* .createView			= */ controllerCreateView
+	/* .setComponentState      = */ controllerSetComponentState,
+	/* .setState               = */ controllerSetState,
+	/* .getState               = */ controllerGetState,
+	/* .getParameterCount      = */ controllerGetParameterCount,
+	/* .getParameterInfo       = */ controllerGetParameterInfo,
+	/* .getParamStringByValue  = */ controllerGetParamStringByValue,
+	/* .getParamValueByString  = */ controllerGetParamValueByString,
+	/* .normalizedParamToPlain = */ controllerNormalizedParamToPlain,
+	/* .plainParamToNormalized = */ controllerPlainParamToNormalized,
+	/* .getParamNormalized     = */ controllerGetParamNormalized,
+	/* .setParamNormalized     = */ controllerSetParamNormalized,
+	/* .setComponentHandler    = */ controllerSetComponentHandler,
+	/* .createView             = */ controllerCreateView
 };
 
 static Steinberg_tresult controllerIMidiMappingQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
@@ -1806,12 +1806,12 @@ static Steinberg_tresult controllerGetMidiControllerAssignment(void* thisInterfa
 
 static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 	/* FUnknown */
-	/* .queryInterface		= */ controllerIMidiMappingQueryInterface,
-	/* .addRef			= */ controllerIMidiMappingAddRef,
-	/* .release			= */ controllerIMidiMappingRelease,
+	/* .queryInterface              = */ controllerIMidiMappingQueryInterface,
+	/* .addRef                      = */ controllerIMidiMappingAddRef,
+	/* .release                     = */ controllerIMidiMappingRelease,
 
 	/* IMidiMapping */
-	/* .getMidiControllerAssignment	= */ controllerGetMidiControllerAssignment
+	/* .getMidiControllerAssignment = */ controllerGetMidiControllerAssignment
 };
 
 #ifdef DATA_UI
@@ -1853,14 +1853,14 @@ static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, s
 
 static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint = {
 	/* FUnknown */
-	/* .queryInterface		= */ controllerIConnectionPointQueryInterface,
-	/* .addRef			= */ controllerIConnectionPointAddRef,
-	/* .release			= */ controllerIConnectionPointRelease,
+	/* .queryInterface = */ controllerIConnectionPointQueryInterface,
+	/* .addRef         = */ controllerIConnectionPointAddRef,
+	/* .release        = */ controllerIConnectionPointRelease,
 
 	/* IConnectionPoint */
-	/* .connect			= */ controllerIConnectionPointConnect,
-	/* .disconnect			= */ controllerIConnectionPointDisconnect,
-	/* .notify			= */ controllerIConnectionPointNotify
+	/* .connect        = */ controllerIConnectionPointConnect,
+	/* .disconnect     = */ controllerIConnectionPointDisconnect,
+	/* .notify         = */ controllerIConnectionPointNotify
 };
 # endif
 #endif
@@ -2085,22 +2085,22 @@ static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Stein
 
 static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
 	/* FUnknown */
-	/* .queryInterface	= */ factoryQueryInterface,
-	/* .addRef		= */ factoryAddRef,
-	/* .release		= */ factoryRelease,
+	/* .queryInterface      = */ factoryQueryInterface,
+	/* .addRef              = */ factoryAddRef,
+	/* .release             = */ factoryRelease,
 
 	/* IPluginFactory */
-	/* .getFactoryInfo	= */ factoryGetFactoryInfo,
-	/* .countClasses	= */ factoryCountClasses,
-	/* .getClassInfo	= */ factoryGetClassInfo,
-	/* .createInstance	= */ factoryCreateInstance,
+	/* .getFactoryInfo      = */ factoryGetFactoryInfo,
+	/* .countClasses        = */ factoryCountClasses,
+	/* .getClassInfo        = */ factoryGetClassInfo,
+	/* .createInstance      = */ factoryCreateInstance,
 
 	/* IPluginFactory2 */
-	/* .getClassInfo2	= */ factoryGetClassInfo2,
+	/* .getClassInfo2       = */ factoryGetClassInfo2,
 
 	/* IPluginFactory3 */
-	/* .getClassInfoUnicode	= */ factoryGetClassInfoUnicode,
-	/* .setHostContext	= */ factorySetHostContext
+	/* .getClassInfoUnicode = */ factoryGetClassInfoUnicode,
+	/* .setHostContext      = */ factorySetHostContext
 };
 static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 
