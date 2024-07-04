@@ -230,7 +230,7 @@ typedef struct pluginInstance {
 #endif
 	void                                          *mem;
 #ifdef PARAM_OUT_CPU_INDEX
-	float                                         cpu_meter;
+	float                                          cpu_meter;
 #endif
 } pluginInstance;
 
