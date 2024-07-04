@@ -27,6 +27,9 @@ var busesOut   = buses.filter(x => x.type == "audio" && x.direction == "output")
 var nChansIn   = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
 var nChansOut  = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
 
+var cpu_meter  = 0.0;
+var sampleRate = 1.0;
+
 class Processor extends AudioWorkletProcessor {
 	constructor(options) {
 		super();
@@ -71,6 +74,8 @@ class Processor extends AudioWorkletProcessor {
 	}
 
 	process(inputs, outputs, params) {
+		const processTimeStart = performance.now();
+
 		for (var i = 0; i < this.parametersIn.length; i++) {
 			var index = this.parametersIn[i].index;
 			var parameter = parameters[index];
@@ -141,7 +146,11 @@ class Processor extends AudioWorkletProcessor {
 		
 		for (var i = 0; i < this.parametersOut.length; i++) {
 			var index = this.parametersOut[i].index;
-			var value = this.parametersOutValues[i];
+			var value;
+			if (parameters[index].isCpumeter)
+				value = cpu_meter;
+			else
+				value = this.parametersOutValues[i];
 			if (value != this.parametersOut[i].value) {
 				this.paramOutChangeMsg.index = index;
 				this.paramOutChangeMsg.value = value;
@@ -149,6 +158,10 @@ class Processor extends AudioWorkletProcessor {
 				this.parametersOut[i].value = value;
 			}
 		}
+		const processTimeEnd = performance.now();
+		const processTimeMs  = processTimeEnd - processTimeStart;
+		const processTimeS   = processTimeMs * 0.001;
+		cpu_meter = cpu_meter * 0.9 + (processTimeS * sampleRate) * 0.1;
 
 		return true; // because Chrome sucks: https://bugs.chromium.org/p/chromium/issues/detail?id=921354
 	}
