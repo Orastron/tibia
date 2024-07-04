@@ -28,7 +28,7 @@ extern unsigned char __heap_base;
 typedef struct _header {
 	struct _header *next;
 	struct _header *prev;
-	char free;
+	char            free;
 } header;
 
 static char inited = 0;

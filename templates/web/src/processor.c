@@ -22,10 +22,10 @@
 #include <stdint.h>
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 } plugin_callbacks;
 
 #include "data.h"
@@ -35,19 +35,19 @@ typedef struct {
 #include "walloc.h"
 
 typedef struct {
-	plugin		p;
-	void *		mem;
+	plugin       p;
+	void        *mem;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
-	float		x_buf[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N * 128];
-	const float *	x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
-	float		zero_buf[128];
+	float        x_buf[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N * 128];
+	const float *x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
+	float        zero_buf[128];
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	float		y_buf[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N * 128];
-	float *		y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
+	float        y_buf[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N * 128];
+	float       *y[DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N];
 #endif
 #if DATA_PRODUCT_PARAMETERS_OUTPUT_N > 0
-	float		out_params[DATA_PRODUCT_PARAMETERS_OUTPUT_N];
+	float        out_params[DATA_PRODUCT_PARAMETERS_OUTPUT_N];
 #endif
 } instance;
 
@@ -57,10 +57,10 @@ instance * processor_new(float sample_rate) {
 		return NULL;
 
 	plugin_callbacks cbs = {
-		/* .handle		= */ NULL,
-		/* .format		= */ "web",
-		/* .get_bindir		= */ NULL,
-		/* .get_datadir		= */ NULL
+		/* .handle      = */ NULL,
+		/* .format      = */ "web",
+		/* .get_bindir  = */ NULL,
+		/* .get_datadir = */ NULL
 	};
 	plugin_init(&i->p, &cbs);
 

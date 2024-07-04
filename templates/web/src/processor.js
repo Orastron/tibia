@@ -18,14 +18,14 @@
  * File author: Stefano D'Angelo
  */
 
-var buses = {{=JSON.stringify(it.product.buses, null, 2)}};
+var buses      = {{=JSON.stringify(it.product.buses, null, 2)}};
 var parameters = {{=JSON.stringify(it.product.parameters, null, 2)}};
 
-var busesIn = buses.filter(x => x.type == "audio" && x.direction == "input");
-var busesOut = buses.filter(x => x.type == "audio" && x.direction == "output");
+var busesIn    = buses.filter(x => x.type == "audio" && x.direction == "input");
+var busesOut   = buses.filter(x => x.type == "audio" && x.direction == "output");
 
-var nChansIn = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
-var nChansOut = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+var nChansIn   = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+var nChansOut  = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
 
 class Processor extends AudioWorkletProcessor {
 	constructor(options) {
