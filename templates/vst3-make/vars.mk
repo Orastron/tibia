@@ -18,17 +18,17 @@
 # File author: Stefano D'Angelo
 #
 
-BUNDLE_NAME := {{=it.product.bundleName}}
+BUNDLE_NAME    := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.vst3_make?.cflags ?? ""}}
+CFLAGS_EXTRA   := {{=it.make?.cflags   ?? ""}} {{=it.vst3_make?.cflags   ?? ""}}
 CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.vst3_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.vst3_make?.ldflags ?? ""}}
+LDFLAGS_EXTRA  := {{=it.make?.ldflags  ?? ""}} {{=it.vst3_make?.ldflags  ?? ""}}
 
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.vst3_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.vst3_make?.cxxSrcs ?? ""}}
+C_SRCS_EXTRA   := {{=it.make?.cSrcs    ?? ""}} {{=it.vst3_make?.cSrcs   ?? ""}}
+CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs  ?? ""}} {{=it.vst3_make?.cxxSrcs ?? ""}}
 
-COMMON_DIR := {{=it.vst3_make?.commonDir ?? (it.make?.commonDir ?? "")}}
-DATA_DIR := {{=it.vst3_make?.dataDir ?? (it.make?.dataDir ?? "")}}
-PLUGIN_DIR := {{=it.vst3_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+COMMON_DIR     := {{=it.vst3_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+DATA_DIR       := {{=it.vst3_make?.dataDir   ?? (it.make?.dataDir   ?? "")}}
+PLUGIN_DIR     := {{=it.vst3_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 
-HAS_UI := {{=it.product.ui ? "yes" : "no"}}
+HAS_UI         := {{=it.product.ui ? "yes" : "no"}}

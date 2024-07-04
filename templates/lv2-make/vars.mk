@@ -18,15 +18,15 @@
 # File author: Stefano D'Angelo
 #
 
-BUNDLE_NAME := {{=it.product.bundleName}}
+BUNDLE_NAME    := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.lv2_make?.cflags ?? ""}}
+CFLAGS_EXTRA   := {{=it.make?.cflags   ?? ""}} {{=it.lv2_make?.cflags   ?? ""}}
 CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.lv2_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.lv2_make?.ldflags ?? ""}}
+LDFLAGS_EXTRA  := {{=it.make?.ldflags  ?? ""}} {{=it.lv2_make?.ldflags  ?? ""}}
 
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.lv2_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.lv2_make?.cxxSrcs ?? ""}}
+C_SRCS_EXTRA   := {{=it.make?.cSrcs    ?? ""}} {{=it.lv2_make?.cSrcs    ?? ""}}
+CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs  ?? ""}} {{=it.lv2_make?.cxxSrcs  ?? ""}}
 
-COMMON_DIR := {{=it.lv2_make?.commonDir ?? (it.make?.commonDir ?? "")}}
-DATA_DIR := {{=it.lv2_make?.dataDir ?? (it.make?.dataDir ?? "")}}
-PLUGIN_DIR := {{=it.lv2_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+COMMON_DIR     := {{=it.lv2_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+DATA_DIR       := {{=it.lv2_make?.dataDir   ?? (it.make?.dataDir   ?? "")}}
+PLUGIN_DIR     := {{=it.lv2_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
