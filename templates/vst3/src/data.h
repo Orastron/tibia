@@ -211,6 +211,10 @@ static struct {
 {{~}}
 };
 
+{{?it.product.parameters.find(x => x.direction == "output" && x.isCpumeter)}}
+# define PARAM_OUT_CPU_INDEX {{=it.product.parameters.indexOf(it.product.parameters.find(x => x.direction == "output" && x.isCpumeter))}}
+{{?}}
+
 # endif
 
 #endif

@@ -64,6 +64,10 @@ typedef struct {
 #include <pmmintrin.h>
 #endif
 
+#ifdef PARAM_OUT_CPU_INDEX
+# include "fatica.h"
+#endif
+
 // COM in C doc:
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
@@ -222,6 +226,9 @@ typedef struct pluginInstance {
 	char                                           midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
 #endif
 	void                                          *mem;
+#ifdef PARAM_OUT_CPU_INDEX
+	float                                         cpu_meter;
+#endif
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -320,6 +327,9 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		p->midiOutputsActive[i] = 0;
 #endif
 	p->mem = NULL;
+#ifdef PARAM_OUT_CPU_INDEX
+	p->cpu_meter = 0.f;
+#endif
 	return Steinberg_kResultOk;
 }
 
@@ -738,6 +748,10 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst_ProcessData* data) {
 	TRACE("plugin IAudioProcessor process\n");
 
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeStart = fatica_time_process();
+#endif
+
 #if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -813,7 +827,13 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
 			continue;
-		float v = plugin_get_parameter(&p->p, parameterData[i].index);
+		float v;
+# ifdef PARAM_OUT_CPU_INDEX
+		if (i == PARAM_OUT_CPU_INDEX)
+			v = p->cpu_meter;
+		else
+# endif
+		v = plugin_get_parameter(&p->p, parameterData[i].index);
 		if (v == p->parameters[i])
 			continue;
 		p->parameters[i] = v;
@@ -835,6 +855,13 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 #elif defined(__i386__) || defined(__x86_64__)
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeEnd = fatica_time_process();
+	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
+	const double processTimeS = ((double) processTime100n) * 1.0e-7;
+	p->cpu_meter = p->cpu_meter * 0.9f + ((float) (processTimeS * p->sampleRate)) * 0.1f;
 #endif
 
 	return Steinberg_kResultOk;
