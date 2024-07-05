@@ -148,7 +148,7 @@
 				"optional": false,
 				"integer": false,
 				"list": false,
-				"unit": "%",
+				"unit": "",
 				"map": "linear"
 			}
 		],
