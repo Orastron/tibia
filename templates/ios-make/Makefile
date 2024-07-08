@@ -21,7 +21,7 @@
 include vars.mk
 
 COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
+DATA_DIR   := $(or $(DATA_DIR),.)
 PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
 SOURCES := \
