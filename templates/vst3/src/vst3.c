@@ -58,6 +58,9 @@ typedef struct {
 #else
 # include <dlfcn.h>
 #endif
+#ifdef __APPLE__
+# include <CoreFoundation/CoreFoundation.h>
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <xmmintrin.h>
@@ -1017,7 +1020,6 @@ static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 
 # elif defined(__APPLE__)
 
-#  include <CoreFoundation/CoreFoundation.h>
 #  include <objc/objc.h>
 #  include <objc/runtime.h>
 #  include <objc/message.h>

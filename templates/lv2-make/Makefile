@@ -52,10 +52,10 @@ DATA_DIR := $(or $(DATA_DIR),.)
 PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CFLAGS) $(CFLAGS_EXTRA)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) $(shell pkg-config --cflags lv2) -fPIC $(CFLAGS) $(CFLAGS_EXTRA)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared $(LDFLAGS) $(LDFLAGS_EXTRA)
+LDFLAGS_ALL := -shared $(shell pkg-config --libs lv2) $(LDFLAGS) $(LDFLAGS_EXTRA)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CXXFLAGS) $(CXXFLAGS_EXTRA)
