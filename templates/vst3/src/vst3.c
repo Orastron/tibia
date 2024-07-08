@@ -59,7 +59,7 @@ typedef struct {
 # include <dlfcn.h>
 #endif
 #ifdef __APPLE__
-#  include <CoreFoundation/CoreFoundation.h>
+# include <CoreFoundation/CoreFoundation.h>
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
