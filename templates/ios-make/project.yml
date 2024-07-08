@@ -20,41 +20,43 @@
 
 name: {{=it.product.bundleName}}
 targets:
-	{{=it.product.bundleName}}:
+  {{=it.product.bundleName}}:
 {{?it.ios_make.supportedDestinations}}
-		supportedDestinations: {{=Array.isArray(it.ios_make.supportedDestinations) ? "[" + it.ios_make.supportedDestinations.toString() + "]" : it.ios_make.supportedDestinations}}
+    supportedDestinations: {{=Array.isArray(it.ios_make.supportedDestinations) ? "[" + it.ios_make.supportedDestinations.toString() + "]" : it.ios_make.supportedDestinations}}
 {{??}}
-		platform: [iOS]
+    platform: [iOS]
 {{?}}
-		deploymentTarget: "{{=it.ios_make.deploymentTarget}}"
-		type: application
-		sources:
-			- path: src
-		dependencies:
-
-		settings:
-			base:
-				PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios.productBundleIdentifier}}
-				SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
+    deploymentTarget: "{{=it.ios_make.deploymentTarget}}"
+    type: application
+    sources:
+      - path: src
+{{?it.ios_make.dependencies}}
+    dependencies: {{~it.ios_make.dependencies :d}}
+      - target: {{=d}}{{~}}
+{{?}}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios.productBundleIdentifier}}
+        SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
 {{?it.ios_make.headerSearchPaths}}
-				HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
-					- {{=p}}{{~}}
+        HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
+          - {{=p}}{{~}}
 {{?}}
-		info:
-			path: Info.plist
+    info:
+      path: Info.plist
 {{?(it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0) || it.ios_make.infoProperties || it.ios_make.uiLaunchScreen}}
-			properties:
+      properties:
 {{?it.product.buses.filter(x => x.type == "audio" && x.direction == "input").length > 0}}
-				NSMicrophoneUsageDescription: Need audio input for processing sound
+        NSMicrophoneUsageDescription: Need audio input for processing sound
 {{?}}
 {{?it.ios_make.infoProperties}}
 {{~it.ios_make.infoProperties :p}}
-				{{=p.key}}: {{=Array.isArray(p.value) ? "[" + p.value.toString() + "]" : p.value}}
+        {{=p.key}}: {{=Array.isArray(p.value) ? "[" + p.value.toString() + "]" : p.value}}
 {{~}}
 {{?}}
 {{?it.ios_make.launchScreen}}
-				UILaunchScreen:
-					UIColorName: {{=it.ios_make.launchScreen.colorName}}
-					UIImageName: {{=it.ios_make.launchScreen.imageName}}
+        UILaunchScreen:
+          UIColorName: {{=it.ios_make.launchScreen.colorName}}
+          UIImageName: {{=it.ios_make.launchScreen.imageName}}
 {{?}}
 {{?}}
