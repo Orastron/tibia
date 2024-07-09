@@ -22,10 +22,10 @@
 #include <stdint.h>
 
 typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
+	void       *handle;
+	const char *format;
+	const char *(*get_bindir)(void *handle);
+	const char *(*get_datadir)(void *handle);
 } plugin_callbacks;
 
 #include "data.h"
@@ -52,8 +52,11 @@ typedef struct {
 
 #if NUM_MIDI_INPUTS > 0
 # include <vector>
-
 # include <amidi/AMidi.h>
+#endif
+
+#ifdef PARAM_OUT_CPU_INDEX
+# include "fatica.h"
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -61,50 +64,58 @@ typedef struct {
 #include <pmmintrin.h>
 #endif
 
-static ma_device	device;
-static plugin		instance;
-static void *		mem;
+static ma_device      device;
+static plugin         instance;
+static void          *mem;
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
-float			zero[BLOCK_SIZE];
+float                 zero[BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_IN > 0
-float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
-float *			x_in[NUM_CHANNELS_IN];
+float                 x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
+float                *x_in[NUM_CHANNELS_IN];
 #endif
 #if NUM_ALL_CHANNELS_IN > 0
-const float *		x[NUM_ALL_CHANNELS_IN];
+const float          *x[NUM_ALL_CHANNELS_IN];
 #else
-const float **		x;
+const float         **x;
 #endif
 #if NUM_NON_OPT_CHANNELS_OUT > 0
-float			y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
+float                 y_buf[NUM_NON_OPT_CHANNELS_OUT * BLOCK_SIZE];
 #endif
 #if NUM_CHANNELS_OUT > 0
-float *			y_out[NUM_CHANNELS_OUT];
+float                *y_out[NUM_CHANNELS_OUT];
 #endif
 #if NUM_ALL_CHANNELS_OUT > 0
-float *			y[NUM_ALL_CHANNELS_OUT];
+float                *y[NUM_ALL_CHANNELS_OUT];
 #else
-float **		y;
+float               **y;
 #endif
 #if PARAMETERS_N > 0
-std::mutex		mutex;
-float			param_values[PARAMETERS_N];
-float			param_values_prev[PARAMETERS_N];
+std::mutex            mutex;
+float                 param_values[PARAMETERS_N];
+float                 param_values_prev[PARAMETERS_N];
 #endif
 #if NUM_MIDI_INPUTS > 0
 struct PortData {
-	AMidiDevice	*device;
-	int		 portNumber;
-	AMidiOutputPort	*port;
+	AMidiDevice     *device;
+	int              portNumber;
+	AMidiOutputPort *port;
 };
 std::vector<PortData> midiPorts;
 # define MIDI_BUFFER_SIZE 1024
-uint8_t midiBuffer[MIDI_BUFFER_SIZE];
+uint8_t               midiBuffer[MIDI_BUFFER_SIZE];
+#endif
+#ifdef PARAM_OUT_CPU_INDEX
+float                 cpu_meter   = 0.f;
+float                 sample_rate = 1.f;
 #endif
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
+
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeStart = fatica_time_process();
+#endif
 
 #if defined(__aarch64__)
 	uint64_t fpcr;
@@ -122,8 +133,15 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	if (mutex.try_lock()) {
 # if PARAMETERS_N > 0
 		for (size_t i = 0; i < PARAMETERS_N; i++) {
-			if (param_data[i].out)
+			if (param_data[i].out) {
+#  ifdef PARAM_OUT_CPU_INDEX
+				if (i == PARAM_OUT_CPU_INDEX) {
+					param_values_prev[i] = param_values[i] = cpu_meter;
+					continue;
+				}
+#  endif
 				param_values_prev[i] = param_values[i] = plugin_get_parameter(&instance, i);
+			}
 			else if (param_values_prev[i] != param_values[i]) {
 				plugin_set_parameter(&instance, i, param_values[i]);
 				param_values_prev[i] = param_values[i];
@@ -188,6 +206,13 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
 #endif
+
+#ifdef PARAM_OUT_CPU_INDEX
+	const unsigned long long processTimeEnd = fatica_time_process();
+	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
+	const double processTimeS = ((double) processTime100n) * 1.0e-7;
+	cpu_meter = cpu_meter * 0.9f + ((float) (processTimeS * sample_rate)) * 0.1f;
+#endif
 }
 
 extern "C"
@@ -208,35 +233,35 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
 #endif
 
-	deviceConfig.periodSizeInFrames		= BLOCK_SIZE;
-	deviceConfig.periods			= 1;
-	deviceConfig.performanceProfile		= ma_performance_profile_low_latency;
-	deviceConfig.noPreSilencedOutputBuffer	= 1;
-	deviceConfig.noClip			= 0;
-	deviceConfig.noDisableDenormals		= 0;
-	deviceConfig.noFixedSizedCallback	= 1;
-	deviceConfig.dataCallback		= data_callback;
-	deviceConfig.capture.pDeviceID		= NULL;
-	deviceConfig.capture.format		= ma_format_f32;
-	deviceConfig.capture.channels		= NUM_CHANNELS_IN;
-	deviceConfig.capture.shareMode		= ma_share_mode_shared;
-	deviceConfig.playback.pDeviceID		= NULL;
-	deviceConfig.playback.format		= ma_format_f32;
+	deviceConfig.periodSizeInFrames        = BLOCK_SIZE;
+	deviceConfig.periods                   = 1;
+	deviceConfig.performanceProfile        = ma_performance_profile_low_latency;
+	deviceConfig.noPreSilencedOutputBuffer = 1;
+	deviceConfig.noClip                    = 0;
+	deviceConfig.noDisableDenormals        = 0;
+	deviceConfig.noFixedSizedCallback      = 1;
+	deviceConfig.dataCallback              = data_callback;
+	deviceConfig.capture.pDeviceID         = NULL;
+	deviceConfig.capture.format            = ma_format_f32;
+	deviceConfig.capture.channels          = NUM_CHANNELS_IN;
+	deviceConfig.capture.shareMode         = ma_share_mode_shared;
+	deviceConfig.playback.pDeviceID        = NULL;
+	deviceConfig.playback.format           = ma_format_f32;
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
-	deviceConfig.playback.channels		= NUM_CHANNELS_OUT;
+	deviceConfig.playback.channels         = NUM_CHANNELS_OUT;
 #else
-	deviceConfig.playback.channels		= 1; // Fake & muted
+	deviceConfig.playback.channels         = 1; // Fake & muted
 #endif
-	deviceConfig.playback.shareMode		= ma_share_mode_shared;
+	deviceConfig.playback.shareMode        = ma_share_mode_shared;
 
 	if (ma_device_init(NULL, &deviceConfig, &device) != MA_SUCCESS)
 		return false;
 
 	plugin_callbacks cbs = {
-		/* .handle		= */ NULL,
-		/* .format		= */ "android",
-		/* .get_bindir		= */ NULL,
-		/* .get_datadir		= */ NULL
+		/* .handle      = */ NULL,
+		/* .format      = */ "android",
+		/* .get_bindir  = */ NULL,
+		/* .get_datadir = */ NULL
 	};
 	plugin_init(&instance, &cbs);
 
@@ -249,6 +274,10 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 #endif
 
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
+#ifdef PARAM_OUT_CPU_INDEX
+	sample_rate = (float)device.sampleRate;
+#endif
+
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
