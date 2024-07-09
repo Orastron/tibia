@@ -18,6 +18,7 @@ cp $dir/plugin.h $dir/../out/web/src
 
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/android.json $dir/../templates/android $dir/../out/android
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/android.json,$dir/android-make.json $dir/../templates/android-make $dir/../out/android
+cp $dir/../templates/common/* $dir/../out/android/src/
 cp $dir/keystore.jks $dir/../out/android
 cp $dir/plugin.h $dir/../out/android/src
 
