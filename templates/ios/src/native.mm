@@ -96,7 +96,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 	(void)pDevice;
 
 #ifdef PARAM_OUT_CPU_INDEX
-    const unsigned long long processTimeStart = fatica_time_process();
+	const unsigned long long processTimeStart = fatica_time_process();
 #endif
     
 #if defined(__aarch64__)
@@ -301,7 +301,9 @@ char audioStart() {
 #endif
 	
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
+#ifdef PARAM_OUT_CPU_INDEX
 	sample_rate = (float)device.sampleRate;
+#endif
 
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
