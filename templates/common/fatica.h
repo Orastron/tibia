@@ -10,7 +10,7 @@ unsigned long long fatica_time_process(void);
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 
-#include <windows.h>
+# include <windows.h>
 
 static ULONGLONG filetime_to_ull(const FILETIME* ft) {
 	return (((ULONGLONG)ft->dwHighDateTime) << 32) + ft->dwLowDateTime;
@@ -28,13 +28,13 @@ unsigned long long fatica_time_process(void) {
 
 #elif defined(__linux__)
 
-#if __STDC_VERSION__ >= 199901L
-# define _XOPEN_SOURCE 600
-#else
-# define _XOPEN_SOURCE 500
-#endif
-#include <time.h>
-#include <unistd.h>
+# if __STDC_VERSION__ >= 199901L
+#  define _XOPEN_SOURCE 600
+# else
+#  define _XOPEN_SOURCE 500
+# endif
+# include <time.h>
+# include <unistd.h>
 
 unsigned long long fatica_time_process(void) {
 	struct timespec ts;
@@ -45,9 +45,9 @@ unsigned long long fatica_time_process(void) {
 
 #elif defined(__APPLE__)
 
-#include <unistd.h>
-#include <mach/mach.h>
-#include <mach/thread_act.h>
+# include <unistd.h>
+# include <mach/mach.h>
+# include <mach/thread_act.h>
 
 unsigned long long fatica_time_process(void) {
 	thread_t thread = mach_thread_self();
@@ -59,5 +59,7 @@ unsigned long long fatica_time_process(void) {
     	+ (info.user_time.microseconds + info.system_time.microseconds) / 1000;
 }
 
+#else
+# error "System not supported"
 #endif
 #endif // FATICA_H
