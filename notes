@@ -4,18 +4,21 @@ company {
 		LV2: manifest.ttl doap:maintainer foaf:name
 		web: not used
 		cmd: not used
+		ios: not used
 		android: not used
 	url:
 		VST3: PFactoryInfo.url
 		LV2: manifest.ttl doap:maintainer rdfs:seeAlso
 		web: not used
 		cmd: not used
+		ios: not used
 		android: not used
 	email:
 		VST3: PFactoryInfo.email
 		LV2: manifest.ttl doap:maintainer foaf:mbox
 		web: not used
 		cmd: not used
+		ios: not used
 		android: not used
 }
 
@@ -25,24 +28,28 @@ product {
 		LV2: manifest.ttl plugin doap:name
 		web: web-demo <title> and <h1>
 		cmd: not used
+		ios: index.html <title>
 		android: index.html <title>, AndroidManifest.xml <application> <activity> android:label
 	version:
 		VST3: PClassInfo{2,W}.version (first 3 numbers)
 		LV2: not used
 		web: not used
 		cmd: not used
+		ios: not used
 		android: not used
 	buildVersion:
 		VST3: PClassInfo{2,W}.version (last number)
 		LV2: not used
 		web: not used
 		cmd: not used
+		ios: not used
 		android: not used
 	bundleName:
 		VST3: plugin folder name, plugin .dll name, Info.plist
 		LV2: plugin folder name, plugin .dll name, manifest.ttl plugin lv2:binary
 		web: registerProcessor(), output file names
 		cmd: executable file name
+		ios: project.yml name/target, vars.mk BUNDLE_NAME
 		android: .so/.apk filenames
 	buses: [
 		{
@@ -52,6 +59,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:name
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			shortName:
 				bus short name string, required
@@ -59,6 +67,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:shortName
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			id:
 				bus unique id string, required
@@ -66,6 +75,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:symbol (resulting ports can have _l or _r appended)
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			direction:
 				"input" or "output", required
@@ -73,6 +83,7 @@ product {
 				LV2: manifest.ttl lv2:port a - lots of implications
 				web: AudioWorkletNode.{numberOfInputs,numberOfOutputs,outputChannelCount} - lots of implications
 				cmd: lots of places
+				ios: data.h, index.html
 				android: lots of places
 			type:
 				"audio" or "midi", required
@@ -80,6 +91,7 @@ product {
 				LV2: lots of implications everywhere
 				web: AudioWorkletNode.{numberOfInputs,numberOfOutputs,outputChannelCount} - lots of implications
 				cmd: lots of places
+				ios: data.h, index.html
 				android: lots of places
 			channels:
 				"mono" or "stereo", audio type only, required
@@ -87,6 +99,7 @@ product {
 				LV2: manifest.ttl lv2:port - lots of implications
 				web: AudioWorkletNode.outputChannelCount - lots of implications
 				cmd: lots of places
+				ios: data.h
 				android: lots of places
 			sidechain:
 				bus is not part of main audio path (sidechain)? boolean, default false
@@ -94,6 +107,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty lv2:isSideChain
 				web: web-demo choice of audio I/O buses
 				cmd: choice of audio I/O buses
+				ios: choice of audio I/O buses
 				android: choice of audio I/O buses
 			cv:
 				bus is control voltage audio-rate? boolean, audio type only, default false
@@ -101,6 +115,7 @@ product {
 				LV2: manifest.ttl lv2:port a lv2:CVPort
 				web: web-demo choice of audio I/O buses
 				cmd: choice of audio I/O buses
+				ios: choice of audio I/O buses
 				android: choice of audio I/O buses
 			control:
 				bus is the "primary control channel" (send cmds, receive responses)? boolean, midi type only, default false
@@ -108,6 +123,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:designation lv2:control
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			optional:
 				bus is optionally connected? boolean, default false
@@ -115,6 +131,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty lv2:connectionOptional
 				web: not used
 				cmd: whether to pass NULLs if not chosen audio I/O buses
+				ios: whether to pass NULLs if not chosen audio I/O buses
 				android: whether to pass NULLs if not chosen audio I/O buses
 		}
 	]
@@ -126,6 +143,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:name
 				web: AudioWorkletProcessor.parameterDescriptors, web-demo <label>
 				cmd: not used
+				ios: index.html
 				android: index.html <label>
 			shortName:
 				parameter short name string, required
@@ -133,6 +151,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:shortName
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			id:
 				parameter unique id string, required
@@ -140,6 +159,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:symbol (bypass ports used "enabled")
 				web: not used
 				cmd: command line parameter name etc.
+				ios: not used
 				android: not used
 			direction:
 				"input" or "output", required
@@ -147,6 +167,7 @@ product {
 				LV2: manifest.ttl lv2:port a - lots of implications
 				web: AudioWorkletProcessor.parameterDescriptors, web-demo <range> readonly/input listener - lots of implications
 				cmd: lots of places
+				ios: data.h, index.html
 				android: lots of places
 			isBypass:
 				parameter is bypass/enabled? boolean - lots of implications, default false
@@ -154,6 +175,7 @@ product {
 				LV2: manifest.ttl lv2:port, run() (set parameter)
 				web: AudoWorkletProcessor.process(), web-demo <range> min/max/step
 				cmd: set parameter
+				ios: native.mm set parameter, index.html <range> min/max/step
 				android: JNI set parameter, index.html <range> min/max/step
 			isLatency:
 				parameter is latency output? boolean - lots of implications, default false
@@ -161,21 +183,23 @@ product {
 				LV2: manifest.ttl lv2:port, TBD round output value
 				web: not (yet) used
 				cmd: not (yet) used
+				ios: not used
 				android: not (yet) used
 			isCpumeter:
-				parameter is output cpu meter? boolean
-				VST3: TODO
+				parameter is output cpu meter? boolean. It must be an output parameter. It is handled within the wrappers, and not by the plugin user code
+				VST3: data.h, vst3.c
 				LV2: data.h, lv2.c
-				web: TODO
+				web: processor.js
 				cmd: TODO
-				android: TODO
-				ios: TODO
+				ios: data.h native.mm
+				android: data.h jni.cpp
 			defaultValue:
 				default value, number, mapped, required for non-bypass
 				VST3: ParameterInfo defaultNormalizedValue, controller initialize
 				LV2: manifest.ttl lv2:port lv2:default, activate() (set initial parameter)
 				web: AudioWorkletProcessor.parameterDescriptors, processor_new(), web-demo initial <range> value and value <span> innerText
 				cmd: default parameter value
+				ios: native.mm set parameter initial value, index.html initial <range> value
 				android: JNI set parameter initial value, index.html initial <range> value
 			minimum:
 				minimum value, number, mapped, required for non-bypass
@@ -183,6 +207,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:minimum, run() (set parameter, value clamped)
 				web: AudioWorkletProcessor.parameterDescriptors, AudioWorkletProcessor.process() (value clamped), web-demo <range> mapping
 				cmd: set parameter (value clamped)
+				ios: native.mm set parameter (value clamped), index.html <range> mapping
 				android: JNI set parameter (value clamped), index.html <range> mapping
 			maximum:
 				maximum value, number, mapped, required for non-bypass
@@ -190,6 +215,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:maximum, run() (set parameter, value clamped)
 				web: AudioWorkletProcessor.parameterDescriptors, AudioWorkletProcessor.process() (value clamped), web-demo <range> mapping
 				cmd: set parameter (value clamped)
+				ios: native.mm set parameter (value clamped), index.html <range> mapping
 				android: JNI set parameter (value clamped), index.html <range> mapping
 			toggled:
 				parameter is on/off? boolean, default false
@@ -197,6 +223,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty lv2:toggled, run() (set parameter)
 				web: AudoWorkletProcessor.process(), web-demo <range> min/max/step
 				cmd: set parameter
+				ios: native.mm set parameter, index.html <range> min/max/step
 				android: JNI set parameter, index.html <range> min/max/step
 			optional:
 				parameter is optionally connected? boolean, default false
@@ -204,6 +231,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty lv2:connectionOptional
 				web: not used
 				cmd: not used
+				ios: not used
 				android: not used
 			integer:
 				parameter values are integers? boolean, default false
@@ -211,6 +239,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty lv2:integer, run() (set parameter)
 				web: AudoWorkletProcessor.process(), web-demo <range> step
 				cmd: set parameter
+				ios: native.mm set parameter, index.html <range> step
 				android: JNI set parameter, index.html <range> step
 			scalePoints:
 				{ "label1": value1, "label2", value2, ... }
@@ -219,6 +248,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:scalePoint
 				web: not (yet) used
 				cmd: not (yet) used
+				ios: not (yet) used
 				android: not (yet) used
 			list:
 				parameter is a list (using scalePoints values)? default false
@@ -226,6 +256,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:enumeration - run() (set parameter) TBD?
 				web: TBD (approx to closest? dropdown? both?)
 				cmd: not (yet) used
+				ios: not (yet) used
 				android: not (yet) used
 			unit:
 				unit of measure (from predefined list, see tibia-index.js), default ""
@@ -233,6 +264,7 @@ product {
 				LV2: manifest.ttl lv2:port units:unit
 				web: web-demo value <span> innerText
 				cmd: not (yet) used
+				ios: not (yet) used
 				android: not (yet) used
 			map:
 				"linear" vs "logarithmic"
@@ -240,6 +272,7 @@ product {
 				LV2: manifest.ttl lv2:port lv2:portProperty pprops:logarithmic
 				web: web-demo <range> values
 				cmd: not used
+				ios: index.html <range> values
 				android: index.html <range> values
 		}
 	]
