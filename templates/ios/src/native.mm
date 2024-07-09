@@ -301,7 +301,10 @@ char audioStart() {
 #endif
 	
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
-    sample_rate = (float)device.sampleRate;
+#ifdef PARAM_OUT_CPU_INDEX
+	sample_rate = (float)device.sampleRate;
+#endif
+
 	size_t req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
