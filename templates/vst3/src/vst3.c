@@ -1096,12 +1096,17 @@ static void plugViewUpdateAllParameters(plugView *view) {
 }
 
 static void plugViewSetParameterCb(void *handle, size_t index, float value) {
-	plugView *v = (plugView *)handle;
+	TRACE("set parameter cb\n");
+
 #  ifdef DATA_PARAM_LATENCY_INDEX
+	if (index == DATA_PARAM_LATENCY_INDEX)
+		return;
 	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
 #  endif
+	plugView *v = (plugView *)handle;
+	v->ctrl->parameters[index] = parameterAdjust(index, value); // let Reaper find the updated value
 	v->ctrl->componentHandler->lpVtbl->beginEdit(v->ctrl->componentHandler, parameterInfo[index].id);
-	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(index, parameterAdjust(index, value)));
+	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(index, v->ctrl->parameters[index]));
 	v->ctrl->componentHandler->lpVtbl->endEdit(v->ctrl->componentHandler, parameterInfo[index].id);
 }
 # endif
