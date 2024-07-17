@@ -33,7 +33,9 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+	void (*set_parameter_begin)(void *handle, size_t index);
 	void (*set_parameter)(void *handle, size_t index, float value);
+	void (*set_parameter_end)(void *handle, size_t index);
 } plugin_ui_callbacks;
 
 #pragma GCC diagnostic push
@@ -1095,6 +1097,18 @@ static void plugViewUpdateAllParameters(plugView *view) {
 		plugin_ui_set_parameter(view->ui, parameterData[i].index, view->ctrl->parameters[i]);
 }
 
+static void plugViewSetParameterBeginCb(void *handle, size_t index) {
+	TRACE("set parameter begin cb\n");
+
+#  ifdef DATA_PARAM_LATENCY_INDEX
+	if (index == DATA_PARAM_LATENCY_INDEX)
+		return;
+	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
+#  endif
+	plugView *v = (plugView *)handle;
+	v->ctrl->componentHandler->lpVtbl->beginEdit(v->ctrl->componentHandler, parameterInfo[index].id);
+}
+
 static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 	TRACE("set parameter cb\n");
 
@@ -1105,10 +1119,21 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 #  endif
 	plugView *v = (plugView *)handle;
 	v->ctrl->parameters[index] = parameterAdjust(index, value); // let Reaper find the updated value
-	v->ctrl->componentHandler->lpVtbl->beginEdit(v->ctrl->componentHandler, parameterInfo[index].id);
 	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(index, v->ctrl->parameters[index]));
+}
+
+static void plugViewSetParameterEndCb(void *handle, size_t index) {
+	TRACE("set parameter end cb\n");
+
+#  ifdef DATA_PARAM_LATENCY_INDEX
+	if (index == DATA_PARAM_LATENCY_INDEX)
+		return;
+	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
+#  endif
+	plugView *v = (plugView *)handle;
 	v->ctrl->componentHandler->lpVtbl->endEdit(v->ctrl->componentHandler, parameterInfo[index].id);
 }
+
 # endif
 
 # ifdef __APPLE__
@@ -1144,9 +1169,13 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		/* .get_bindir		= */ get_bindir_cb,
 		/* .get_datadir		= */ get_datadir_cb,
 # if DATA_PRODUCT_PARAMETERS_N > 0
-		/* .set_parameter	= */ plugViewSetParameterCb
+		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
+		/* .set_parameter	= */ plugViewSetParameterCb,
+		/* .set_parameter_end	= */ plugViewSetParameterEndCb
 # else
-		/* .set_parameter	= */ NULL
+		/* .set_parameter_begin	= */ NULL,
+		/* .set_parameter	= */ NULL,
+		/* .set_parameter_end	= */ NULL
 # endif
 	};
 	v->ui = plugin_ui_create(1, parent, &cbs);

@@ -33,7 +33,9 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+	void (*set_parameter_begin)(void *handle, size_t index);
 	void (*set_parameter)(void *handle, size_t index, float value);
+	void (*set_parameter_end)(void *handle, size_t index);
 } plugin_ui_callbacks;
 
 #include "data.h"
@@ -360,11 +362,21 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 }
 
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+static void ui_set_parameter_begin_cb(void *handle, size_t index) {
+	(void)handle;
+	(void)index;
+}
+
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
 	index = index_to_param[index];
 	value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
 	instance->write(instance->controller, index, sizeof(float), 0, &value);
+}
+
+static void ui_set_parameter_end_cb(void *handle, size_t index) {
+	(void)handle;
+	(void)index;
 }
 # endif
 
@@ -395,9 +407,13 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 		/* .get_bindir		= */ ui_get_bundle_path_cb,
 		/* .get_datadir		= */ ui_get_bundle_path_cb,
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-		/* .set_parameter	= */ ui_set_parameter_cb
+		/* .set_parameter_begin	= */ ui_set_parameter_begin_cb,
+		/* .set_parameter	= */ ui_set_parameter_cb,
+		/* .set_parameter_end	= */ ui_set_parameter_end_cb
 # else
-		/* .set_parameter	= */ NULL
+		/* .set_parameter_begin	= */ NULL,
+		/* .set_parameter	= */ NULL,
+		/* .set_parameter_end	= */ NULL
 # endif
 	};
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0

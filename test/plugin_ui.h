@@ -40,6 +40,8 @@ typedef struct {
 	char			bypass;
 	float			y_z1;
 
+	int			param_down;
+
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
@@ -144,7 +146,7 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 			puglPostRedisplay(instance->view);
 		}
 			break;
-		case PUGL_BUTTON_RELEASE:
+		case PUGL_BUTTON_PRESS:
 		{
 			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
 			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
@@ -155,24 +157,78 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 
 			if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.15 * h && ev->y <= y + 0.25 * h) {
+				instance->param_down = 0;
 				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 0);
 				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.3 * h && ev->y <= y + 0.4 * h) {
+				instance->param_down = 1;
 				instance->delay = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 1);
 				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.45 * h && ev->y <= y + 0.55 * h) {
+				instance->param_down = 2;
 				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 2);
 				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
 			    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
-				instance->bypass = !instance->bypass;
-				instance->cbs.set_parameter(instance->cbs.handle, 3, instance->bypass ? 1.f : 0.f);
+				instance->param_down = 3;
+			}
+		}
+			break;
+		case PUGL_MOTION:
+		{
+			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			const PuglMotionEvent *ev = (const PuglMotionEvent *)event;
+			double x = instance->x;
+			double w = instance->w;
+			float v = ev->x < x + 0.1 * w ? 0.f : (ev->x > x + 0.9 * w ? 1.f : (float)((ev->x - (x + 0.1 * w)) / (0.8 * w)));
+
+			switch (instance->param_down) {
+			case 0:
+				instance->gain = v;
+				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
 				puglPostRedisplay(instance->view);
+				break;
+			case 1:
+				instance->delay = v;
+				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
+				puglPostRedisplay(instance->view);
+				break;
+			case 2:
+				instance->cutoff = v;
+				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
+				puglPostRedisplay(instance->view);
+				break;
+			}
+		}
+			break;
+		case PUGL_BUTTON_RELEASE:
+		{
+			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
+			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
+			double x = instance->x;
+			double y = instance->y;
+			double w = instance->w;
+			double h = instance->h;
+
+			if (instance->param_down == 3)
+				if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
+				    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
+					instance->bypass = !instance->bypass;
+					instance->cbs.set_parameter(instance->cbs.handle, 3, instance->bypass ? 1.f : 0.f);
+					puglPostRedisplay(instance->view);
+				}
+
+			if (instance->param_down != -1) {
+				instance->cbs.set_parameter_end(instance->cbs.handle, instance->param_down);
+				instance->param_down = -1;
 			}
 		}
 			break;
@@ -193,6 +249,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	plugin_ui *instance = malloc(sizeof(plugin_ui));
 	if (instance == NULL)
 		return NULL;
+	instance->param_down = -1;
 	instance->world = puglNewWorld(PUGL_MODULE, 0);
 	instance->view = puglNewView(instance->world);
 	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, WIDTH, HEIGHT);
