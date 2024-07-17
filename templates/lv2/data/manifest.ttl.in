@@ -125,15 +125,11 @@
 {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}}
 	a ui:@UI_TYPE@ ;
 	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;
-	lv2:extensionData ui:resize ;
 {{?!it.product.ui.userResizable}}
 	lv2:optionalFeature ui:noUserResize ; # doesn't work as lv2:requiredFeature, don't ask me why
 {{?!it.product.ui.selfResizable}}
 	lv2:optionalFeature ui:fixedSize ;
 {{?}}
-{{?}}
-{{?it.product.ui.selfResizable}}
-	lv2:optionalFeature ui:resize ;
 {{?}}
 	lv2:requiredFeature ui:idleInterface ;
 	lv2:extensionData ui:idleInterface .

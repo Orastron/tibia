@@ -346,6 +346,8 @@ typedef struct {
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	LV2UI_Write_Function	write;
 	LV2UI_Controller	controller;
+	char			has_touch;
+	LV2UI_Touch		touch;
 # endif
 } ui_instance;
 
@@ -363,8 +365,11 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void ui_set_parameter_begin_cb(void *handle, size_t index) {
-	(void)handle;
-	(void)index;
+	ui_instance *instance = (ui_instance *)handle;
+	if (instance->has_touch) {
+		index = index_to_param[index];
+		instance->touch.touch(instance->touch.handle, index, true);
+	}
 }
 
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
@@ -375,23 +380,17 @@ static void ui_set_parameter_cb(void *handle, size_t index, float value) {
 }
 
 static void ui_set_parameter_end_cb(void *handle, size_t index) {
-	(void)handle;
-	(void)index;
+	ui_instance *instance = (ui_instance *)handle;
+	if (instance->has_touch) {
+		index = index_to_param[index];
+		instance->touch.touch(instance->touch.handle, index, false);
+	}
 }
 # endif
 
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
 	(void)descriptor;
 	(void)plugin_uri;
-	(void)bundle_path;
-
-	char has_parent = 0;
-	void *parent = NULL;
-	for (size_t i = 0; features[i] != NULL; i++)
-		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
-			has_parent = 1;
-			parent = features[i]->data;
-		}
 
 	ui_instance *instance = malloc(sizeof(ui_instance));
 	if (instance == NULL)
@@ -400,6 +399,20 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	instance->bundle_path = strdup(bundle_path);
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
+
+	char has_parent = 0;
+	void *parent = NULL;
+	instance->has_touch = 0;
+	for (size_t i = 0; features[i] != NULL; i++) {
+		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
+			has_parent = 1;
+			parent = features[i]->data;
+		}
+		if (!strcmp(features[i]->URI, LV2_UI__touch)) {
+			instance->has_touch = 1;
+			instance->touch = *((LV2UI_Touch *)features[i]->data);
+		}
+	}
 
 	plugin_ui_callbacks cbs = {
 		/* .handle		= */ (void *)instance,
