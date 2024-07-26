@@ -121,5 +121,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);
 	api.copyFile(`src${sep}lv2.c`, `src${sep}lv2.c`);
+	api.copyFile(`..${sep}common${sep}fatica.h`, `src${sep}fatica.h`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
 };

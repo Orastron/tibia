@@ -66,5 +66,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 	api.copyFile(`data${sep}PkgInfo`, `data${sep}PkgInfo`);
 	api.generateFileFromTemplateFile(`data${sep}Info.plist`, `data${sep}Info.plist`, data);
 	api.copyFile(`src${sep}vst3.c`, `src${sep}vst3.c`);
+	api.copyFile(`..${sep}common${sep}fatica.h`, `src${sep}fatica.h`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
 };

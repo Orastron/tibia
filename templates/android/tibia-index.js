@@ -27,4 +27,5 @@ module.exports = function (data, api) {
 	api.copyFile(`src${sep}jni.cpp`, `src${sep}jni.cpp`);
 	api.generateFileFromTemplateFile(`src${sep}MainActivity.java`, `src${sep}MainActivity.java`, data);
 	api.generateFileFromTemplateFile(`src${sep}index.html`, `src${sep}index.html`, data);
+	api.copyFile(`..${sep}common${sep}fatica.h`, `src${sep}fatica.h`);
 };
