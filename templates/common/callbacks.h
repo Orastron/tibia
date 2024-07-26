@@ -1,6 +1,8 @@
 #ifndef TIBIA_CALLBACKS_H
 #define TIBIA_CALLBACKS_H
 
+#include <inttypes.h>
+
 typedef struct {
 	void       *handle;
 	const char *format;
