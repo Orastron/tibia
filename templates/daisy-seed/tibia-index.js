@@ -24,4 +24,5 @@ var sep = path.sep;
 module.exports = function (data, api) {
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
 	api.copyFile(`src${sep}main.cpp`, `src${sep}main.cpp`);
+	api.copyFile(`..${sep}common${sep}callbacks.h`, `src${sep}callbacks.h`);
 };

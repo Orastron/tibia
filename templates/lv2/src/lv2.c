@@ -21,23 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-typedef struct {
-	void       *handle;
-	const char *format;
-	const char *(*get_bindir)(void *handle);
-	const char *(*get_datadir)(void *handle);
-} plugin_callbacks;
-
-typedef struct {
-	void       *handle;
-	const char *format;
-
-	const char *(*get_bindir)         (void *handle);
-	const char *(*get_datadir)        (void *handle);
-	void        (*set_parameter_begin)(void *handle, size_t index);
-	void        (*set_parameter)      (void *handle, size_t index, float value);
-	void        (*set_parameter_end)  (void *handle, size_t index);
-} plugin_ui_callbacks;
+#include "callbacks.h"
 
 #include "data.h"
 #pragma GCC diagnostic push
