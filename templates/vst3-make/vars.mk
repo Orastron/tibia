@@ -20,15 +20,17 @@
 
 BUNDLE_NAME    := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA   := {{=it.make?.cflags   ?? ""}} {{=it.vst3_make?.cflags   ?? ""}}
-CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.vst3_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA  := {{=it.make?.ldflags  ?? ""}} {{=it.vst3_make?.ldflags  ?? ""}}
-
-C_SRCS_EXTRA   := {{=it.make?.cSrcs    ?? ""}} {{=it.vst3_make?.cSrcs   ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs  ?? ""}} {{=it.vst3_make?.cxxSrcs ?? ""}}
-
 COMMON_DIR     := {{=it.vst3_make?.commonDir ?? (it.make?.commonDir ?? "")}}
 DATA_DIR       := {{=it.vst3_make?.dataDir   ?? (it.make?.dataDir   ?? "")}}
 PLUGIN_DIR     := {{=it.vst3_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+
+C_SRCS_EXTRA   := {{=it.make?.cSrcs    ?? ""}} {{=it.vst3_make?.cSrcs    ?? ""}}
+M_SRCS_EXTRA   := {{=it.make?.mSrcs    ?? ""}} {{=it.vst3_make?.mSrcs    ?? ""}}
+CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs  ?? ""}} {{=it.vst3_make?.cxxSrcs  ?? ""}}
+
+CFLAGS_EXTRA   := {{=it.make?.cflags   ?? ""}} {{=it.vst3_make?.cflags   ?? ""}}
+CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.vst3_make?.cxxflags ?? ""}}
+
+LDFLAGS_EXTRA  := {{=it.make?.ldflags  ?? ""}} {{=it.vst3_make?.ldflags  ?? ""}}
 
 HAS_UI         := {{=it.product.ui ? "yes" : "no"}}

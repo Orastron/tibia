@@ -86,6 +86,9 @@ DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
 C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
+M_SRCS := $(M_SRCS_EXTRA)
+M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
+
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
@@ -100,10 +103,10 @@ endif
 all: $(ALL)
 
 ifeq ($(CXX_OBJS),)
-build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
+build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
 	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
 else
-build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(CXX_OBJS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
+build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 
@@ -155,6 +158,9 @@ install-user: all
 PERCENT := %
 
 $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
+	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
+
+$(M_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).m,$$(M_SRCS)) | build/obj
 	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
 
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
