@@ -110,6 +110,9 @@ endif
 ifeq ($(UNAME_S), Darwin)
 build/$(BUNDLE_DIR)/Contents/%: $(DATA_DIR)/data/% | build/$(BUNDLE_DIR)/Contents
 	cp $^ $@
+
+build/$(BUNDLE_DIR)/Contents/%: $(COMMON_DIR)/data/% | build/$(BUNDLE_DIR)/Contents
+	cp $^ $@
 endif
 
 build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/$(DLL_DIR) build/obj:
