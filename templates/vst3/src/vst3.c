@@ -203,6 +203,10 @@ typedef struct pluginInstance {
 #if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
 	float                                         *outputs[DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N];
 #endif
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+	// see https://github.com/steinbergmedia/vst3sdk/issues/128
+	char						neededBusesActive;
+#endif
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 	char                                           inputsActive[DATA_PRODUCT_BUSES_AUDIO_INPUT_N];
 #endif
@@ -300,21 +304,24 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 			plugin_set_parameter(&p->p, parameterData[i].index, parameterData[i].def);
 	}
 #endif
-#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+	p->neededBusesActive = 0;
+# if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_INPUT_N; i++)
 		p->inputsActive[i] = 0;
-#endif
-#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+# endif
+# if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N; i++)
 		p->outputsActive[i] = 0;
-#endif
-#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+# endif
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
 		p->midiInputsActive[i] = 0;
-#endif
-#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+# endif
+# if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_OUTPUT_N; i++)
 		p->midiOutputsActive[i] = 0;
+# endif
 #endif
 	p->mem = NULL;
 #ifdef PARAM_OUT_CPU_INDEX
@@ -470,25 +477,28 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 		p->mem = NULL;
 	}
 	if (state) {
-#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
-		for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_INPUT_N; i++)
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+		p->neededBusesActive = 1;
+# if DATA_PRODUCT_BUSES_AUDIO_INPUT_N > 0
+		for (size_t i = 0; p->neededBusesActive && i < DATA_PRODUCT_BUSES_AUDIO_INPUT_N; i++)
 			if (!p->inputsActive[i] && (busInfoAudioInput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
-				return Steinberg_kResultFalse;
-#endif
-#if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
-		for (size_t i = 0; i < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N; i++)
+				p->neededBusesActive = 0;
+# endif
+# if DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N > 0
+		for (size_t i = 0; p->neededBusesActive && i < DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N; i++)
 			if (!p->outputsActive[i] && (busInfoAudioOutput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
-				return Steinberg_kResultFalse;
-#endif
-#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-		for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
+				p->neededBusesActive = 0;
+# endif
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+		for (size_t i = 0; p->neededBusesActive && i < DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
 			if (!p->midiInputsActive[i] && (busInfoMidiInput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
-				return Steinberg_kResultFalse;
-#endif
-#if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
-		for (size_t i = 0; i < DATA_PRODUCT_BUSES_MIDI_OUTPUT_N; i++)
+				p->neededBusesActive = 0;
+# endif
+# if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+		for (size_t i = 0; p->neededBusesActive && i < DATA_PRODUCT_BUSES_MIDI_OUTPUT_N; i++)
 			if (!p->midiOutputsActive[i] && (busInfoMidiOutput[i].flags & Steinberg_Vst_BusInfo_BusFlags_kDefaultActive))
-				return Steinberg_kResultFalse;
+				p->neededBusesActive = 0;
+# endif
 #endif
 		plugin_set_sample_rate(&p->p, p->sampleRate);
 		size_t req = plugin_mem_req(&p->p);
@@ -789,27 +799,39 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	}
 #endif
 
-#if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
-	const float **inputs = p->inputs;
-	Steinberg_int32 ki = 0;
-	for (Steinberg_int32 i = 0; i < data->numInputs; i++)
-		for (Steinberg_int32 j = 0; j < data->inputs[i].numChannels; j++, ki++)
-			inputs[ki] = data->inputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
-#else
-	const float **inputs = NULL;
-#endif
+#if DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
+	if (p->neededBusesActive) {
+# if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
+		const float **inputs = p->inputs;
+		Steinberg_int32 ki = 0;
+		for (Steinberg_int32 i = 0; i < data->numInputs; i++)
+			for (Steinberg_int32 j = 0; j < data->inputs[i].numChannels; j++, ki++)
+				inputs[ki] = data->inputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
+# else
+		const float **inputs = NULL;
+# endif
 
-#if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
-	float **outputs = p->outputs;
-	Steinberg_int32 ko = 0;
-	for (Steinberg_int32 i = 0; i < data->numOutputs; i++)
-		for (Steinberg_int32 j = 0; j < data->outputs[i].numChannels; j++, ko++)
-			outputs[ko] = data->outputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
-#else
-	float **outputs = NULL;
-#endif
+# if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
+		float **outputs = p->outputs;
+		Steinberg_int32 ko = 0;
+		for (Steinberg_int32 i = 0; i < data->numOutputs; i++)
+			for (Steinberg_int32 j = 0; j < data->outputs[i].numChannels; j++, ko++)
+				outputs[ko] = data->outputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j];
+# else
+		float **outputs = NULL;
+# endif
 
-	plugin_process(&p->p, inputs, outputs, data->numSamples);
+		plugin_process(&p->p, inputs, outputs, data->numSamples);
+	} else {
+# if DATA_PRODUCT_CHANNELS_AUDIO_OUTPUT_N > 0
+		for (Steinberg_int32 i = 0; i < data->numOutputs; i++)
+			for (Steinberg_int32 j = 0; j < data->outputs[i].numChannels; j++)
+				memset(data->outputs[i].Steinberg_Vst_AudioBusBuffers_channelBuffers32[j], 0, data->numSamples * sizeof(float));
+# endif
+	}
+#else
+	plugin_process(&p->p, NULL, NULL, data->numSamples);
+#endif
 
 	processParams(p, data, 0); 
 
