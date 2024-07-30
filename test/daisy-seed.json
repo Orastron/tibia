@@ -1,5 +1,5 @@
 {
 	"daisy_seed": {
-		"parameterPins": [ 15, 16, 17, 18, 22 ]
+		"parameterPins" : [ 15, 16, 17, 18, 22 ]
 	}
 }

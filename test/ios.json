@@ -1,5 +1,5 @@
 {
 	"ios": {
-		"productBundleIdentifier": "com.example.tibia-test"
+		"productBundleIdentifier" : "com.example.tibia-test"
 	}
 }

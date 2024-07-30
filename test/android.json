@@ -1,5 +1,5 @@
 {
 	"android": {
-		"javaPackageName": "com.example.tibia_test"
+		"javaPackageName" : "com.example.tibia_test"
 	}
 }

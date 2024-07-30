@@ -1,7 +1,8 @@
 {
 	"company": {
-		"name":		"Example company",
-		"url":		"https://www.example.com/",
-		"email":	"info@example.com"
+		"name":   "Example company",
+		"url":    "https://www.example.com/",
+		"email":  "info@example.com",
+		"domain": "com.example"
 	}
 }

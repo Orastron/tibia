@@ -1,5 +1,5 @@
 {
 	"daisy_seed_make": {
-		"libdaisyDir": "../../../libDaisy"
+		"libdaisyDir" : "../../../libDaisy"
 	}
 }
