@@ -1,7 +1,7 @@
 #ifndef TIBIA_CALLBACKS_H
 #define TIBIA_CALLBACKS_H
 
-#include <inttypes.h>
+#include <stddef.h>
 
 typedef struct {
 	void       *handle;
