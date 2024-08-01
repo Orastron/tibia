@@ -20,8 +20,8 @@
 
 BUNDLE_NAME    := {{=it.product.bundleName}}
 
-C_SRCS_EXTRA   := {{=it.make?.cSrcs         ?? ""}} {{=it.cmd_make?.cSrcs   ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs       ?? ""}} {{=it.cmd_make?.cxxSrcs ?? ""}}
+C_SRCS_EXTRA   := {{=it.make?.cSrcs         ?? ""}} {{=it.ios_make?.cSrcs   ?? ""}}
+CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs       ?? ""}} {{=it.ios_make?.cxxSrcs ?? ""}}
 SRCS_EXTRA     := {{=it.ios_make?.srcsExtra ?? ""}}
 
 COMMON_DIR     := {{=it.ios_make?.commonDir ?? (it.make?.commonDir ?? "")}}
