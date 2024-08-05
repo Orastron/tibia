@@ -5,18 +5,21 @@ company {
 		web: not used
 		cmd: not used
 		android: not used
+		ios: not used
 	url:
 		VST3: PFactoryInfo.url
 		LV2: manifest.ttl doap:maintainer rdfs:seeAlso
 		web: not used
 		cmd: not used
 		android: not used
+		ios: not used
 	email:
 		VST3: PFactoryInfo.email
 		LV2: manifest.ttl doap:maintainer foaf:mbox
 		web: not used
 		cmd: not used
 		android: not used
+		ios: not used
 }
 
 product {
@@ -26,24 +29,28 @@ product {
 		web: web-demo <title> and <h1>
 		cmd: not used
 		android: index.html <title>, AndroidManifest.xml <application> <activity> android:label
+		ios: index.html <title>
 	version:
 		VST3: PClassInfo{2,W}.version (first 3 numbers)
 		LV2: not used
 		web: not used
 		cmd: not used
 		android: not used
+		ios: not used
 	buildVersion:
 		VST3: PClassInfo{2,W}.version (last number)
 		LV2: not used
 		web: not used
 		cmd: not used
 		android: not used
+		ios: not used
 	bundleName:
 		VST3: plugin folder name, plugin .dll name, Info.plist
 		LV2: plugin folder name, plugin .dll name, manifest.ttl plugin lv2:binary
 		web: registerProcessor(), output file names
 		cmd: executable file name
 		android: .so/.apk filenames
+		ios: xcodegen name and target name, xcodeproj filename
 	buses: [
 		{
 			name:
@@ -53,6 +60,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			shortName:
 				bus short name string, required
 				VST3: not used
@@ -60,6 +68,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			id:
 				bus unique id string, required
 				VST3; not used
@@ -67,6 +76,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			direction:
 				"input" or "output", required
 				VST3: BusInfo flags - lots of implications
@@ -74,6 +84,7 @@ product {
 				web: AudioWorkletNode.{numberOfInputs,numberOfOutputs,outputChannelCount} - lots of implications
 				cmd: lots of places
 				android: lots of places
+				ios: lots of places
 			type:
 				"audio" or "midi", required
 				VST3: BusInfo mediaType, ParameterInfo (channel pressure, pitch bend params) - lots of implications
@@ -81,6 +92,7 @@ product {
 				web: AudioWorkletNode.{numberOfInputs,numberOfOutputs,outputChannelCount} - lots of implications
 				cmd: lots of places
 				android: lots of places
+				ios: lots of places
 			channels:
 				"mono" or "stereo", audio type only, required
 				VST3: BusInfo channelCount, plugin get/set bus arrangements
@@ -88,6 +100,7 @@ product {
 				web: AudioWorkletNode.outputChannelCount - lots of implications
 				cmd: lots of places
 				android: lots of places
+				ios: lots of places
 			sidechain:
 				bus is not part of main audio path (sidechain)? boolean, default false
 				VST3: BusInfo busType
@@ -102,6 +115,7 @@ product {
 				web: web-demo choice of audio I/O buses
 				cmd: choice of audio I/O buses
 				android: choice of audio I/O buses
+				ios: choice of audio I/O buses
 			control:
 				bus is the "primary control channel" (send cmds, receive responses)? boolean, midi type only, default false
 				VST3: not used
@@ -109,6 +123,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			optional:
 				bus is optionally connected? boolean, default false
 				VST3: BusInfo flags, plugin initialize, activate bus, set active
@@ -116,6 +131,7 @@ product {
 				web: not used
 				cmd: whether to pass NULLs if not chosen audio I/O buses
 				android: whether to pass NULLs if not chosen audio I/O buses
+				ios: whether to pass NULLs if not chosen audio I/O buses
 		}
 	]
 	parameters: [
@@ -127,6 +143,7 @@ product {
 				web: AudioWorkletProcessor.parameterDescriptors, web-demo <label>
 				cmd: not used
 				android: index.html <label>
+				ios: index.html <label>
 			shortName:
 				parameter short name string, required
 				VST3: ParameterInfo shortTitle
@@ -134,6 +151,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			id:
 				parameter unique id string, required
 				VST3; not used
@@ -141,6 +159,7 @@ product {
 				web: not used
 				cmd: command line parameter name etc.
 				android: not used
+				ios: not used
 			direction:
 				"input" or "output", required
 				VST3: ParameterInfo flags - lots of implications
@@ -148,6 +167,7 @@ product {
 				web: AudioWorkletProcessor.parameterDescriptors, web-demo <range> readonly/input listener - lots of implications
 				cmd: lots of places
 				android: lots of places
+				ios: lots of places
 			isBypass:
 				parameter is bypass/enabled? boolean - lots of implications, default false
 				VST3: ParameterInfo, controller get/set parameter/state
@@ -155,6 +175,7 @@ product {
 				web: AudoWorkletProcessor.process(), web-demo <range> min/max/step
 				cmd: set parameter
 				android: JNI set parameter, index.html <range> min/max/step
+				ios: native set parameter, index.html <range> min/max/step
 			isLatency:
 				parameter is latency output? boolean - lots of implications, default false
 				VST3: TBD
@@ -162,6 +183,7 @@ product {
 				web: not (yet) used
 				cmd: not (yet) used
 				android: not (yet) used
+				ios: not (yet) used
 			defaultValue:
 				default value, number, mapped, required for non-bypass
 				VST3: ParameterInfo defaultNormalizedValue, controller initialize
@@ -169,6 +191,7 @@ product {
 				web: AudioWorkletProcessor.parameterDescriptors, processor_new(), web-demo initial <range> value and value <span> innerText
 				cmd: default parameter value
 				android: JNI set parameter initial value, index.html initial <range> value
+				ios: native set parameter initial value, index.html initial <range> value
 			minimum:
 				minimum value, number, mapped, required for non-bypass
 				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
@@ -176,6 +199,7 @@ product {
 				web: AudioWorkletProcessor.parameterDescriptors, AudioWorkletProcessor.process() (value clamped), web-demo <range> mapping
 				cmd: set parameter (value clamped)
 				android: JNI set parameter (value clamped), index.html <range> mapping
+				ios: native set parameter (value clamped), index.html <range> mapping
 			maximum:
 				maximum value, number, mapped, required for non-bypass
 				VST3: ParameterInfo stepCount, defaultNormalizedValue, controller get/set parameter (value clamped)
@@ -183,6 +207,7 @@ product {
 				web: AudioWorkletProcessor.parameterDescriptors, AudioWorkletProcessor.process() (value clamped), web-demo <range> mapping
 				cmd: set parameter (value clamped)
 				android: JNI set parameter (value clamped), index.html <range> mapping
+				ios: native set parameter (value clamped), index.html <range> mapping
 			toggled:
 				parameter is on/off? boolean, default false
 				VST3: ParameterInfo stepCount, controller set parameter/state
@@ -190,6 +215,7 @@ product {
 				web: AudoWorkletProcessor.process(), web-demo <range> min/max/step
 				cmd: set parameter
 				android: JNI set parameter, index.html <range> min/max/step
+				ios: native set parameter, index.html <range> min/max/step
 			optional:
 				parameter is optionally connected? boolean, default false
 				VST3: not used
@@ -197,6 +223,7 @@ product {
 				web: not used
 				cmd: not used
 				android: not used
+				ios: not used
 			integer:
 				parameter values are integers? boolean, default false
 				VST3: ParameterInfo stepCount, controller set parameter/state
@@ -204,6 +231,7 @@ product {
 				web: AudoWorkletProcessor.process(), web-demo <range> step
 				cmd: set parameter
 				android: JNI set parameter, index.html <range> step
+				ios: native set parameter, index.html <range> step
 			scalePoints:
 				{ "label1": value1, "label2", value2, ... }
 				labeled values, default none
@@ -212,6 +240,7 @@ product {
 				web: not (yet) used
 				cmd: not (yet) used
 				android: not (yet) used
+				ios: not (yet) used
 			list:
 				parameter is a list (using scalePoints values)? default false
 				VST3: TBD (+approx to closest?)
@@ -219,6 +248,7 @@ product {
 				web: TBD (approx to closest? dropdown? both?)
 				cmd: not (yet) used
 				android: not (yet) used
+				ios: not (yet) used
 			unit:
 				unit of measure (from predefined list, see tibia-index.js), default ""
 				VST3: ParameterInfo units
@@ -226,6 +256,7 @@ product {
 				web: web-demo value <span> innerText
 				cmd: not (yet) used
 				android: not (yet) used
+				ios: not (yet) used
 			map:
 				"linear" vs "logarithmic"
 				VST3: many places (requires libm)
@@ -233,6 +264,7 @@ product {
 				web: web-demo <range> values
 				cmd: not used
 				android: index.html <range> values
+				ios: index.html <range> values
 		}
 	]
 }
