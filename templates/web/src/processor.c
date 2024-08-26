@@ -21,14 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct {
-	void *		handle;
-	const char *	format;
-	const char * (*get_bindir)(void *handle);
-	const char * (*get_datadir)(void *handle);
-} plugin_callbacks;
-
 #include "data.h"
+#include "plugin_api.h"
 #include "plugin.h"
 
 #include "string.h"
