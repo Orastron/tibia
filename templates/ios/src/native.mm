@@ -21,9 +21,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "callbacks.h"
-
 #include "data.h"
+#include "plugin_api.h"
 #include "plugin.h"
 #if PARAMETERS_N > 0
 # include <algorithm>

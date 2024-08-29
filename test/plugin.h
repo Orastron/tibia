@@ -68,17 +68,17 @@ static void plugin_reset(plugin *instance) {
 
 static void plugin_set_parameter(plugin *instance, size_t index, float value) {
 	switch (index) {
-	case 0:
+	case plugin_parameter_gain:
 		//approx instance->gain = powf(10.f, 0.05f * value);
 		instance->gain = ((2.6039890429412597e-4f * value + 0.032131027163547855f) * value + 1.f) / ((0.0012705124328080768f * value - 0.0666763481312185f) * value + 1.f);
 		break;
-	case 1:
+	case plugin_parameter_delay:
 		instance->delay = 0.001f * value;
 		break;
-	case 2:
+	case plugin_parameter_cutoff:
 		instance->cutoff = value;
 		break;
-	case 3:
+	case plugin_parameter_bypass:
 		instance->bypass = value >= 0.5f;
 		break;
 	}

@@ -21,9 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "callbacks.h"
-
 #include "data.h"
+#include "plugin_api.h"
 #include "plugin.h"
 
 #include "string.h"

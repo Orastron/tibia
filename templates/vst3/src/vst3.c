@@ -21,14 +21,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "callbacks.h"
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "vst3_c_api.h"
 #pragma GCC diagnostic pop
 
 #include "data.h"
+#include "plugin_api.h"
 #include "plugin.h"
 #ifdef DATA_UI
 # include "plugin_ui.h"

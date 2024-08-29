@@ -21,9 +21,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "callbacks.h"
-
 #include "data.h"
+#include "plugin_api.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #include "plugin.h"
