@@ -83,6 +83,9 @@ BUNDLE_DIR := $(BUNDLE_NAME).vst3
 DLL_DIR := Contents/$(PLATFORM)
 DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
 
+BUNDLE_DATA_PATH := build/$(BUNDLE_DIR)/Contents/Resources
+BUNDLE_BIN_PATH  := build/$(BUNDLE_DIR)/$(DLL_DIR)
+
 C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
@@ -119,6 +122,9 @@ build/$(BUNDLE_DIR)/Contents/%: $(COMMON_DIR)/data/% | build/$(BUNDLE_DIR)/Conte
 endif
 
 build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/$(DLL_DIR) build/obj:
+	mkdir -p $@
+
+${BUNDLE_DATA_PATH}:
 	mkdir -p $@
 
 clean:
