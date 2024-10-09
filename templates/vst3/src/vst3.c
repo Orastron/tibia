@@ -342,7 +342,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 static Steinberg_tresult pluginGetControllerClassId(void *thisInterface, Steinberg_TUID classId) {
 	(void)thisInterface;
 
-	TRACE("plugin get controller class id %p %p\n", thisInterface, classId);
+	TRACE("plugin get controller class id %p %s\n", thisInterface, classId);
 	if (classId != NULL) {
 		memcpy(classId, dataControllerCID, sizeof(Steinberg_TUID));
 		return Steinberg_kResultTrue;
@@ -1131,7 +1131,7 @@ static void plugViewUpdateAllParameters(plugView *view) {
 }
 
 static void plugViewSetParameterBeginCb(void *handle, size_t index) {
-	TRACE("set parameter begin cb\n");
+	TRACE("set parameter begin cb %zu \n", index);
 
 #  ifdef DATA_PARAM_LATENCY_INDEX
 	if (index == DATA_PARAM_LATENCY_INDEX)
@@ -1143,7 +1143,7 @@ static void plugViewSetParameterBeginCb(void *handle, size_t index) {
 }
 
 static void plugViewSetParameterCb(void *handle, size_t index, float value) {
-	TRACE("set parameter cb\n");
+	TRACE("set parameter cb A %zu %f \n", index, value);
 
 #  ifdef DATA_PARAM_LATENCY_INDEX
 	if (index == DATA_PARAM_LATENCY_INDEX)
@@ -1156,7 +1156,7 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 }
 
 static void plugViewSetParameterEndCb(void *handle, size_t index) {
-	TRACE("set parameter end cb\n");
+	TRACE("set parameter end cb %zu \n", index);
 
 #  ifdef DATA_PARAM_LATENCY_INDEX
 	if (index == DATA_PARAM_LATENCY_INDEX)
@@ -1679,7 +1679,7 @@ void TCharToD(Steinberg_Vst_TChar* s, double *v) {
 static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_TChar* string, Steinberg_Vst_ParamValue* valueNormalized) {
 	(void)thisInterface;
 
-	TRACE("controller get param value by string\n");
+	TRACE("controller get param value by string %d %s \n", parameterGetIndexById(id), string);
 	int pi = parameterGetIndexById(id);
 	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
@@ -1692,7 +1692,7 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	(void)thisInterface;
 
-	TRACE("controller normalized param to plain\n");
+	TRACE("controller normalized param to plain %d %f\n", parameterGetIndexById(id), valueNormalized);
 	int pi = parameterGetIndexById(id);
 	return pi >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(pi, valueNormalized);
 }
@@ -1700,13 +1700,13 @@ static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInter
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	(void)thisInterface;
 
-	TRACE("controller plain param to normalized\n");
+	TRACE("controller plain param to normalized %d %f\n", parameterGetIndexById(id), plainValue);
 	int pi = parameterGetIndexById(id);
 	return pi >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(pi, plainValue);
 }
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
-	TRACE("controller get param normalized\n");
+	TRACE("controller get param normalized %d \n", parameterGetIndexById(id));
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	int pi = parameterGetIndexById(id);
@@ -1723,7 +1723,7 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 }
 
 static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue value) {
-	TRACE("controller set param normalized\n");
+	TRACE("controller set param normalized %d %f\n", parameterGetIndexById(id), value);
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	int pi = parameterGetIndexById(id);
 	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
