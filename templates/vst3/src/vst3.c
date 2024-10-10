@@ -1307,6 +1307,8 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	size->left = 0;
 	size->top = 0;
+	size->right = 0;
+	size->bottom = 0;
 	if (v->ui) {
 # ifdef __linux__
 		XWindowAttributes attr;
@@ -1323,6 +1325,13 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 		CGFloat height = bounds.size.height;
 		size->right = width;
 		size->bottom = height;
+# endif
+# ifdef _WIN32
+		RECT rect;
+		if (GetWindowRect((HWND)*((char **)v->ui), &rect)) {
+			size->right  = rect.right - rect.left;
+			size->bottom = rect.bottom - rect.top;
+		}
 # endif
 	}
 	if (!v->ui || size->right < 1 || size->bottom < 1) {
