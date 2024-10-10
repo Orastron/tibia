@@ -1307,12 +1307,7 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	size->left = 0;
 	size->top = 0;
-	if (!v->ui) {
-		uint32_t width, height;
-		plugin_ui_get_default_size(&width, &height);
-		size->right = width;
-		size->bottom = height;
-	} else {
+	if (v->ui) {
 # ifdef __linux__
 		XWindowAttributes attr;
 		TRACE(" window %u\n", (Window)(*((char **)v->ui)));
@@ -1320,13 +1315,28 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 		size->right = attr.width;
 		size->bottom = attr.height;
 # endif
+# ifdef __APPLE__
+		SEL boundsSelector = sel_registerName("bounds");
+		CGRect (*boundsMsgSend)(id, SEL) = (CGRect (*)(id, SEL))objc_msgSend;
+		CGRect bounds = boundsMsgSend((id)(*((char **)v->ui)), boundsSelector);
+		CGFloat width = bounds.size.width;
+		CGFloat height = bounds.size.height;
+		size->right = width;
+		size->bottom = height;
+# endif
+	}
+	if (!v->ui || size->right < 1 || size->bottom < 1) {
+		uint32_t width, height;
+		plugin_ui_get_default_size(&width, &height);
+		size->right = width;
+		size->bottom = height;
 	}
 	TRACE(" %u x %u\n", size->right, size->bottom);
 	return Steinberg_kResultTrue;
 }
 
 static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_ViewRect* newSize) {
-	TRACE("plugView onSize %p\n", thisInterface);
+	TRACE("plugView onSize %p %d %d\n", thisInterface, newSize->right - newSize->left, newSize->bottom - newSize->top);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 	// TODO: if not resizable by both user and plugin just return false
 	if (!v->ui)
