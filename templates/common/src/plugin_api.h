@@ -47,6 +47,8 @@ enum {
 	{{~it.product.parameters :p}}
 	plugin_parameter_{{=p.id}},
 	{{~}}
+
+	plugin_parameter_count
 };
 {{?}}
 
