@@ -72,6 +72,9 @@ CXX_SRCS := $(COMMON_DIR)/src/new.cpp $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 endif
 
+BUNDLE_DATA_PATH := build/web
+BUNDLE_BIN_PATH  := build/web
+
 ALL := build/web/$(BUNDLE_NAME).wasm build/web/$(BUNDLE_NAME)_processor.js build/web/$(BUNDLE_NAME).js
 
 -include $(COMMON_DIR)/vars-extra.mk
