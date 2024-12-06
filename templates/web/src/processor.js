@@ -30,6 +30,8 @@ var nChansOut  = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0
 var cpu_meter  = 0.0;
 var sampleRate = 1.0;
 
+const now = globalThis.performance ? performance.now : Date.now;
+
 class Processor extends AudioWorkletProcessor {
 	constructor(options) {
 		super();
@@ -74,7 +76,7 @@ class Processor extends AudioWorkletProcessor {
 	}
 
 	process(inputs, outputs, params) {
-		const processTimeStart = performance.now();
+		const processTimeStart = now();
 
 		for (var i = 0; i < this.parametersIn.length; i++) {
 			var index = this.parametersIn[i].index;
@@ -158,7 +160,7 @@ class Processor extends AudioWorkletProcessor {
 				this.parametersOut[i].value = value;
 			}
 		}
-		const processTimeEnd = performance.now();
+		const processTimeEnd = now();
 		const processTimeMs  = processTimeEnd - processTimeStart;
 		const processTimeS   = processTimeMs * 0.001;
 		cpu_meter = cpu_meter * 0.9 + (processTimeS * sampleRate) * 0.1;

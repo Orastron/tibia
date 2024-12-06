@@ -89,10 +89,10 @@ build/web/$(BUNDLE_NAME).wasm: $(C_OBJS) $(CXX_OBJS) | build/web
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 
-build/web/$(BUNDLE_NAME)_processor.js: $(DATA_DIR)/src/processor.js | build/web
+build/web/$(BUNDLE_NAME)_processor.js: $(DATA_DIR)/res/processor.js | build/web
 	cp $^ $@
 
-build/web/$(BUNDLE_NAME).js: $(DATA_DIR)/src/module.js | build/web
+build/web/$(BUNDLE_NAME).js: $(DATA_DIR)/res/module.js | build/web
 	cp $^ $@
 
 build/web build/obj:
