@@ -18,19 +18,19 @@
  * File author: Stefano D'Angelo
  */
 
-var buses      = {{=JSON.stringify(it.product.buses, null, 2)}};
-var parameters = {{=JSON.stringify(it.product.parameters, null, 2)}};
+const buses      = {{=JSON.stringify(it.product.buses, null, 2)}};
+const parameters = {{=JSON.stringify(it.product.parameters, null, 2)}};
 
-var busesIn    = buses.filter(x => x.type == "audio" && x.direction == "input");
-var busesOut   = buses.filter(x => x.type == "audio" && x.direction == "output");
+const busesIn    = buses.filter(x => x.type == "audio" && x.direction == "input");
+const busesOut   = buses.filter(x => x.type == "audio" && x.direction == "output");
 
-var nChansIn   = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
-var nChansOut  = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+const nChansIn   = busesIn.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
+const nChansOut  = busesOut.reduce((a, x) => a + (x.channels == "mono" ? 1 : 2), 0);
 
-var cpu_meter  = 0.0;
-var sampleRate = 1.0;
+let cpu_meter = 0.0;
 
-const now = globalThis.performance ? performance.now : Date.now;
+// performance is not available, and there's no better option than Date atm
+const now = Date.now;
 
 class Processor extends AudioWorkletProcessor {
 	constructor(options) {
@@ -162,8 +162,7 @@ class Processor extends AudioWorkletProcessor {
 		}
 		const processTimeEnd = now();
 		const processTimeMs  = processTimeEnd - processTimeStart;
-		const processTimeS   = processTimeMs * 0.001;
-		cpu_meter = cpu_meter * 0.9 + (processTimeS * sampleRate) * 0.1;
+		cpu_meter = cpu_meter * 0.99 + (processTimeMs * 0.128 / sampleRate) * 0.01; // TODO: something better than 0.99?
 
 		return true; // because Chrome sucks: https://bugs.chromium.org/p/chromium/issues/detail?id=921354
 	}
