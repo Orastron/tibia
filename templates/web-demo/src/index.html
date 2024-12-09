@@ -24,7 +24,7 @@
 	<head>
 		<title>{{=it.product.name}}</title>
 		<script type="module">
-import * as demo from "./{{=it.product.bundleName}}.js";
+import * as demo from "./{{=it.product.bundleName}}/module.js";
 window.demo = demo;
 		</script>
 		<script>
@@ -212,7 +212,7 @@ window.addEventListener("load", function (e) {
 				module = new demo.Module();
 			if (!midi && hasMidiInput)
 				midi = await navigator.requestMIDIAccess();
-			await module.init(audioCtx, "{{=it.product.bundleName}}_processor.js", "{{=it.product.bundleName}}.wasm");
+			await module.init(audioCtx, "{{=it.product.bundleName}}/processor.js", "{{=it.product.bundleName}}/module.wasm");
 			node = new demo.Node(module);
 			node.connect(audioCtx.destination, audioOutputIndex);
 
