@@ -323,9 +323,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 #ifdef PARAM_OUT_CPU_INDEX
 	const unsigned long long processTimeEnd = fatica_time_process();
-	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
-	const double processTimeS = ((double) processTime100n) * 1.0e-7;
-	i->cpu_meter = i->cpu_meter * 0.9f + ((float) (processTimeS * i->sample_rate)) * 0.1f;
+	fatica_cpu_meter(&i->cpu_meter, processTimeStart, processTimeEnd, sample_count, i->sample_rate);
 #endif
 
 }

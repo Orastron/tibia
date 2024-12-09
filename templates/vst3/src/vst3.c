@@ -870,9 +870,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 
 #ifdef PARAM_OUT_CPU_INDEX
 	const unsigned long long processTimeEnd = fatica_time_process();
-	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
-	const double processTimeS = ((double) processTime100n) * 1.0e-7;
-	p->cpu_meter = p->cpu_meter * 0.9f + ((float) (processTimeS * p->sampleRate)) * 0.1f;
+	fatica_cpu_meter(&p->cpu_meter, processTimeStart, processTimeEnd, data->numSamples, p->sampleRate);
 #endif
 
 	return Steinberg_kResultOk;

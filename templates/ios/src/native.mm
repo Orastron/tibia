@@ -173,9 +173,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     
 #ifdef PARAM_OUT_CPU_INDEX
 	const unsigned long long processTimeEnd = fatica_time_process();
-	const unsigned long long processTime100n = processTimeEnd - processTimeStart;
-	const double processTimeS = ((double) processTime100n) * 1.0e-7;
-	cpu_meter = cpu_meter * 0.9f + ((float) (processTimeS * sample_rate)) * 0.1f;
+	fatica_cpu_meter(&cpu_meter, processTimeStart, processTimeEnd, frameCount, sample_rate);
 #endif
 }
 

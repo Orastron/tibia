@@ -5,6 +5,7 @@
 
 // unit = 100-nanosecond starting from somewhen
 unsigned long long fatica_time_process(void);
+void               fatica_cpu_meter(float *value, unsigned long long start, unsigned long long end, uint32_t sample_count, float sample_rate);
 
 // Implementation
 
@@ -28,10 +29,12 @@ unsigned long long fatica_time_process(void) {
 
 #elif defined(__linux__)
 
-# if __STDC_VERSION__ >= 199901L
-#  define _XOPEN_SOURCE 600
-# else
-#  define _XOPEN_SOURCE 500
+# ifndef _XOPEN_SOURCE
+#  if __STDC_VERSION__ >= 199901L
+#   define _XOPEN_SOURCE 600
+#  else
+#   define _XOPEN_SOURCE 500
+#  endif
 # endif
 # include <time.h>
 # include <unistd.h>
@@ -62,4 +65,11 @@ unsigned long long fatica_time_process(void) {
 #else
 # error "System not supported"
 #endif
+
+void fatica_cpu_meter(float *value, unsigned long long start, unsigned long long end, uint32_t sample_count, float sample_rate) {
+	const unsigned long long processTime100n = end - start;
+	const double processTimeMs = ((double) processTime100n) * 1.0e-4;
+	*value = *value * 0.99f + ((float) (processTimeMs * sample_count / (sample_rate * 1000))) * 0.01f;
+}
+
 #endif // FATICA_H
