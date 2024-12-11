@@ -89,7 +89,7 @@ endif
 build/web/$(BUNDLE_NAME)/processor.js: $(DATA_DIR)/src/processor.js | build/web/$(BUNDLE_NAME)
 	cp $^ $@
 
-build/web/$(BUNDLE_NAME)/module.js: $(DATA_DIR)/src/module.js | build/web
+build/web/$(BUNDLE_NAME)/module.js: $(DATA_DIR)/src/module.js | build/web/$(BUNDLE_NAME)
 	cp $^ $@
 
 build/obj build/web build/web/$(BUNDLE_NAME):
