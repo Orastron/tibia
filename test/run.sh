@@ -1,14 +1,18 @@
 #!/bin/sh
 
 dir=`dirname $0`
+
+mkdir -p $dir/../out/mk
+cp $dir/vars-pre.mk $dir/../out/mk
+
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/common $dir/../out/vst3
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/vst3.json $dir/../templates/vst3 $dir/../out/vst3
-$dir/../tibia $dir/product.json,$dir/company.json,$dir/vst3.json,$dir/vst3-make.json $dir/../templates/vst3-make $dir/../out/vst3
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/vst3.json,$dir/make.json $dir/../templates/vst3-make $dir/../out/vst3
 cp $dir/plugin.h $dir/plugin_ui.h $dir/../out/vst3/src
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/common $dir/../out/lv2
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/lv2.json $dir/../templates/lv2 $dir/../out/lv2
-$dir/../tibia $dir/product.json,$dir/company.json,$dir/lv2.json,$dir/lv2-make.json $dir/../templates/lv2-make $dir/../out/lv2
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/lv2.json,$dir/make.json $dir/../templates/lv2-make $dir/../out/lv2
 cp $dir/plugin.h $dir/plugin_ui.h $dir/../out/lv2/src
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/common $dir/../out/web
@@ -30,7 +34,7 @@ cp $dir/plugin.h $dir/../out/ios/src
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/common $dir/../out/cmd
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/cmd $dir/../out/cmd
-$dir/../tibia $dir/product.json,$dir/company.json,$dir/cmd-make.json $dir/../templates/cmd-make $dir/../out/cmd
+$dir/../tibia $dir/product.json,$dir/company.json,$dir/make.json $dir/../templates/cmd-make $dir/../out/cmd
 cp $dir/plugin.h $dir/../out/cmd/src
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/common $dir/../out/daisy-seed

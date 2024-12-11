@@ -20,13 +20,15 @@
 
 BUNDLE_NAME := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.lv2_make?.cflags ?? ""}}
-CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.lv2_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.lv2_make?.ldflags ?? ""}}
-
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.lv2_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.lv2_make?.cxxSrcs ?? ""}}
-
+{{?(it.lv2_make?.commonDir || it.make?.commonDir)}}
 COMMON_DIR := {{=it.lv2_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+{{?}}
+{{?(it.lv2_make?.dataDir || it.make?.dataDir)}}
 DATA_DIR := {{=it.lv2_make?.dataDir ?? (it.make?.dataDir ?? "")}}
+{{?}}
+{{?(it.lv2_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.lv2_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+{{?}}
+{{?(it.lv2_make?.mkincDir || it.make?.mkincDir)}}
+MKINC_DIR := {{=it.lv2_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
+{{?}}

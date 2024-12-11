@@ -18,7 +18,16 @@
 # File author: Stefano D'Angelo
 #
 
+TEMPLATE := cmd
+
 include vars.mk
+
+COMMON_DIR ?= .
+DATA_DIR ?= .
+PLUGIN_DIR ?= src
+MKINC_DIR ?= $(COMMON_DIR)
+
+-include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(OS), Windows_NT)
 	EXE_SUFFIX := .exe
@@ -29,26 +38,25 @@ else
 	BINDIR := $(PREFIX)/bin
 endif
 
-COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
-PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+TINIWAV_DIR ?= ../tinywav
+MIDI_PARSER_DIR ?= ../midi-parser
 
 CC := gcc
 CXX := g++
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fPIC $(CFLAGS) $(CFLAGS_EXTRA)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := $(LDFLAGS) $(LDFLAGS_EXTRA)
+LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fPIC $(CXXFLAGS) $(CXXFLAGS_EXTRA)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 ifeq ($(UNAME_S), Darwin)
-CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
-LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
-CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
+	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
+	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
 endif
 
 PROGRAM := $(BUNDLE_NAME)$(EXE_SUFFIX)
@@ -64,7 +72,7 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(PROGRAM)
 
--include $(COMMON_DIR)/vars-extra.mk
+-include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
 
@@ -92,7 +100,7 @@ install: all
 .PHONY: all clean install
 endif
 
--include $(COMMON_DIR)/rules-extra.mk
+-include $(MKINC_DIR)/rules-extra.mk
 
 .SECONDEXPANSION:
 
@@ -107,4 +115,4 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
--include $(COMMON_DIR)/rules-secondexp-extra.mk
+-include $(MKINC_DIR)/rules-secondexp-extra.mk

@@ -20,18 +20,17 @@
 
 BUNDLE_NAME := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.cmd_make?.cflags ?? ""}}
-CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.cmd_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.cmd_make?.ldflags ?? ""}}
-
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.cmd_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.cmd_make?.cxxSrcs ?? ""}}
-
+{{?(it.cmd_make?.commonDir || it.make?.commonDir)}}
 COMMON_DIR := {{=it.cmd_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+{{?}}
+{{?(it.cmd_make?.dataDir || it.make?.dataDir)}}
 DATA_DIR := {{=it.cmd_make?.dataDir ?? (it.make?.dataDir ?? "")}}
+{{?}}
+{{?(it.cmd_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.cmd_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
-
-TINYWAV_DIR := {{=it.cmd_make.tinywavDir}}
-MIDI_PARSER_DIR := {{=it.cmd_make.midiParserDir}}
+{{?}}
+{{?(it.cmd_make?.mkincDir || it.make?.mkincDir)}}
+MKINC_DIR := {{=it.cmd_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
+{{?}}
 
 HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}

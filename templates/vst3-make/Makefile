@@ -18,7 +18,16 @@
 # File author: Stefano D'Angelo
 #
 
+TEMPLATE := vst3
+
 include vars.mk
+
+COMMON_DIR ?= .
+DATA_DIR ?= .
+PLUGIN_DIR ?= src
+MKINC_DIR ?= $(COMMON_DIR)
+
+-include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX := .vst3
@@ -46,36 +55,32 @@ else
 	endif
 endif
 
-COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
-PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
-
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CFLAGS) $(CFLAGS_EXTRA)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -lm $(LDFLAGS) $(LDFLAGS_EXTRA)
+LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CXXFLAGS) $(CXXFLAGS_EXTRA)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 ifeq ($(UNAME_S), Darwin)
-CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
-LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
-CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
- ifeq ($(HAS_UI), yes)
-LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
- endif
+	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
+	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
+	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+	ifeq ($(HAS_UI), yes)
+		LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
+	endif
 endif
 
 ifeq ($(UNAME_S), Linux)
-CFLAGS_ALL := $(CFLAGS_ALL) -D_GNU_SOURCE
-LDFLAGS_ALL := $(LDFLAGS_ALL) -ldl
- ifeq ($(HAS_UI), yes)
-CFLAGS_ALL := $(CFLAGS_ALL) $(shell pkg-config --cflags x11)
-LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs x11)
-CXXFLAGS_ALL := $(CXXFLAGS_ALL) $(shell pkg-config --cflags x11)
- endif
+	CFLAGS_ALL := $(CFLAGS_ALL) -D_GNU_SOURCE
+	LDFLAGS_ALL := $(LDFLAGS_ALL) -ldl
+	ifeq ($(HAS_UI), yes)
+		CFLAGS_ALL := $(CFLAGS_ALL) $(shell pkg-config --cflags x11)
+		LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs x11)
+		CXXFLAGS_ALL := $(CXXFLAGS_ALL) $(shell pkg-config --cflags x11)
+	endif
 endif
 
 BUNDLE_DIR := $(BUNDLE_NAME).vst3
@@ -95,7 +100,7 @@ ifeq ($(UNAME_S), Darwin)
 ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
 endif
 
--include $(COMMON_DIR)/vars-extra.mk
+-include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
 
@@ -149,7 +154,7 @@ install-user: all
 		install -m $$m $$f "$(VST3DIR_USER)/$$d"; \
 	done
 
--include $(COMMON_DIR)/rules-extra.mk
+-include $(MKINC_DIR)/rules-extra.mk
 
 .PHONY: all clean install install-user
 
@@ -163,4 +168,4 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
--include $(COMMON_DIR)/rules-secondexp-extra.mk
+-include $(MKINC_DIR)/rules-secondexp-extra.mk
