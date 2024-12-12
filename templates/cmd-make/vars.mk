@@ -34,3 +34,7 @@ MKINC_DIR := {{=it.cmd_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
 
 HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}
+
+{{?(it.cmd_make?.extra || it.make?.extra)}}
+{{=it.cmd_make?.extra ?? (it.make?.extra ?? "")}}
+{{?}}

@@ -32,3 +32,7 @@ PLUGIN_DIR := {{=it.ios_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?(it.ios_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.ios_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
+
+{{?(it.ios_make?.extra || it.make?.extra)}}
+{{=it.ios_make?.extra ?? (it.make?.extra ?? "")}}
+{{?}}

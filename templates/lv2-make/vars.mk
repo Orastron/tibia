@@ -32,3 +32,7 @@ PLUGIN_DIR := {{=it.lv2_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?(it.lv2_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.lv2_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
+
+{{?(it.lv2_make?.extra || it.make?.extra)}}
+{{=it.lv2_make?.extra ?? (it.make?.extra ?? "")}}
+{{?}}

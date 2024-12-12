@@ -32,3 +32,7 @@ PLUGIN_DIR := {{=it.daisy_seed_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?(it.daisy_seed_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.daisy_seed_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
+
+{{?(it.daisy_seed_make?.extra || it.make?.extra)}}
+{{=it.daisy_seed_make?.extra ?? (it.make?.extra ?? "")}}
+{{?}}
