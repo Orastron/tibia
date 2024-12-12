@@ -25,6 +25,7 @@ include vars.mk
 COMMON_DIR ?= .
 DATA_DIR ?= .
 PLUGIN_DIR ?= src
+API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
 -include $(MKINC_DIR)/vars-pre.mk
@@ -36,6 +37,7 @@ SOURCES := \
 	$(COMMON_DIR)/src/native.mm \
 	$(COMMON_DIR)/src/app-Bridging-Header.h \
 	$(PLUGIN_DIR)/plugin.h \
+	$(API_DIR)/plugin_api.h \
 	$(C_SRCS_EXTRA) \
 	$(CXX_SRCS_EXTRA) \
 	$(SRCS_EXTRA)

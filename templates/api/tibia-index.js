@@ -22,5 +22,5 @@ var path = require("path");
 var sep = path.sep;
 
 module.exports = function (data, api) {
-	api.generateFileFromTemplateFile(`src${sep}plugin_api.h`, `src${sep}plugin_api.h`, data);
+	api.generateFileFromTemplateFile(`src${sep}plugin_api.h`, `plugin_api.h`, data);
 };

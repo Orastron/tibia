@@ -29,6 +29,9 @@ DATA_DIR := {{=it.vst3_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.vst3_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.vst3_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.vst3_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.vst3_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.vst3_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.vst3_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

@@ -29,6 +29,9 @@ DATA_DIR := {{=it.web_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.web_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.web_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.web_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.web_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.web_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.web_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

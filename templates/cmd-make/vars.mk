@@ -29,6 +29,9 @@ DATA_DIR := {{=it.cmd_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.cmd_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.cmd_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.cmd_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.cmd_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.cmd_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.cmd_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

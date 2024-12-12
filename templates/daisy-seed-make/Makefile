@@ -25,6 +25,7 @@ include vars.mk
 COMMON_DIR ?= .
 DATA_DIR ?= .
 PLUGIN_DIR ?= src
+API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
 -include $(MKINC_DIR)/vars-pre.mk
@@ -41,8 +42,8 @@ include $(SYSTEM_FILES_DIR)/Makefile
 
 C_SOURCES += $(C_SRCS_EXTRA)
 
-CFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) $(CFLAGS_EXTRA)
+CFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CFLAGS_EXTRA)
 LDFLAGS += $(LDFLAGS_EXTRA)
-CXXFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) $(CXXFLAGS_EXTRA)
+CXXFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CXXFLAGS_EXTRA)
 
 -include $(COMMON_DIR)/extra.mk

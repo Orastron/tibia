@@ -29,6 +29,9 @@ DATA_DIR := {{=it.daisy_seed_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.daisy_seed_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.daisy_seed_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.daisy_seed_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.daisy_seed_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.daisy_seed_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.daisy_seed_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

@@ -25,6 +25,7 @@ include vars.mk
 COMMON_DIR ?= .
 DATA_DIR ?= .
 PLUGIN_DIR ?= src
+API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
 -include $(MKINC_DIR)/vars-pre.mk
@@ -56,13 +57,13 @@ else
 endif
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
 LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64

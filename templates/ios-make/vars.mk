@@ -29,6 +29,9 @@ DATA_DIR := {{=it.ios_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.ios_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.ios_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.ios_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.ios_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.ios_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.ios_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

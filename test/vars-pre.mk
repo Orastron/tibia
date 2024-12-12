@@ -1,3 +1,5 @@
+API_DIR := ../api
+
 ifeq ($(TEMPLATE), cmd)
 	TINYWAV_DIR := ../../../tinywav
 	MIDI_PARSER_DIR := ../../../midi-parser

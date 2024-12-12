@@ -25,6 +25,7 @@ include vars.mk
 COMMON_DIR ?= .
 DATA_DIR ?= .
 PLUGIN_DIR ?= src
+API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
 -include $(MKINC_DIR)/vars-pre.mk
@@ -33,7 +34,7 @@ CC := clang
 CXX := clang++
 
 CFLAGS := -Ofast -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS_ALL := \
 	-Wl,--allow-undefined \
@@ -64,7 +65,7 @@ endif
 LDFLAGS_ALL := $(LDFLAGS_ALL) $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 C_SRCS := $(COMMON_DIR)/src/processor.c $(COMMON_DIR)/src/walloc.c $(COMMON_DIR)/src/string.c
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))

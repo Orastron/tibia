@@ -30,6 +30,9 @@ DATA_DIR := {{=it.android_make?.dataDir ?? (it.make?.dataDir ?? "")}}
 {{?(it.android_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.android_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
 {{?}}
+{{?(it.android_make?.apiDir || it.make?.apiDir)}}
+API_DIR := {{=it.android_make?.apiDir ?? (it.make?.apiDir ?? "")}}
+{{?}}
 {{?(it.android_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.android_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}

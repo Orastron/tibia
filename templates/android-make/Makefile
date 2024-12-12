@@ -25,6 +25,7 @@ include vars.mk
 COMMON_DIR ?= .
 DATA_DIR ?= .
 PLUGIN_DIR ?= src
+API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
 include $(MKINC_DIR)/vars-pre.mk
@@ -75,10 +76,10 @@ ifeq ($(HAS_MIDI_IN), yes)
 endif
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -fPIC -std=c++11 $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -std=c++11 $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 LDFLAGS :=
 LDFLAGS_ALL := -shared -static-libstdc++ -landroid
