@@ -18,13 +18,20 @@
 # File author: Stefano D'Angelo
 #
 
+TEMPLATE := daisy-seed
+
 include vars.mk
 
-TARGET := $(BUNDLE_NAME)
+COMMON_DIR ?= .
+DATA_DIR ?= .
+PLUGIN_DIR ?= src
+MKINC_DIR ?= $(COMMON_DIR)
 
-COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
-PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+-include $(MKINC_DIR)/vars-pre.mk
+
+LIBDAISY_DIR ?= ../libDaisy
+
+TARGET := $(BUNDLE_NAME)
 
 CPP_SOURCES := $(COMMON_DIR)/src/main.cpp $(CXX_SRCS_EXTRA)
 

@@ -20,10 +20,15 @@
 
 BUNDLE_NAME := {{=it.product.bundleName}}
 
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.cmd_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.cmd_make?.cxxSrcs ?? ""}}
-SRCS_EXTRA := {{=it.ios_make?.srcsExtra ?? ""}}
-
+{{?(it.ios_make?.commonDir || it.make?.commonDir)}}
 COMMON_DIR := {{=it.ios_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+{{?}}
+{{?(it.ios_make?.dataDir || it.make?.dataDir)}}
 DATA_DIR := {{=it.ios_make?.dataDir ?? (it.make?.dataDir ?? "")}}
+{{?}}
+{{?(it.ios_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.ios_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+{{?}}
+{{?(it.ios_make?.mkincDir || it.make?.mkincDir)}}
+MKINC_DIR := {{=it.ios_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
+{{?}}

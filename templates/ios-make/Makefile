@@ -18,11 +18,16 @@
 # File author: Stefano D'Angelo
 #
 
+TEMPLATE := ios
+
 include vars.mk
 
-COMMON_DIR := $(or $(COMMON_DIR),.)
-DATA_DIR := $(or $(DATA_DIR),.)
-PLUGIN_DIR := $(or $(PLUGIN_DIR),src)
+COMMON_DIR ?= .
+DATA_DIR ?= .
+PLUGIN_DIR ?= src
+MKINC_DIR ?= $(COMMON_DIR)
+
+-include $(MKINC_DIR)/vars-pre.mk
 
 SOURCES := \
 	$(DATA_DIR)/src/data.h \
@@ -38,7 +43,7 @@ SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
 ALL = build/gen/$(BUNDLE_NAME).xcodeproj
 
--include $(COMMON_DIR)/vars-extra.mk
+-include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
 
@@ -51,7 +56,7 @@ build/gen/src:
 clean:
 	rm -fr build
 
--include $(COMMON_DIR)/rules-extra.mk
+-include $(MKINC_DIR)/rules-extra.mk
 
 .PHONY: all clean
 
@@ -62,4 +67,4 @@ PERCENT := %
 $(SOURCES_OUT): build/gen/src/%: $$(filter $$(PERCENT)/%,$$(SOURCES)) | build/gen/src
 	cp -R $^ $@
 
--include $(COMMON_DIR)/rules-secondexp-extra.mk
+-include $(MKINC_DIR)/rules-secondexp-extra.mk

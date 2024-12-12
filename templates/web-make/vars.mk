@@ -20,15 +20,17 @@
 
 BUNDLE_NAME := {{=it.product.bundleName}}
 
-CFLAGS_EXTRA := {{=it.make?.cflags ?? ""}} {{=it.web_make?.cflags ?? ""}}
-CXXFLAGS_EXTRA := {{=it.make?.cxxflags ?? ""}} {{=it.web_make?.cxxflags ?? ""}}
-LDFLAGS_EXTRA := {{=it.make?.ldflags ?? ""}} {{=it.web_make?.ldflags ?? ""}}
-
-C_SRCS_EXTRA := {{=it.make?.cSrcs ?? ""}} {{=it.web_make?.cSrcs ?? ""}}
-CXX_SRCS_EXTRA := {{=it.make?.cxxSrcs ?? ""}} {{=it.web_make?.cxxSrcs ?? ""}}
-
+{{?(it.web_make?.commonDir || it.make?.commonDir)}}
 COMMON_DIR := {{=it.web_make?.commonDir ?? (it.make?.commonDir ?? "")}}
+{{?}}
+{{?(it.web_make?.dataDir || it.make?.dataDir)}}
 DATA_DIR := {{=it.web_make?.dataDir ?? (it.make?.dataDir ?? "")}}
+{{?}}
+{{?(it.web_make?.pluginDir || it.make?.pluginDir)}}
 PLUGIN_DIR := {{=it.web_make?.pluginDir ?? (it.make?.pluginDir ?? "")}}
+{{?}}
+{{?(it.web_make?.mkincDir || it.make?.mkincDir)}}
+MKINC_DIR := {{=it.web_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
+{{?}}
 
 HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}
