@@ -23,6 +23,6 @@ var sep = path.sep;
 
 module.exports = function (data, api) {
 	api.generateFileFromTemplateFile(`src${sep}index.html`, `src${sep}index.html`, data);
-	api.copyFile(`vars-extra.mk`, `vars-extra.mk`);
-	api.copyFile(`rules-extra.mk`, `rules-extra.mk`);
+	api.copyFile(`vars-extra-web-demo.mk`, `vars-extra-web-demo.mk`);
+	api.copyFile(`rules-extra-web-demo.mk`, `rules-extra-web-demo.mk`);
 };
