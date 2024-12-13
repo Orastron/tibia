@@ -38,6 +38,9 @@ MKINC_DIR := {{=it.vst3_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 
 HAS_UI := {{=it.product.ui ? "yes" : "no"}}
 
-{{?(it.vst3_make?.extra || it.make?.extra)}}
-{{=it.vst3_make?.extra ?? (it.make?.extra ?? "")}}
+{{?it.make?.extra}}
+{{=it.make.extra}}
+{{?}}
+{{?it.vst3_make?.extra}}
+{{=it.vst3_make.extra}}
 {{?}}

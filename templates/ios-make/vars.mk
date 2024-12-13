@@ -36,6 +36,9 @@ API_DIR := {{=it.ios_make?.apiDir ?? (it.make?.apiDir ?? "")}}
 MKINC_DIR := {{=it.ios_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
 
-{{?(it.ios_make?.extra || it.make?.extra)}}
-{{=it.ios_make?.extra ?? (it.make?.extra ?? "")}}
+{{?it.make?.extra}}
+{{=it.make.extra}}
+{{?}}
+{{?it.ios_make?.extra}}
+{{=it.ios_make.extra}}
 {{?}}

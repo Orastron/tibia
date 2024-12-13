@@ -28,6 +28,9 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUILD_BIN_DIR := build
+BUILD_DATA_DIR := build
+
 -include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(OS), Windows_NT)
@@ -72,9 +75,6 @@ CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(PROGRAM)
-
-BUILD_BIN_DIR := build
-BUILD_DATA_DIR := build
 
 -include $(MKINC_DIR)/vars-extra.mk
 

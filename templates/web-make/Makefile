@@ -28,6 +28,9 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUILD_BIN_DIR := build/web
+BUILD_DATA_DIR := build/web
+
 -include $(MKINC_DIR)/vars-pre.mk
 
 CC := clang
@@ -79,9 +82,6 @@ else
 endif
 
 ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
-
-BUILD_BIN_DIR := build/web
-BUILD_DATA_DIR := build/web
 
 -include $(MKINC_DIR)/vars-extra.mk
 

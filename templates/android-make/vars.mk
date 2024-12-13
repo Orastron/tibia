@@ -39,6 +39,9 @@ MKINC_DIR := {{=it.android_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 
 HAS_MIDI_IN := {{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0 ? "yes" : "no"}}
 
-{{?(it.android_make?.extra || it.make?.extra)}}
-{{=it.android_make?.extra ?? (it.make?.extra ?? "")}}
+{{?it.make?.extra}}
+{{=it.make.extra}}
+{{?}}
+{{?it.android_make?.extra}}
+{{=it.android_make.extra}}
 {{?}}

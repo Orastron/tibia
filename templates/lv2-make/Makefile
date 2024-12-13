@@ -28,6 +28,11 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUNDLE_DIR := $(BUNDLE_NAME).lv2
+
+BUILD_BIN_DIR := build/$(BUNDLE_DIR)
+BUILD_DATA_DIR := build/$(BUNDLE_DIR)
+
 -include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(OS), Windows_NT)
@@ -72,8 +77,6 @@ ifeq ($(UNAME_S), Darwin)
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
 endif
 
-BUNDLE_DIR := $(BUNDLE_NAME).lv2
-
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)
 
 C_SRCS := $(COMMON_DIR)/src/lv2.c $(C_SRCS_EXTRA)
@@ -83,9 +86,6 @@ CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
-
-BUILD_BIN_DIR := build/$(BUNDLE_DIR)
-BUILD_DATA_DIR := build/$(BUNDLE_DIR)
 
 -include $(MKINC_DIR)/vars-extra.mk
 

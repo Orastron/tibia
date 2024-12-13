@@ -28,6 +28,9 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUILD_BIN_DIR := build/apk/lib/armeabi-v7a
+BUILD_DATA_DIR := build/assets/index.html
+
 include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(HAS_MIDI_IN), yes)
@@ -98,9 +101,6 @@ CXX_SRCS := $(COMMON_DIR)/src/jni.cpp $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(BUNDLE_NAME).apk
-
-BUILD_BIN_DIR := build/apk/lib/armeabi-v7a
-BUILD_DATA_DIR := build/assets/index.html
 
 -include $(MKINC_DIR)/vars-extra.mk
 

@@ -28,11 +28,27 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUNDLE_DIR := $(BUNDLE_NAME).vst3
+
+ifeq ($(OS), Windows_NT)
+	PLATFORM := x86_64-win
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Darwin)
+		PLATFORM := MacOS
+	else
+		PLATFORM := $(shell uname -m)-linux
+	endif
+endif
+DLL_DIR := Contents/$(PLATFORM)
+
+BUILD_BIN_DIR := build/$(BUNDLE_DIR)/$(DLL_DIR)
+BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
+
 -include $(MKINC_DIR)/vars-pre.mk
 
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX := .vst3
-	PLATFORM := x86_64-win
 	VST3DIR := $(shell echo '$(COMMONPROGRAMFILES)' | sed 's:\\:/:g')/VST3
 	VST3DIR_USER := $(shell echo '$(LOCALAPPDATA)' | sed 's:\\:/:g')/Programs/Common/VST3
 	CC := gcc
@@ -41,14 +57,12 @@ else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		DLL_SUFFIX :=
-		PLATFORM := MacOS
 		VST3DIR := /Library/Audio/Plug-Ins/VST3
 		VST3DIR_USER := $(HOME)/Library/Audio/Plug-Ins/VST3
 		CC := clang
 		CXX := clang++
 	else
 		DLL_SUFFIX := .so
-		PLATFORM := $(shell uname -m)-linux
 		VST3DIR := /usr/local/lib/vst3
 		VST3DIR_USER := $(HOME)/.vst3
 		CC := gcc
@@ -84,9 +98,7 @@ ifeq ($(UNAME_S), Linux)
 	endif
 endif
 
-BUNDLE_DIR := $(BUNDLE_NAME).vst3
 
-DLL_DIR := Contents/$(PLATFORM)
 DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
 
 C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
@@ -100,9 +112,6 @@ ALL := build/$(BUNDLE_DIR)/$(DLL_FILE)
 ifeq ($(UNAME_S), Darwin)
 ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
 endif
-
-BUILD_BIN_DIR := build/$(BUNDLE_DIR)/$(DLL_DIR)
-BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -124,7 +133,7 @@ build/$(BUNDLE_DIR)/Contents/%: $(COMMON_DIR)/data/% | build/$(BUNDLE_DIR)/Conte
 	cp $^ $@
 endif
 
-build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/$(DLL_DIR) build/obj:
+build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/$(DLL_DIR) $(BUILD_DATA_DIR) build/obj:
 	mkdir -p $@
 
 clean:

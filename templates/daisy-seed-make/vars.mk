@@ -36,6 +36,9 @@ API_DIR := {{=it.daisy_seed_make?.apiDir ?? (it.make?.apiDir ?? "")}}
 MKINC_DIR := {{=it.daisy_seed_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
 
-{{?(it.daisy_seed_make?.extra || it.make?.extra)}}
-{{=it.daisy_seed_make?.extra ?? (it.make?.extra ?? "")}}
+{{?it.make?.extra}}
+{{=it.make.extra}}
+{{?}}
+{{?it.daisy_seed_make?.extra}}
+{{=it.daisy_seed_make.extra}}
 {{?}}
