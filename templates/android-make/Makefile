@@ -99,6 +99,9 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(BUNDLE_NAME).apk
 
+BUILD_BIN_DIR := build/apk/lib/armeabi-v7a
+BUILD_DATA_DIR := build/assets/index.html
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)

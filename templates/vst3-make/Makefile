@@ -101,6 +101,9 @@ ifeq ($(UNAME_S), Darwin)
 ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
 endif
 
+BUILD_BIN_DIR := build/$(BUNDLE_DIR)/$(DLL_DIR)
+BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)

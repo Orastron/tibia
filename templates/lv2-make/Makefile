@@ -84,6 +84,9 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
+BUILD_BIN_DIR := build/$(BUNDLE_DIR)
+BUILD_DATA_DIR := build/$(BUNDLE_DIR)
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)

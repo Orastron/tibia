@@ -73,6 +73,9 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 ALL := build/$(PROGRAM)
 
+BUILD_BIN_DIR := build
+BUILD_DATA_DIR := build
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
