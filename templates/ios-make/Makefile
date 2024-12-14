@@ -43,7 +43,9 @@ SOURCES := \
 	$(SRCS_EXTRA)
 SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
-ALL = build/gen/$(BUNDLE_NAME).xcodeproj
+DIRS := build build/gen build/gen/src
+
+ALL := build/gen/$(BUNDLE_NAME).xcodeproj
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -52,7 +54,7 @@ all: $(ALL)
 build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT)
 	xcodegen generate --spec project.yml -r build/gen -p build/gen
 
-build/gen/src:
+$(DIRS):
 	mkdir -p $@
 
 clean:

@@ -100,6 +100,8 @@ C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_SRCS := $(COMMON_DIR)/src/jni.cpp $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+DIRS := build build/gen build/apk build/obj build/apk/lib build/apk/lib/armeabi-v7a build/assets
+
 ALL := build/$(BUNDLE_NAME).apk
 
 -include $(MKINC_DIR)/vars-extra.mk
@@ -131,7 +133,7 @@ build/apk/lib/armeabi-v7a/lib$(BUNDLE_NAME).so: $(C_OBJS) $(CXX_OBJS) | build/ap
 build/assets/index.html: $(DATA_DIR)/src/index.html | build/assets
 	cp $^ $@
 
-build/gen build/apk build/obj build/apk/lib/armeabi-v7a build/assets:
+$(DIRS):
 	mkdir -p $@
 
 clean:

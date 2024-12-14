@@ -74,6 +74,8 @@ C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+DIRS := build build/obj
+
 ALL := build/$(PROGRAM)
 
 -include $(MKINC_DIR)/vars-extra.mk
@@ -88,7 +90,7 @@ build/$(PROGRAM): $(C_OBJS) $(CXX_OBJS) build/obj/tinywav.o | build
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 
-build build/obj:
+$(DIRS):
 	mkdir -p $@
 
 clean:

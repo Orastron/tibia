@@ -88,6 +88,8 @@ M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+DIRS := build build/$(BUNDLE_DIR) build/$(BUNDLE_DIR) build/obj
+
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
 -include $(MKINC_DIR)/vars-extra.mk
@@ -105,7 +107,7 @@ build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) | build/$(BUNDL
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 
-build/$(BUNDLE_DIR) build/obj:
+$(DIRS):
 	mkdir -p $@
 
 clean:

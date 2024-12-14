@@ -81,6 +81,8 @@ else
 	CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 endif
 
+DIRS := build build/obj build/web build/web/$(BUNDLE_NAME)
+
 ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
 
 -include $(MKINC_DIR)/vars-extra.mk
@@ -101,7 +103,7 @@ build/web/$(BUNDLE_NAME)/processor.js: $(DATA_DIR)/src/processor.js | build/web/
 build/web/$(BUNDLE_NAME)/module.js: $(DATA_DIR)/src/module.js | build/web/$(BUNDLE_NAME)
 	cp $^ $@
 
-build/obj build/web build/web/$(BUNDLE_NAME):
+$(DIRS):
 	mkdir -p $@
 
 clean:

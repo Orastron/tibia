@@ -110,6 +110,8 @@ M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+DIRS := build build/obj build/$(BUNDLE_DIR) build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/Contents/Resources build/$(BUNDLE_DIR)/$(DLL_DIR)
+
 ALL := build/$(BUNDLE_DIR)/$(DLL_FILE)
 
 ifeq ($(UNAME_S), Darwin)
@@ -136,7 +138,7 @@ build/$(BUNDLE_DIR)/Contents/%: $(COMMON_DIR)/data/% | build/$(BUNDLE_DIR)/Conte
 	cp $^ $@
 endif
 
-build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/$(DLL_DIR) $(BUILD_DATA_DIR) build/obj:
+$(DIRS):
 	mkdir -p $@
 
 clean:
