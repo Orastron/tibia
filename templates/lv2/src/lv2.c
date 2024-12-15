@@ -449,11 +449,18 @@ static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buf
 	(void)format;
 
 	ui_instance *instance = (ui_instance *)handle;
+#  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
 		size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
 		plugin_ui_set_parameter(instance->ui, param_data[index].index, adjust_param(index, *((float *)buffer)));
-	} else
+	}
+#  endif
+#  if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+#   if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+	else
+#   endif
 		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
+#  endif
 }
 # endif
 
