@@ -30,6 +30,13 @@ targets:
     type: application
     sources:
       - path: src
+
+{{?it.ios_make.dependencies}}
+    dependencies:
+{{~it.ios_make.dependencies :d}}
+      - target: {{=d}}{{~}}
+{{?}}
+
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios.productBundleIdentifier}}
