@@ -33,6 +33,12 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: {{=it.ios.productBundleIdentifier}}
+
+{{?it.ios_make.development_team}}
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: {{=it.ios_make.development_team}}
+{{?}}
+
         SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
 {{?it.ios_make.headerSearchPaths}}
         HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}
