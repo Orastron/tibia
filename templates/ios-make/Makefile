@@ -28,6 +28,9 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
+BUILD_BIN_DIR  := build/gen/src
+BUILD_DATA_DIR := build/gen/src
+
 -include $(MKINC_DIR)/vars-pre.mk
 
 SOURCES := \
