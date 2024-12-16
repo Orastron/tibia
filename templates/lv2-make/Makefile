@@ -88,7 +88,7 @@ M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
-DIRS := build build/$(BUNDLE_DIR) build/$(BUNDLE_DIR) build/obj
+DIRS := build build/$(BUNDLE_DIR) build/obj
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
