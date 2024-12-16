@@ -183,7 +183,7 @@ PERCENT := %
 $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(C_SRCS)) | build/obj
 	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
 
-$(M_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$(M_SRCS)) | build/obj
+$(M_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).m,$$(M_SRCS)) | build/obj
 	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
 
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
