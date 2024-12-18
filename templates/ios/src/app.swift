@@ -67,7 +67,8 @@ struct WebView: UIViewRepresentable {
 
 	func makeUIView(context: Context) -> WKWebView {
 		let configuration = WKWebViewConfiguration()
-		configuration.userContentController.addScriptMessageHandler(Coordinator(), contentWorld: .page, name: "listener")
+		configuration.userContentController.addScriptMessageHandler(Coordinator(), contentWorld: .page, name: "messageHandler")
+		configuration.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
 		let webView = WKWebView(frame: .zero, configuration: configuration)
 		//webView.isInspectable = true
 		return webView
@@ -81,7 +82,7 @@ struct WebView: UIViewRepresentable {
 
 struct ContentView: View {
 	var body: some View {
-		let url = Bundle.main.url(forResource: "index", withExtension: "html")
+		let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "res")
 		WebView(url: url!)
 	}
 }

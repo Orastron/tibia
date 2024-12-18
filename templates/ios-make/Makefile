@@ -28,14 +28,13 @@ PLUGIN_DIR ?= src
 API_DIR ?= $(PLUGIN_DIR)
 MKINC_DIR ?= $(COMMON_DIR)
 
-BUILD_BIN_DIR  := build/gen/src
-BUILD_DATA_DIR := build/gen/src
+BUILD_BIN_DIR  := build/gen/res
+BUILD_DATA_DIR := build/gen/res
 
 -include $(MKINC_DIR)/vars-pre.mk
 
 SOURCES := \
 	$(DATA_DIR)/src/data.h \
-	$(DATA_DIR)/src/index.html \
 	$(COMMON_DIR)/src/app.swift \
 	$(COMMON_DIR)/src/native.mm \
 	$(COMMON_DIR)/src/app-Bridging-Header.h \
@@ -46,7 +45,10 @@ SOURCES := \
 	$(SRCS_EXTRA)
 SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
-DIRS := build build/gen build/gen/src
+RESOURCES     := $(DATA_DIR)/src/index.html
+RESOURCES_OUT := $(addprefix build/gen/res/, $(notdir $(RESOURCES)))
+
+DIRS := build build/gen build/gen/src build/gen/res
 
 ALL := build/gen/$(BUNDLE_NAME).xcodeproj
 
@@ -54,7 +56,7 @@ ALL := build/gen/$(BUNDLE_NAME).xcodeproj
 
 all: $(ALL)
 
-build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT)
+build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT) $(RESOURCES_OUT)
 	xcodegen generate --spec project.yml -r build/gen -p build/gen
 
 $(DIRS):
@@ -72,6 +74,9 @@ clean:
 PERCENT := %
 
 $(SOURCES_OUT): build/gen/src/%: $$(filter $$(PERCENT)/%,$$(SOURCES)) | build/gen/src
+	cp -R $^ $@
+
+$(RESOURCES_OUT): build/gen/res/%: $$(filter $$(PERCENT)/%,$$(RESOURCES)) | build/gen/res
 	cp -R $^ $@
 
 -include $(MKINC_DIR)/rules-secondexp-extra.mk

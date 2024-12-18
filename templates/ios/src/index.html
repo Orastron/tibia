@@ -26,7 +26,7 @@
 		<title>{{=it.product.name}}</title>
 		<script type="text/javascript">
 function request(data) {
-	return window.webkit.messageHandlers.listener.postMessage(data);
+	return window.webkit.messageHandlers.messageHandler.postMessage(data);
 }
         
 function needAudioPermission() {

@@ -30,6 +30,8 @@ targets:
     type: application
     sources:
       - path: src
+      - path: res
+        type: folder
 
 {{?it.ios_make.dependencies}}
     dependencies:
