@@ -19,11 +19,11 @@
  */
 
 import SwiftUI
-import WebKit
+@preconcurrency import WebKit
 import AVFoundation
 
 struct WebView: UIViewRepresentable {
-	class Coordinator: NSObject, WKScriptMessageHandlerWithReply {
+	class Coordinator: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
 		func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
 			guard let body = message.body as? [String : Any] else { return }
 			guard let name = body["name"] as? String else { return }
@@ -57,6 +57,15 @@ struct WebView: UIViewRepresentable {
 				break;
 			}
 		}
+		
+		func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+			if let url = navigationAction.request.url, navigationAction.navigationType == .linkActivated {
+				UIApplication.shared.open(url)
+				decisionHandler(.cancel)
+			} else {
+				decisionHandler(.allow)
+			}
+		}
 	}
 
 	func makeCoordinator() -> Coordinator {
@@ -70,6 +79,7 @@ struct WebView: UIViewRepresentable {
 		configuration.userContentController.addScriptMessageHandler(Coordinator(), contentWorld: .page, name: "messageHandler")
 		configuration.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
 		let webView = WKWebView(frame: .zero, configuration: configuration)
+		webView.navigationDelegate = context.coordinator
 		//webView.isInspectable = true
 		return webView
 	}
@@ -98,12 +108,12 @@ struct templateApp: App {
 	var body: some Scene {
 		WindowGroup {
 			ContentView()
-                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                            audioPause()
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                            audioResume()
-                        }
+				.onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+					audioPause()
+				}
+				.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+					audioResume()
+				}
 		}
 	}
 }
