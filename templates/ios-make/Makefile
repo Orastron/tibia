@@ -33,19 +33,29 @@ BUILD_DATA_DIR := build/gen/res
 
 -include $(MKINC_DIR)/vars-pre.mk
 
+CFLAGS := -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CFLAGS_EXTRA) $(CFLAGS)
+
+CXXFLAGS := $(CFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+
+LDFLAGS :=
+LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
+
 SOURCES := \
+	$(C_SRCS_EXTRA) \
+	$(M_SRCS_EXTRA) \
+	$(CXX_SRCS_EXTRA) \
+	$(SRCS_EXTRA) \
 	$(DATA_DIR)/src/data.h \
 	$(COMMON_DIR)/src/app.swift \
 	$(COMMON_DIR)/src/native.mm \
 	$(COMMON_DIR)/src/app-Bridging-Header.h \
 	$(PLUGIN_DIR)/plugin.h \
-	$(API_DIR)/plugin_api.h \
-	$(C_SRCS_EXTRA) \
-	$(CXX_SRCS_EXTRA) \
-	$(SRCS_EXTRA)
+	$(API_DIR)/plugin_api.h
 SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
 
-RESOURCES     := $(DATA_DIR)/src/index.html
+RESOURCES     := $(PLUGIN_DIR)/index.html
 RESOURCES_OUT := $(addprefix build/gen/res/, $(notdir $(RESOURCES)))
 
 DIRS := build build/gen build/gen/src build/gen/res
@@ -56,8 +66,13 @@ ALL := build/gen/$(BUNDLE_NAME).xcodeproj
 
 all: $(ALL)
 
-build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT) $(RESOURCES_OUT)
-	xcodegen generate --spec project.yml -r build/gen -p build/gen
+build/gen/$(BUNDLE_NAME).xcodeproj: $(SOURCES_OUT) $(RESOURCES_OUT) build/project_out.yml
+	xcodegen generate --spec build/project_out.yml -r build/gen -p build/gen
+
+build/project_out.yml: project.yml build/
+	sed -e 's|@CFLAGS_ALL@|$(CFLAGS_ALL)|g' \
+	    -e 's|@CXXFLAGS_ALL@|$(CXXFLAGS_ALL)|g' \
+	    -e 's|@LDFLAGS_ALL@|$(LDFLAGS_ALL)|g' $< > $@
 
 $(DIRS):
 	mkdir -p $@

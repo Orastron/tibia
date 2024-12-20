@@ -47,7 +47,9 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: {{=it.ios_make.development_team}}
 {{?}}
-
+        OTHER_CFLAGS:         "$(inherited) @CFLAGS_ALL@"
+        OTHER_CPLUSPLUSFLAGS: "$(inherited) @CXXFLAGS_ALL@"
+        OTHER_LDFLAGS:        "$(inherited) @LDFLAGS_ALL@"
         SWIFT_OBJC_BRIDGING_HEADER: src/app-Bridging-Header.h
 {{?it.ios_make.headerSearchPaths}}
         HEADER_SEARCH_PATHS: {{~it.ios_make.headerSearchPaths :p}}

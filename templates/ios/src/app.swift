@@ -93,7 +93,7 @@ struct WebView: UIViewRepresentable {
 struct ContentView: View {
 	var body: some View {
 		let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "res")
-		WebView(url: url!)
+		WebView(url: url!).ignoresSafeArea().preferredColorScheme(.dark)
 	}
 }
 
