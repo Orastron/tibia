@@ -31,16 +31,16 @@ MKINC_DIR ?= $(COMMON_DIR)
 BUNDLE_DIR := $(BUNDLE_NAME).vst3
 
 ifeq ($(OS), Windows_NT)
-	PLATFORM := x86_64-win
+	VST3_PLATFORM := x86_64-win
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
-		PLATFORM := MacOS
+		VST3_PLATFORM := MacOS
 	else
-		PLATFORM := $(shell uname -m)-linux
+		VST3_PLATFORM := $(shell uname -m)-linux
 	endif
 endif
-DLL_DIR := Contents/$(PLATFORM)
+DLL_DIR := Contents/$(VST3_PLATFORM)
 
 BUILD_BIN_DIR := build/$(BUNDLE_DIR)/$(DLL_DIR)
 BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
