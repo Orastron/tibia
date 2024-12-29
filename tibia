@@ -2,37 +2,56 @@
 
 function usage() {
 	console.log("Usage:");
-	console.log("  tibia file1.json,file2.json,...filen.json template outDirectory");
-	console.log("  tibia --common template outDirectory");
-	console.log("  tibia --data file1.json,file2.json,...filen.json template outDirectory");
+	console.log("  tibia file1.json,file2.json,...filen.json template outDirectory [override1=value1] [override2=value2] ...");
+	console.log("  tibia --common template outDirectory [override1=value1] [override2=value2] ...");
+	console.log("  tibia --data file1.json,file2.json,...filen.json template outDirectory [override1=value1] [override2=value2] ...");
 	process.exit(1);
 }
 
-var jsonFiles, template, outputDir, outputCommon, outputData;
+var jsonFiles, template, outputDir, outputCommon, outputData, i;
 if (process.argv[2] == "--common") {
-	if (process.argv.length != 5)
+	if (process.argv.length < 5)
 		usage();
 	jsonFiles = [];
 	template = process.argv[3];
 	outputDir = process.argv[4];
 	outputCommon = true;
 	outputData = false;
+	i = 5;
 } else if (process.argv[2] == "--data") {
-	if (process.argv.length != 6)
+	if (process.argv.length < 6)
 		usage();
 	jsonFiles = process.argv[3].split(",");
 	template = process.argv[4];
 	outputDir = process.argv[5];
 	outputCommon = false;
 	outputData = true;
+	i = 6;
 } else {
-	if (process.argv.length != 5)
+	if (process.argv.length < 5)
 		usage();
 	jsonFiles = process.argv[2].split(",");
 	template = process.argv[3];
 	outputDir = process.argv[4];
 	outputCommon = true;
 	outputData = true;
+	i = 5;
+}
+
+var overrides = [];
+for (; i < process.argv.length; i++) {
+	var o = process.argv[i];
+	var r = o.match(/^([_a-zA-Z][_a-zA-Z0-9]*(\.[_a-zA-Z][_a-zA-Z0-9]*)*)=/);
+	if (!r)
+		usage();
+	var p = r[1].split(".");
+	var v = o.substring(r[0].length);
+	try {
+		v = JSON.parse(v);
+	} catch (e) {
+		usage();
+	}
+	overrides.push({ property: p, value: v });
 }
 
 var fs = require("fs");
@@ -53,6 +72,13 @@ for (var i = 0; i < jsonFiles.length; i++) {
 	var d = JSON.parse(fs.readFileSync(jsonFiles[i], { encoding: "utf-8" }));
 	for (var k in d)
 		data[k] = d[k];
+}
+for (var i = 0; i < overrides.length; i++) {
+	var p = data;
+	var o = overrides[i];
+	for (var j = 0; j < o.property.length - 1; j++)
+		p = p[o.property[j]];
+	p[o.property[o.property.length - 1]] = o.value;
 }
 
 /*
