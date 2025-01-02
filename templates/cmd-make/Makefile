@@ -96,6 +96,9 @@ $(DIRS):
 clean:
 	rm -fr build
 
+strip: all
+	strip build/$(PROGRAM)
+
 ifeq ($(OS), Windows_NT)
 .PHONY: all clean
 else
@@ -103,7 +106,7 @@ install: all
 	mkdir -m 0755 -p $(BINDIR)
 	install -m 0755 build/$(PROGRAM) $(BINDIR)
 
-.PHONY: all clean install
+.PHONY: all clean strip install
 endif
 
 -include $(MKINC_DIR)/rules-extra.mk

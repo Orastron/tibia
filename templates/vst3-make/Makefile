@@ -144,6 +144,9 @@ $(DIRS):
 clean:
 	rm -fr build
 
+strip: all
+	strip build/$(BUNDLE_DIR)/$(DLL_FILE)
+
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
 		d=`echo $$d | sed 's:^build/::'` ; \
@@ -174,7 +177,7 @@ install-user: all
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean install install-user
+.PHONY: all clean strip install install-user
 
 .SECONDEXPANSION:
 

@@ -109,9 +109,19 @@ $(DIRS):
 clean:
 	rm -fr build
 
+strip:
+	#already stripped
+	#wasm-strip build/web/$(BUNDLE_NAME)/module.wasm
+	uglifyjs -c pure_funcs -m reserved build/web/$(BUNDLE_NAME)/module.js -o build/web/$(BUNDLE_NAME)/module.js
+	uglifyjs -c pure_funcs -m reserved build/web/$(BUNDLE_NAME)/processor.js -o build/web/$(BUNDLE_NAME)/processor.js
+	$(eval TMP := $(shell mktemp /tmp/index.XXXXXX))
+	html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-script-type-attributes --minify-css true --minify-js true build/web/index.html > $(TMP) || (rm $(TMP) && exit 1)
+	cp $(TMP) build/web/index.html || (rm $(TMP) && exit 1)
+	rm $(TMP)
+
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean
+.PHONY: all clean strip
 
 .SECONDEXPANSION:
 

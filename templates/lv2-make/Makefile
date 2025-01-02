@@ -113,6 +113,13 @@ $(DIRS):
 clean:
 	rm -fr build
 
+strip: all
+	strip build/$(BUNDLE_DIR)/$(DLL_FILE)
+	#Reaper can't handle this
+	#rdfproc lv2_store parse build/$(BUNDLE_DIR)/manifest.ttl turtle || (rm lv2_store* && exit 1)
+	#rdfproc lv2_store serialize ntriples > build/$(BUNDLE_DIR)/manifest.ttl || (rm lv2_store* && exit 1)
+	#rm lv2_store*
+
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
 		d=`echo $$d | sed 's:^build/::'` ; \
@@ -143,7 +150,7 @@ install-user: all
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean install install-user
+.PHONY: all clean strip install install-user
 
 .SECONDEXPANSION:
 
