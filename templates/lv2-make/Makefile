@@ -92,6 +92,10 @@ DIRS := build build/$(BUNDLE_DIR) build/obj
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
+STRIP_ALL := build/$(BUNDLE_DIR)/$(DLL_FILE) build/$(BUNDLE_DIR)/manifest.ttl
+STRIP_PHONY :=
+STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
@@ -113,7 +117,7 @@ $(DIRS):
 clean:
 	rm -fr build
 
-strip: all
+strip: $(STRIP_PREREQS)
 	strip build/$(BUNDLE_DIR)/$(DLL_FILE)
 	#Reaper can't handle this
 	#rdfproc lv2_store parse build/$(BUNDLE_DIR)/manifest.ttl turtle || (rm lv2_store* && exit 1)
@@ -150,7 +154,7 @@ install-user: all
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean strip install install-user
+.PHONY: all clean strip $(STRIP_PHONY) install install-user
 
 .SECONDEXPANSION:
 

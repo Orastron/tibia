@@ -113,10 +113,13 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 DIRS := build build/obj build/$(BUNDLE_DIR) build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/Contents/Resources build/$(BUNDLE_DIR)/$(DLL_DIR)
 
 ALL := build/$(BUNDLE_DIR)/$(DLL_FILE)
-
 ifeq ($(UNAME_S), Darwin)
-ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
+	ALL := $(ALL) build/$(BUNDLE_DIR)/Contents/Info.plist build/$(BUNDLE_DIR)/Contents/PkgInfo
 endif
+
+STRIP_ALL := build/$(BUNDLE_DIR)/$(DLL_FILE)
+STRIP_PHONY :=
+STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -144,7 +147,7 @@ $(DIRS):
 clean:
 	rm -fr build
 
-strip: all
+strip: $(STRIP_PREREQS)
 	strip build/$(BUNDLE_DIR)/$(DLL_FILE)
 
 install: all
@@ -177,7 +180,7 @@ install-user: all
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean strip install install-user
+.PHONY: all clean strip $(STRIP_PHONY) install install-user
 
 .SECONDEXPANSION:
 

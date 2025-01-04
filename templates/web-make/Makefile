@@ -85,6 +85,10 @@ DIRS := build build/obj build/web build/web/$(BUNDLE_NAME)
 
 ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
 
+STRIP_ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
+STRIP_PHONY :=
+STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
@@ -109,19 +113,15 @@ $(DIRS):
 clean:
 	rm -fr build
 
-strip:
+strip: $(STRIP_PREREQS)
 	#already stripped
 	#wasm-strip build/web/$(BUNDLE_NAME)/module.wasm
 	uglifyjs -c pure_funcs -m reserved build/web/$(BUNDLE_NAME)/module.js -o build/web/$(BUNDLE_NAME)/module.js
 	uglifyjs -c pure_funcs -m reserved build/web/$(BUNDLE_NAME)/processor.js -o build/web/$(BUNDLE_NAME)/processor.js
-	$(eval TMP := $(shell mktemp /tmp/index.XXXXXX))
-	html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-script-type-attributes --minify-css true --minify-js true build/web/index.html > $(TMP) || (rm $(TMP) && exit 1)
-	cp $(TMP) build/web/index.html || (rm $(TMP) && exit 1)
-	rm $(TMP)
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean strip
+.PHONY: all clean strip $(STRIP_PHONY)
 
 .SECONDEXPANSION:
 
