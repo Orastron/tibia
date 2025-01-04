@@ -21,5 +21,5 @@
 ALL := $(ALL) build/web/index.html build/web/cert.pem build/web/key.pem
 
 STRIP_ALL := $(STRIP_ALL) build/web/index.html
-STRIP_PHONY := strip-web-demo
+STRIP_PHONY := $(STRIP_PHONY) strip-web-demo
 STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
