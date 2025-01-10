@@ -49,13 +49,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 				"pc":			"%",
 				"s":			"s",
 				"semitone12TET":	"semi"
-			},
-
-			sdbm: function (s) {
-				var hash = 0;
-				for (var i = 0; i < s.length; i++)
-					hash = s.charCodeAt(i) + (hash << 6) + (hash << 16) - hash;
-				return hash >>> 0;
 			}
 		};
 
