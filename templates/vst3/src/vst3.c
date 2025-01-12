@@ -1552,9 +1552,11 @@ static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinber
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
 		c->parameters[i] = parameterAdjust(i, v.f);
+# ifdef DATA_UI
 		if (c->views)
 			for (size_t j = 0; j < c->viewsCount; j++)
 				plugViewUpdateParameter(c->views[j], i);
+# endif
 	}
 #endif
 	return Steinberg_kResultOk;
