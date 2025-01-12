@@ -1536,19 +1536,50 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 }
 
 static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinberg_IBStream* state) {
-	(void)thisInterface;
-	(void)state;
-
 	TRACE("controller set state\n");
-	return Steinberg_kNotImplemented;
+	if (state == NULL)
+		return Steinberg_kResultFalse;
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
+		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+			continue;
+		union { float f; uint32_t u; } v;
+		Steinberg_int32 n;
+		state->lpVtbl->read(state, &v, 4, &n);
+		if (n != 4)
+			return Steinberg_kResultFalse;
+		if (IS_BIG_ENDIAN)
+			v.u = SWAP_UINT32(v.u);
+		c->parameters[i] = parameterAdjust(i, v.f);
+		if (c->views)
+			for (size_t j = 0; j < c->viewsCount; j++)
+				plugViewUpdateParameter(c->views[j], i);
+	}
+#endif
+	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult controllerGetState(void* thisInterface, struct Steinberg_IBStream* state) {
-	(void)thisInterface;
-	(void)state;
-
 	TRACE("controller get state\n");
-	return Steinberg_kNotImplemented;
+	if (state == NULL)
+		return Steinberg_kResultFalse;
+#if DATA_PRODUCT_PARAMETERS_N > 0
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
+		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+			continue;
+		union { float f; uint32_t u; } v;
+		v.f = c->parameters[i];
+		if (IS_BIG_ENDIAN)
+			v.u = SWAP_UINT32(v.u);
+		Steinberg_int32 n;
+		state->lpVtbl->write(state, &v, 4, &n);
+		if (n != 4)
+			return Steinberg_kResultFalse;
+	}
+#endif
+	return Steinberg_kResultOk;
 }
 
 static Steinberg_int32 controllerGetParameterCount(void* thisInterface) {
