@@ -121,7 +121,7 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
 }
 
-static void serialize_float(char *dest, float f) {
+static void serialize_float(uint8_t *dest, float f) {
 	union { float f; uint32_t u; } v;
 	v.f = f;
 	dest[0] = v.u & 0xff;
@@ -130,30 +130,29 @@ static void serialize_float(char *dest, float f) {
 	dest[3] = (v.u & 0xff000000) >> 24;
 }
 
-static float parse_float(const char *data) {
+static float parse_float(const uint8_t *data) {
 	union { float f; uint32_t u; } v;
-	v.u = 0;
-	v.u |= data[0];
-	v.u |= (data[1] << 8);
-	v.u |= (data[2] << 16);
-	v.u |= (data[3] << 24);
+	v.u = data[0];
+	v.u |= data[1] << 8;
+	v.u |= data[2] << 16;
+	v.u |= data[3] << 24;
 	return v.f;
 }
 
 static int plugin_state_save(plugin *instance) {
-	char data[13];
+	uint8_t data[13];
 	serialize_float(data, instance->gain);
 	serialize_float(data + 4, instance->delay);
 	serialize_float(data + 8, instance->cutoff);
 	data[12] = instance->bypass ? 1 : 0;
-	return instance->cbs.write_state(instance->cbs.handle, data, 13);
+	return instance->cbs.write_state(instance->cbs.handle, (const char *)data, 13);
 }
 
 static void plugin_state_load(plugin *instance, const char *data, size_t length) {
 	(void)length;
-
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, parse_float(data));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, parse_float(data + 4));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, parse_float(data + 8));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, data[12] ? 1.f : 0.f);
+	const uint8_t *d = (const uint8_t *)data;
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, parse_float(d));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, parse_float(d + 4));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, parse_float(d + 8));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, d[12] ? 1.f : 0.f);
 }
