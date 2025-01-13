@@ -137,6 +137,9 @@
 		"ui": {
 			"userResizable": true,
 			"selfResizable": false
+		},
+		"state": {
+			"dspCustom": true
 		}
 	}
 }

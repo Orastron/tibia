@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023, 2024 Orastron Srl unipersonale
+ * Copyright (C) 2023-2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,25 +18,28 @@
  * File author: Stefano D'Angelo
  */
 
+#include <stdint.h>
+
 typedef struct plugin {
-	float	sample_rate;
-	size_t	delay_line_length;
+	plugin_callbacks	cbs;
 
-	float	gain;
-	float	delay;
-	float	cutoff;
-	char	bypass;
+	float			sample_rate;
+	size_t			delay_line_length;
 
-	float *	delay_line;
-	size_t	delay_line_cur;
-	float	z1;
-	float	cutoff_k;
-	float	yz1;
+	float			gain;
+	float			delay;
+	float			cutoff;
+	char			bypass;
+
+	float *			delay_line;
+	size_t			delay_line_cur;
+	float			z1;
+	float			cutoff_k;
+	float			yz1;
 } plugin;
 
 static void plugin_init(plugin *instance, plugin_callbacks *cbs) {
-	(void)instance;
-	(void)cbs;
+	instance->cbs = *cbs;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -73,7 +76,7 @@ static void plugin_set_parameter(plugin *instance, size_t index, float value) {
 		instance->gain = ((2.6039890429412597e-4f * value + 0.032131027163547855f) * value + 1.f) / ((0.0012705124328080768f * value - 0.0666763481312185f) * value + 1.f);
 		break;
 	case plugin_parameter_delay:
-		instance->delay = 0.001f * value;
+		instance->delay = value;
 		break;
 	case plugin_parameter_cutoff:
 		instance->cutoff = value;
@@ -94,8 +97,10 @@ static size_t calc_index(size_t cur, size_t delay, size_t len) {
 }
 
 static void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
-	//approx size_t delay = roundf(instance->sample_rate * instance->delay);
-	size_t delay = (size_t)(instance->sample_rate * instance->delay + 0.5f);
+	//approx const float gain = powf(10.f, 0.05f * instance->gain);
+	const float gain = ((2.6039890429412597e-4f * instance->gain + 0.032131027163547855f) * instance->gain + 1.f) / ((0.0012705124328080768f * instance->gain - 0.0666763481312185f) * instance->gain + 1.f);
+	//approx const size_t delay = roundf(instance->sample_rate * 0.001f * instance->delay);
+	const size_t delay = (size_t)(instance->sample_rate * 0.001f * instance->delay + 0.5f);
 	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff * instance->cutoff_k);
 	for (size_t i = 0; i < n_samples; i++) {
 		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
@@ -105,7 +110,7 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 			instance->delay_line_cur = 0;
 		const float y = x + mA1 * (instance->z1 - x);
 		instance->z1 = y;
-		outputs[0][i] = instance->bypass ? inputs[0][i] : instance->gain * y;
+		outputs[0][i] = instance->bypass ? inputs[0][i] : gain * y;
 		instance->yz1 = outputs[0][i];
 	}
 }
@@ -115,4 +120,41 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 	if (((data[0] & 0xf0) == 0x90) && (data[2] != 0))
 		//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
 		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
+}
+
+static void serialize_float(char *dest, float f) {
+	union { float f; uint32_t u; } v;
+	v.f = f;
+	dest[0] = v.u & 0xff;
+	dest[1] = (v.u & 0xff00) >> 8;
+	dest[2] = (v.u & 0xff0000) >> 16;
+	dest[3] = (v.u & 0xff000000) >> 24;
+}
+
+static float parse_float(const char *data) {
+	union { float f; uint32_t u; } v;
+	v.u = 0;
+	v.u |= data[0];
+	v.u |= (data[1] << 8);
+	v.u |= (data[2] << 16);
+	v.u |= (data[3] << 24);
+	return v.f;
+}
+
+static int plugin_state_save(plugin *instance) {
+	char data[13];
+	serialize_float(data, instance->gain);
+	serialize_float(data + 4, instance->delay);
+	serialize_float(data + 8, instance->cutoff);
+	data[12] = instance->bypass ? 1 : 0;
+	return instance->cbs.write_state(instance->cbs.handle, data, 13);
+}
+
+static void plugin_state_load(plugin *instance, const char *data, size_t length) {
+	(void)length;
+
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, parse_float(data));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, parse_float(data + 4));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, parse_float(data + 8));
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, data[12] ? 1.f : 0.f);
 }

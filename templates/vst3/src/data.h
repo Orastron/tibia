@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023, 2024 Orastron Srl unipersonale
+ * Copyright (C) 2023-2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,6 +123,7 @@ static uint32_t midiInIndex[DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 #endif
 
 #define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
+#define DATA_PRODUCT_PARAMETERS_IN_N		{{=it.product.parameters.filter(x => x.direction == "input").length}}
 
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
@@ -222,4 +223,8 @@ static struct {
 {{?it.product.ui}}
 #define DATA_UI
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
+{{?}}
+
+{{?it.product.state && it.product.state.dspCustom}}
+#define STATE_DSP_CUSTOM
 {{?}}

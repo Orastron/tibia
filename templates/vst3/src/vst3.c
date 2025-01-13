@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023, 2024 Orastron Srl unipersonale
+ * Copyright (C) 2023-2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -146,12 +146,12 @@ static char *x_asprintf(const char * restrict format, ...) {
 static char *bindir;
 static char *datadir;
 
-static const char * get_bindir_cb(void *handle) {
+static const char * getBindirCb(void *handle) {
 	(void)handle;
 	return bindir;
 }
 
-static const char * get_datadir_cb(void *handle) {
+static const char * getDatadirCb(void *handle) {
 	(void)handle;
 	return datadir;
 }
@@ -215,10 +215,42 @@ typedef struct pluginInstance {
 	char						midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
 #endif
 	void *						mem;
+#ifdef STATE_DSP_CUSTOM
+	struct Steinberg_IBStream *			state;
+#endif
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
 static Steinberg_Vst_IAudioProcessorVtbl pluginVtblIAudioProcessor;
+
+#ifdef STATE_DSP_CUSTOM
+static int pluginWriteStateCb(void *handle, const char *data, size_t length) {
+	pluginInstance *p = (pluginInstance *)handle;
+	size_t written = 0;
+	while (written < length) {
+		Steinberg_int32 w = (length - written) <= 0x7fffffff ? length - written : 0x7fffffff;
+		Steinberg_int32 n;
+		p->state->lpVtbl->write(p->state, (void *)data, length, &n);
+		if (n != w)
+			return -1;
+		written += n;
+	}
+	return 0;
+}
+
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
+static void pluginLoadParameterCb(void *handle, size_t index, float value) {
+	size_t i = index;
+#  ifdef DATA_PARAM_LATENCY_INDEX
+	if (i >= DATA_PARAM_LATENCY_INDEX)
+		i--;
+#  endif
+	pluginInstance *p = (pluginInstance *)handle;
+	p->parameters[i] = parameterAdjust(i, value);
+	plugin_set_parameter(&p->p, index, p->parameters[i]);
+}
+# endif
+#endif
 
 static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg_TUID iid, void ** obj) {
 	// This seems to violate the way multiple inheritance should work in COM, but hosts like it, so what do I know...
@@ -285,8 +317,19 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	plugin_callbacks cbs = {
 		/* .handle		= */ (void *)p,
 		/* .format		= */ "vst3",
-		/* .get_bindir		= */ get_bindir_cb,
-		/* .get_datadir		= */ get_datadir_cb
+		/* .get_bindir		= */ getBindirCb,
+		/* .get_datadir		= */ getDatadirCb,
+#ifdef STATE_DSP_CUSTOM
+		/* .write_state		= */ pluginWriteStateCb,
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
+		/* .load_parameter	= */ pluginLoadParameterCb
+# else
+		/* .load_parameter	= */ NULL
+# endif
+#else
+		/* .write_state		= */ NULL,
+		/* .load_parameter	= */ NULL
+#endif
 	};
 	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_N > 0
@@ -511,7 +554,33 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 	TRACE("plugin set state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#ifdef STATE_DSP_CUSTOM
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
+	if (state->lpVtbl->seek(state, 0, Steinberg_IBStream_IStreamSeekMode_kIBSeekEnd, NULL) != Steinberg_kResultOk)
+		return Steinberg_kResultFalse;
+	Steinberg_int64 length;
+	if (state->lpVtbl->tell(state, &length) != Steinberg_kResultOk)
+		return Steinberg_kResultFalse;
+	if (state->lpVtbl->seek(state, 0, Steinberg_IBStream_IStreamSeekMode_kIBSeekSet, NULL) != Steinberg_kResultOk)
+		return Steinberg_kResultFalse;
+	char *data = malloc(length);
+	if (data == NULL)
+		return Steinberg_kResultFalse;
+	Steinberg_int64 read = 0;
+	while (read < length) {
+		Steinberg_int32 r = (length - read) <= 0x7fffffff ? length - read : 0x7fffffff;
+		Steinberg_int32 n;
+		state->lpVtbl->read(state, data + read, length, &n);
+		if (n != r) {
+			free(data);
+			return Steinberg_kResultFalse;
+		}
+		read += n;
+	}	
+	plugin_state_load(&p->p, data, length);
+	free(data);
+#else
+# if DATA_PRODUCT_PARAMETERS_N > 0
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
@@ -526,6 +595,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 		p->parameters[i] = parameterAdjust(i, v.f);
 		plugin_set_parameter(&p->p, parameterData[i].index, p->parameters[i]);
 	}
+# endif
 #endif
 	return Steinberg_kResultOk;
 }
@@ -534,7 +604,13 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	TRACE("plugin get state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#ifdef STATE_DSP_CUSTOM
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
+	p->state = state;
+	if (plugin_state_save(&p->p) != 0)
+		return Steinberg_kResultFalse;
+#else
+# if DATA_PRODUCT_PARAMETERS_N > 0
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
 		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
@@ -548,6 +624,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 		if (n != 4)
 			return Steinberg_kResultFalse;
 	}
+# endif
 #endif
 	return Steinberg_kResultOk;
 }
@@ -1172,8 +1249,8 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 	plugin_ui_callbacks cbs = {
 		/* .handle		= */ (void *)v,
 		/* .format		= */ "vst3",
-		/* .get_bindir		= */ get_bindir_cb,
-		/* .get_datadir		= */ get_datadir_cb,
+		/* .get_bindir		= */ getBindirCb,
+		/* .get_datadir		= */ getDatadirCb,
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
 		/* .set_parameter	= */ plugViewSetParameterCb,
@@ -1737,9 +1814,10 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	c->parameters[pi] = pi >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(pi, parameterMap(pi, value));
 # ifdef DATA_UI
-	for (size_t i = 0; i < c->viewsCount; i++)
-		if(c->views[i])
-			plugViewUpdateParameter(c->views[i], pi);
+	if (pi < DATA_PRODUCT_PARAMETERS_N)
+		for (size_t i = 0; i < c->viewsCount; i++)
+			if(c->views[i])
+				plugViewUpdateParameter(c->views[i], pi);
 # endif
 	return Steinberg_kResultTrue;
 #else
