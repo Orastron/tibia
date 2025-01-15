@@ -42,7 +42,7 @@ else
 	BINDIR := $(PREFIX)/bin
 endif
 
-TINIWAV_DIR ?= ../tinywav
+TINYWAV_DIR ?= ../tinywav
 MIDI_PARSER_DIR ?= ../midi-parser
 
 CC := gcc
