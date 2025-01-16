@@ -154,7 +154,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 	{
 		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Channel Pressure") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Channel Pressure") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Chan Pres") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP").slice(0,16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.0,
@@ -164,7 +164,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 	{
 		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Pitch Bend") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB").slice(0, 16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.5,
@@ -174,7 +174,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 	{
 		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Mod Wheel") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(b.name + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " MW").slice(0, 16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.0,

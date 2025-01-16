@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023, 2024 Orastron Srl unipersonale
+# Copyright (C) 2023-2025 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ MKINC_DIR := {{=it.vst3_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
 
 HAS_UI := {{=it.product.ui ? "yes" : "no"}}
+HAS_PARAMETER_IN := {{=it.product.parameters.filter(x => x.direction == "input").length > 0 ? "yes" : "no"}}
 
 {{?it.make?.extra}}
 {{=it.make.extra}}

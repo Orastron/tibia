@@ -11,6 +11,7 @@ ifeq ($(TEMPLATE), lv2)
 endif
 
 ifeq ($(TEMPLATE), vst3)
+	RUTEX_DIR := ../../../rutex
 	CFLAGS_EXTRA := -I../../../vst3_c_api $(shell pkg-config --cflags pugl-cairo-0)
 	LDFLAGS_EXTRA := $(shell pkg-config --libs pugl-cairo-0 pugl-0 cairo) -Wl,-rpath,$(shell pkg-config --variable=libdir pugl-cairo-0),-rpath,$(shell pkg-config --variable=libdir pugl-0),-rpath,$(shell pkg-config --variable=libdir cairo)
 endif
