@@ -28,8 +28,8 @@
 static Steinberg_char16 dataProductNameW[64] = { {{~Array.from(it.product.name).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 static Steinberg_char16 dataProductVersionW[64] = { {{~Array.from(it.product.version + "." + it.product.buildVersion).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
-#define DATA_VST3_SDK_VERSION			"VST 3.7.9"
-static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.9") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+#define DATA_VST3_SDK_VERSION			"VST 3.7.12"
+static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.12") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
 static Steinberg_char16 dataVST3ControllerNameW[64] = { {{~Array.from(it.product.name + " Controller").slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
@@ -124,13 +124,14 @@ static uint32_t midiInIndex[DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 
 #define DATA_PRODUCT_PARAMETERS_N		{{=it.product.parameters.filter(x => !x.isLatency).length}}
 #define DATA_PRODUCT_PARAMETERS_IN_N		{{=it.product.parameters.filter(x => x.direction == "input").length}}
+#define DATA_PRODUCT_PARAMETERS_OUT_N		{{=it.product.parameters.filter(x => !x.isLatency && x.direction == "output").length}}
 
 #if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N] = {
 {{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
 	{
 {{?p.isBypass}}
-		/* .id				= */ {{=(it.tibia.sdbm("Bypass") & 0x7fffffff) >>> 0}},
+		/* .id				= */ {{=(it.tibia.sdbm("bypass ") & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from("Bypass") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
@@ -139,7 +140,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .unitId			= */ 0,
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsBypass | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 {{??}}
-		/* .id				= */ {{=(it.tibia.sdbm(p.name) & 0x7fffffff) >>> 0}},
+		/* .id				= */ {{=(it.tibia.sdbm(p.id) & 0x7fffffff) >>> 0}},
 		/* .title			= */ { {{~Array.from(p.name) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .shortTitle			= */ { {{~Array.from(p.shortName) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { {{~Array.from(p.unit in it.tibia.vst3.units ? it.tibia.vst3.units[p.unit] : "") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
@@ -152,9 +153,9 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 {{~}}
 {{~it.product.buses.filter(x => x.type == "midi" && x.direction == "input") :b:i}}
 	{
-		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Channel Pressure") & 0x7fffffff) >>> 0}},
-		/* .title			= */ { {{~Array.from(b.name + " Channel Pressure") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " CP").slice(0,16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .id				= */ {{=(it.tibia.sdbm(b.id + " channel pressure") & 0x7fffffff) >>> 0}},
+		/* .title			= */ { {{~Array.from(b.name + " Channel Pressure").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Chan Pres").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.0,
@@ -162,9 +163,9 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 	{
-		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Pitch Bend") & 0x7fffffff) >>> 0}},
-		/* .title			= */ { {{~Array.from(b.name + " Pitch Bend") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " PB").slice(0, 16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .id				= */ {{=(it.tibia.sdbm(b.id + " pitch bend") & 0x7fffffff) >>> 0}},
+		/* .title			= */ { {{~Array.from(b.name + " Pitch Bend").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Pitch Bend").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.5,
@@ -172,9 +173,9 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 		/* .flags			= */ Steinberg_Vst_ParameterInfo_ParameterFlags_kIsHidden | Steinberg_Vst_ParameterInfo_ParameterFlags_kCanAutomate
 	},
 	{
-		/* .id				= */ {{=(it.tibia.sdbm(b.name + " Mod Wheel") & 0x7fffffff) >>> 0}},
-		/* .title			= */ { {{~Array.from(b.name + " Mod Wheel") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
-		/* .shortTitle			= */ { {{~Array.from(b.shortName + " MW").slice(0, 16) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .id				= */ {{=(it.tibia.sdbm(b.id + " mod wheel") & 0x7fffffff) >>> 0}},
+		/* .title			= */ { {{~Array.from(b.name + " Mod Wheel").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
+		/* .shortTitle			= */ { {{~Array.from(b.shortName + " Mod Wheel").slice(0, 127) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 },
 		/* .units			= */ { 0 },
 		/* .stepCount			= */ 0,
 		/* .defaultNormalizedValue	= */ 0.0,
@@ -224,6 +225,15 @@ static struct {
 #define DATA_UI
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
 {{?}}
+
+/*
+ * Parameter indices/ids:
+ *
+ * parameterInfo.id: hash of parameter id (+ extra sometimes), univocally identifies parameter across plugin versions (a la lv2:symbol)
+ * parameterGetIndexById(): returns parameterData's array index based on id (parameterInfo.id)
+ * parameterData.index/p.paramIndex: Tibia parameter index, as used in plugin.h
+ * latency out parameter is never added to parameterInfo and parameterData (specially handled)
+ */
 
 {{?it.product.state && it.product.state.dspCustom}}
 #define STATE_DSP_CUSTOM
