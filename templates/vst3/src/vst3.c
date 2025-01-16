@@ -1077,11 +1077,11 @@ static void controllerGetParamDataValuePtrs(controller *ctrl, size_t index, Para
 		*p = parameterInData + parameterInfoToDataIndex[index];
 		*pv = ctrl->parametersIn + parameterInfoToDataIndex[index];
 	}
-# elif DATA_PRODUCT_PARAMETER_IN_N > 0
-	*p = parameterInData + paramterInfoToDataIndex[index];
+# elif DATA_PRODUCT_PARAMETERS_IN_N > 0
+	*p = parameterInData + parameterInfoToDataIndex[index];
 	*pv = ctrl->parametersIn + parameterInfoToDataIndex[index];
 # else
-	*p = parameterOutData + paramterInfoToDataIndex[index];
+	*p = parameterOutData + parameterInfoToDataIndex[index];
 	*pv = ctrl->parametersOut + parameterInfoToDataIndex[index];
 # endif
 }
