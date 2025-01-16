@@ -57,7 +57,6 @@
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
-//#define TIBIA_TRACE
 #ifdef TIBIA_TRACE
 # define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
@@ -160,6 +159,7 @@ static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
 
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 static int parameterGetIndexById(Steinberg_Vst_ParamID id) {
 	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i++)
 		if (parameterInfo[i].id == id)
@@ -167,19 +167,67 @@ static int parameterGetIndexById(Steinberg_Vst_ParamID id) {
 	return -1;
 }
 
-static double parameterMap(int i, double v) {
-	return parameterData[i].flags & DATA_PARAM_MAP_LOG ? parameterData[i].min * exp(parameterData[i].mapK * v) : parameterData[i].min + (parameterData[i].max - parameterData[i].min) * v;
+# if DATA_PRODUCT_PARAMETERS_N > 0
+static double parameterMap(const ParameterData *data, double v) {
+	return data->flags & DATA_PARAM_MAP_LOG ? data->min * exp(data->mapK * v) : data->min + (data->max - data->min) * v;
 }
 
-static double parameterUnmap(int i, double v) {
-	return parameterData[i].flags & DATA_PARAM_MAP_LOG ? log(v / parameterData[i].min) / parameterData[i].mapK : (v - parameterData[i].min) / (parameterData[i].max - parameterData[i].min);
+static double parameterUnmap(const ParameterData *data, double v) {
+	return data->flags & DATA_PARAM_MAP_LOG ? log(v / data->min) / data->mapK : (v - data->min) / (data->max - data->min);
 }
 
-static double parameterAdjust(int i, double v) {
-	v = parameterData[i].flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? (v >= 0.5 ? 1.0 : 0.0)
-		: (parameterData[i].flags & DATA_PARAM_INTEGER ? (int32_t)(v + (v >= 0.0 ? 0.5 : -0.5)) : v);
-	return clamp(v, parameterData[i].min, parameterData[i].max);
+static double parameterAdjust(const ParameterData *data, double v) {
+	v = data->flags & (DATA_PARAM_BYPASS | DATA_PARAM_TOGGLED) ? (v >= 0.5 ? 1.0 : 0.0)
+		: (data->flags & DATA_PARAM_INTEGER ? (int32_t)(v + (v >= 0.0 ? 0.5 : -0.5)) : v);
+	return clamp(v, data->min, data->max);
 }
+# endif
+
+static ParameterData *parameterGetDataByIndex(size_t index) {
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+#  if DATA_PRODUCT_PARAMETERS_N > 0
+	if (index >= DATA_PRODUCT_PARAMETERS_N)
+#  endif
+		return NULL;
+# endif
+# if DATA_PRODUCT_PARAMETERS_N > 0
+#  if (DATA_PRODUCT_PARAMETERS_IN_N > 0) && (DATA_PRODUCT_PARAMETERS_OUT_N > 0)
+	ParameterData *p = (parameterInfo[index].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly ? parameterOutData : parameterInData) + parameterInfoToDataIndex[index];
+#  elif DATA_PRODUCT_PARAMETERS_IN_N > 0
+	ParameterData *p = parameterInData + parameterInfoToDataIndex[index];
+#  else
+	ParameterData *p = parameterOutData + parameterInfoToDataIndex[index];
+#  endif
+	return p;
+# endif
+}
+
+static double parameterMapByIndex(size_t index, double v) {
+# if DATA_PRODUCT_PARAMETERS_N > 0
+	ParameterData *p = parameterGetDataByIndex(index);
+#  if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	if (p == NULL)
+		return v;
+#  endif
+	return parameterMap(p, v);
+# else
+	return v;
+# endif
+}
+
+static double parameterUnmapByIndex(size_t index, double v) {
+# if DATA_PRODUCT_PARAMETERS_N > 0
+	ParameterData *p = parameterGetDataByIndex(index);
+#  if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	if (p == NULL)
+		return v;
+#  endif
+	return parameterUnmap(p, v);
+# else
+	return v;
+# endif
+}
+#endif
 
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent;
@@ -189,8 +237,11 @@ typedef struct pluginInstance {
 	Steinberg_FUnknown *				context;
 	plugin						p;
 	float						sampleRate;
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	float						parameters[DATA_PRODUCT_PARAMETERS_N];
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
+	float						parametersIn[DATA_PRODUCT_PARAMETERS_IN_N];
+#endif
+#if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	float						parametersOut[DATA_PRODUCT_PARAMETERS_OUT_N];
 #endif
 #if DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N > 0
 	const float *					inputs[DATA_PRODUCT_CHANNELS_AUDIO_INPUT_N];
@@ -215,7 +266,7 @@ typedef struct pluginInstance {
 	char						midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
 #endif
 	void *						mem;
-#ifdef STATE_DSP_CUSTOM
+#ifdef DATA_STATE_DSP_CUSTOM
 	struct Steinberg_IBStream *			state;
 #endif
 } pluginInstance;
@@ -223,7 +274,7 @@ typedef struct pluginInstance {
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
 static Steinberg_Vst_IAudioProcessorVtbl pluginVtblIAudioProcessor;
 
-#ifdef STATE_DSP_CUSTOM
+#ifdef DATA_STATE_DSP_CUSTOM
 static int pluginWriteStateCb(void *handle, const char *data, size_t length) {
 	pluginInstance *p = (pluginInstance *)handle;
 	size_t written = 0;
@@ -246,8 +297,9 @@ static void pluginLoadParameterCb(void *handle, size_t index, float value) {
 		i--;
 #  endif
 	pluginInstance *p = (pluginInstance *)handle;
-	p->parameters[i] = parameterAdjust(i, value);
-	plugin_set_parameter(&p->p, index, p->parameters[i]);
+	size_t ii = parameterInfoToDataIndex[i];
+	p->parametersIn[ii] = parameterAdjust(parameterInData + ii, value);
+	plugin_set_parameter(&p->p, index, p->parametersIn[ii]);
 }
 # endif
 #endif
@@ -319,7 +371,7 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
 		/* .get_datadir		= */ getDatadirCb,
-#ifdef STATE_DSP_CUSTOM
+#ifdef DATA_STATE_DSP_CUSTOM
 		/* .write_state		= */ pluginWriteStateCb,
 # if DATA_PRODUCT_PARAMETERS_IN_N > 0
 		/* .load_parameter	= */ pluginLoadParameterCb
@@ -332,12 +384,15 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 #endif
 	};
 	plugin_init(&p->p, &cbs);
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		p->parameters[i] = parameterData[i].def;
-		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
-			plugin_set_parameter(&p->p, parameterData[i].index, parameterData[i].def);
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
+		p->parametersIn[i] = parameterInData[i].def;
+		plugin_set_parameter(&p->p, parameterInData[i].index, parameterInData[i].def);
 	}
+#endif
+#if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_OUT_N; i++)
+		p->parametersOut[i] = parameterOutData[i].def;
 #endif
 #if DATA_PRODUCT_BUSES_AUDIO_INPUT_N + DATA_PRODUCT_BUSES_AUDIO_OUTPUT_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N + DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
 	p->neededBusesActive = 0;
@@ -554,7 +609,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 	TRACE("plugin set state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#ifdef STATE_DSP_CUSTOM
+#ifdef DATA_STATE_DSP_CUSTOM
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	if (state->lpVtbl->seek(state, 0, Steinberg_IBStream_IStreamSeekMode_kIBSeekEnd, NULL) != Steinberg_kResultOk)
 		return Steinberg_kResultFalse;
@@ -580,11 +635,9 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 	plugin_state_load(&p->p, data, length);
 	free(data);
 #else
-# if DATA_PRODUCT_PARAMETERS_N > 0
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
-			continue;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		union { float f; uint32_t u; } v;
 		Steinberg_int32 n;
 		state->lpVtbl->read(state, &v, 4, &n);
@@ -592,8 +645,8 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		p->parameters[i] = parameterAdjust(i, v.f);
-		plugin_set_parameter(&p->p, parameterData[i].index, p->parameters[i]);
+		p->parametersIn[i] = parameterAdjust(parameterInData + i, v.f);
+		plugin_set_parameter(&p->p, parameterInData[i].index, p->parametersIn[i]);
 	}
 # endif
 #endif
@@ -604,19 +657,17 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	TRACE("plugin get state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#ifdef STATE_DSP_CUSTOM
+#ifdef DATA_STATE_DSP_CUSTOM
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
 	p->state = state;
 	if (plugin_state_save(&p->p) != 0)
 		return Steinberg_kResultFalse;
 #else
-# if DATA_PRODUCT_PARAMETERS_N > 0
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent));
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
-			continue;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		union { float f; uint32_t u; } v;
-		v.f = p->parameters[i];
+		v.f = p->parametersIn[i];
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
 		Steinberg_int32 n;
@@ -749,7 +800,7 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 }
 
 static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *data, char before) {
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+#if DATA_PRODUCT_PARAMETERS_IN_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	if (data->inputParameterChanges == NULL)
 		return;
 	Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
@@ -783,6 +834,8 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 			case 1:
 			{
 				// pitch bend change
+				// MIDI spec: 0 = max down bend, 8192 = no bend, 16383 = max up bend
+				// to make it symmetrical we have max down bend = 1 instead
 				uint16_t x = (uint16_t)(16382.0 * v) + 1;
 				data[0] = 0xe0 /* | channel */;
 				data[1] = (x >> 7) & 0x7f;
@@ -802,11 +855,14 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 			continue;
 		}
 # endif
-		v = parameterAdjust(pi, parameterMap(pi, v));
-		if (v != p->parameters[pi]) {
-			p->parameters[pi] = v;
-			plugin_set_parameter(&p->p, parameterData[pi].index, p->parameters[pi]);
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
+		size_t ii = parameterInfoToDataIndex[pi];
+		v = parameterAdjust(parameterInData + ii, parameterMap(parameterInData + ii, v));
+		if (v != p->parametersIn[ii]) {
+			p->parametersIn[ii] = v;
+			plugin_set_parameter(&p->p, parameterInData[ii].index, v);
 		}
+# endif
 	}
 #endif
 }
@@ -897,22 +953,20 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 
 	processParams(p, data, 0); 
 
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (!(parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly))
+#if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_OUT_N; i++) {
+		float v = plugin_get_parameter(&p->p, parameterOutData[i].index);
+		if (v == p->parametersOut[i])
 			continue;
-		float v = plugin_get_parameter(&p->p, parameterData[i].index);
-		if (v == p->parameters[i])
-			continue;
-		p->parameters[i] = v;
+		p->parametersOut[i] = v;
 		if (data->outputParameterChanges == NULL)
 			continue;
-		Steinberg_Vst_ParamID id = parameterInfo[i].id;
+		Steinberg_Vst_ParamID id = parameterInfo[parameterOutDataToInfoIndex[i]].id;
 		Steinberg_int32 index;
 		struct Steinberg_Vst_IParamValueQueue *q = data->outputParameterChanges->lpVtbl->addParameterData(data->outputParameterChanges, &id, &index);
 		if (q == NULL)
 			continue;
-		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(i, v), &index);
+		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(parameterOutData + i, v), &index);
 	}
 #endif
 
@@ -995,8 +1049,14 @@ typedef struct controller {
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
-#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	double						parameters[DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
+	double						parametersIn[DATA_PRODUCT_PARAMETERS_IN_N];
+#endif
+#if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	double						parametersOut[DATA_PRODUCT_PARAMETERS_OUT_N];
+#endif
+#if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	double						parametersMidiIn[3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N];
 #endif
 	struct Steinberg_Vst_IComponentHandler *	componentHandler;
 #ifdef DATA_UI
@@ -1006,6 +1066,26 @@ typedef struct controller {
 } controller;
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
+
+#if DATA_PRODUCT_PARAMETERS_N > 0
+static void controllerGetParamDataValuePtrs(controller *ctrl, size_t index, ParameterData **p, double **pv) {
+# if (DATA_PRODUCT_PARAMETERS_IN_N > 0) && (DATA_PRODUCT_PARAMETERS_OUT_N > 0)
+	if (parameterInfo[index].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly) {
+		*p = parameterOutData + parameterInfoToDataIndex[index];
+		*pv = ctrl->parametersOut + parameterInfoToDataIndex[index];
+	} else {
+		*p = parameterInData + parameterInfoToDataIndex[index];
+		*pv = ctrl->parametersIn + parameterInfoToDataIndex[index];
+	}
+# elif DATA_PRODUCT_PARAMETER_IN_N > 0
+	*p = parameterInData + paramterInfoToDataIndex[index];
+	*pv = ctrl->parametersIn + parameterInfoToDataIndex[index];
+# else
+	*p = parameterOutData + paramterInfoToDataIndex[index];
+	*pv = ctrl->parametersOut + parameterInfoToDataIndex[index];
+# endif
+}
+#endif
 
 #ifdef DATA_UI
 
@@ -1168,16 +1248,31 @@ static Steinberg_tresult plugViewIsPlatformTypeSupported(void* thisInterface, St
 }
 
 # if DATA_PRODUCT_PARAMETERS_N > 0
-static void plugViewUpdateParameter(plugView *view, size_t index) {
+#  if DATA_PRODUCT_PARAMETERS_IN_N > 0
+static void plugViewUpdateParameterIn(plugView *view, size_t index) {
 	if (view->ui)
-		plugin_ui_set_parameter(view->ui, parameterData[index].index, view->ctrl->parameters[index]);
+		plugin_ui_set_parameter(view->ui, parameterInData[index].index, view->ctrl->parametersIn[index]);
 }
+#  endif
+
+#  if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+static void plugViewUpdateParameterOut(plugView *view, size_t index) {
+	if (view->ui)
+		plugin_ui_set_parameter(view->ui, parameterOutData[index].index, view->ctrl->parametersOut[index]);
+}
+#  endif
 
 static void plugViewUpdateAllParameters(plugView *view) {
 	if (view->ui == NULL)
 		return;
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
-		plugin_ui_set_parameter(view->ui, parameterData[i].index, view->ctrl->parameters[i]);
+#  if DATA_PRODUCT_PARAMETERS_IN_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
+		plugin_ui_set_parameter(view->ui, parameterInData[i].index, view->ctrl->parametersIn[i]);
+#  endif
+#  if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_OUT_N; i++)
+		plugin_ui_set_parameter(view->ui, parameterOutData[i].index, view->ctrl->parametersOut[i]);
+#  endif
 }
 
 static void plugViewSetParameterBeginCb(void *handle, size_t index) {
@@ -1201,8 +1296,12 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
 #  endif
 	plugView *v = (plugView *)handle;
-	v->ctrl->parameters[index] = parameterAdjust(index, value); // let Reaper find the updated value
-	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(index, v->ctrl->parameters[index]));
+
+	ParameterData *p;
+	double *pv;
+	controllerGetParamDataValuePtrs(v->ctrl, index, &p, &pv);
+	*pv = parameterAdjust(p, value); // let Reaper find the updated value
+	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(p, *pv));
 }
 
 static void plugViewSetParameterEndCb(void *handle, size_t index) {
@@ -1568,15 +1667,19 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
-#if DATA_PRODUCT_PARAMETERS_N > 0
-	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++)
-		c->parameters[i] = parameterData[i].def;
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
+	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
+		c->parametersIn[i] = parameterInData[i].def;
+#endif
+#if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_OUT_N; i++)
+		c->parametersOut[i] = parameterOutData[i].def;
 #endif
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	for (int i = DATA_PRODUCT_PARAMETERS_N; i < DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i += 3) {
-		c->parameters[i] = 0.0;
-		c->parameters[i + 1] = 0.5;
-		c->parameters[i + 2] = 0.0;
+	for (int i = 0; i < 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N; i += 3) {
+		c->parametersMidiIn[i] = 0.0;
+		c->parametersMidiIn[i + 1] = 0.5;
+		c->parametersMidiIn[i + 2] = 0.0;
 	}
 #endif
 	return Steinberg_kResultOk;
@@ -1593,11 +1696,9 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 	TRACE("controller set component state %p %p\n", thisInterface, (void *)state);
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
-			continue;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		union { float f; uint32_t u; } v;
 		Steinberg_int32 n;
 		state->lpVtbl->read(state, &v, 4, &n);
@@ -1605,7 +1706,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		c->parameters[i] = parameterAdjust(i, v.f);
+		c->parametersIn[i] = parameterAdjust(parameterInData + i, v.f);
 	}
 #endif
 	TRACE(" ok\n");
@@ -1613,14 +1714,13 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 }
 
 static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinberg_IBStream* state) {
+	// TODO: we need this implemented for Reaper, need to re-check this
 	TRACE("controller set state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
-			continue;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		union { float f; uint32_t u; } v;
 		Steinberg_int32 n;
 		state->lpVtbl->read(state, &v, 4, &n);
@@ -1628,11 +1728,11 @@ static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinber
 			return Steinberg_kResultFalse;
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
-		c->parameters[i] = parameterAdjust(i, v.f);
+		c->parametersIn[i] = parameterAdjust(parameterInData + i, v.f);
 # ifdef DATA_UI
 		if (c->views)
 			for (size_t j = 0; j < c->viewsCount; j++)
-				plugViewUpdateParameter(c->views[j], i);
+				plugViewUpdateParameterIn(c->views[j], i);
 # endif
 	}
 #endif
@@ -1640,16 +1740,15 @@ static Steinberg_tresult controllerSetState(void* thisInterface, struct Steinber
 }
 
 static Steinberg_tresult controllerGetState(void* thisInterface, struct Steinberg_IBStream* state) {
+	// TODO: we need this implemented for Reaper, need to re-check this
 	TRACE("controller get state\n");
 	if (state == NULL)
 		return Steinberg_kResultFalse;
-#if DATA_PRODUCT_PARAMETERS_N > 0
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_N; i++) {
-		if (parameterInfo[i].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
-			continue;
+	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		union { float f; uint32_t u; } v;
-		v.f = c->parameters[i];
+		v.f = c->parametersIn[i];
 		if (IS_BIG_ENDIAN)
 			v.u = SWAP_UINT32(v.u);
 		Steinberg_int32 n;
@@ -1672,10 +1771,16 @@ static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinbe
 	(void)thisInterface;
 
 	TRACE("controller get parameter info\n");
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	if (paramIndex < 0 || paramIndex >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N)
 		return Steinberg_kResultFalse;
 	*info = parameterInfo[paramIndex];
 	return Steinberg_kResultTrue;
+#else
+	(void)paramIndex;
+	(void)info;
+	return Steinberg_kResultFalse;
+#endif
 }
 
 static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
@@ -1724,11 +1829,18 @@ static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, St
 	(void)thisInterface;
 
 	TRACE("controller get param string by value\n");
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	int pi = parameterGetIndexById(id);
 	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
-	dToStr(pi >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(pi, valueNormalized), string, 2);
+	dToStr(parameterMapByIndex(pi, valueNormalized), string, 2);
 	return Steinberg_kResultTrue;
+#else
+	(void)id;
+	(void)valueNormalized;
+	(void)string;
+	return Steinberg_kResultFalse;
+#endif
 }
 
 void TCharToD(Steinberg_Vst_TChar* s, double *v) {
@@ -1763,29 +1875,48 @@ static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, St
 	(void)thisInterface;
 
 	TRACE("controller get param value by string\n");
+#if DATA_PRODUCT_PARAMETERS_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	int pi = parameterGetIndexById(id);
 	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
 	double v;
 	TCharToD(string, &v);
-	*valueNormalized = pi >= DATA_PRODUCT_PARAMETERS_N ? v : parameterUnmap(pi, v);
+	*valueNormalized = parameterUnmapByIndex(pi, v);
 	return Steinberg_kResultTrue;
+#else
+	(void)id;
+	(void)string;
+	(void)valueNormalized;
+	return Steinberg_kResultFalse;
+#endif
 }
 
 static Steinberg_Vst_ParamValue controllerNormalizedParamToPlain(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue valueNormalized) {
 	(void)thisInterface;
 
 	TRACE("controller normalized param to plain\n");
+#if DATA_PRODUCT_PARAMETERS_N > 0
 	int pi = parameterGetIndexById(id);
-	return pi >= DATA_PRODUCT_PARAMETERS_N ? valueNormalized : parameterMap(pi, valueNormalized);
+	return parameterMapByIndex(pi, valueNormalized);
+#else
+	(void)id;
+	(void)valueNormalized;
+	return 0.0;
+#endif
 }
 
 static Steinberg_Vst_ParamValue controllerPlainParamToNormalized(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_ParamValue plainValue) {
 	(void)thisInterface;
 
 	TRACE("controller plain param to normalized\n");
+#if DATA_PRODUCT_PARAMETERS_N > 0
 	int pi = parameterGetIndexById(id);
-	return pi >= DATA_PRODUCT_PARAMETERS_N ? plainValue : parameterUnmap(pi, plainValue);
+	return parameterUnmapByIndex(pi, plainValue);
+#else
+	(void)id;
+	(void)plainValue;
+	return 0.0;
+#endif
 }
 
 static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface, Steinberg_Vst_ParamID id) {
@@ -1794,10 +1925,15 @@ static Steinberg_Vst_ParamValue controllerGetParamNormalized(void* thisInterface
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	int pi = parameterGetIndexById(id);
 # if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	return pi >= DATA_PRODUCT_PARAMETERS_N ? c->parameters[pi] : parameterUnmap(pi, c->parameters[pi]);
-# else
-	return parameterUnmap(pi, c->parameters[pi]);
+#  if DATA_PRODUCT_PARAMETERS_N > 0
+	if (pi >= DATA_PRODUCT_PARAMETERS_N)
+#  endif
+		return c->parametersMidiIn[pi - DATA_PRODUCT_PARAMETERS_N];
 # endif
+	ParameterData *p;
+	double *pv;
+	controllerGetParamDataValuePtrs(c, pi, &p, &pv);
+	return parameterUnmap(p, *pv);
 #else
 	(void)thisInterface;
 	(void)id;
@@ -1812,12 +1948,29 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	if (pi >= DATA_PRODUCT_PARAMETERS_N + 3 * DATA_PRODUCT_BUSES_MIDI_INPUT_N || pi < 0)
 		return Steinberg_kResultFalse;
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
-	c->parameters[pi] = pi >= DATA_PRODUCT_PARAMETERS_N ? value : parameterAdjust(pi, parameterMap(pi, value));
-# ifdef DATA_UI
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	if (pi >= DATA_PRODUCT_PARAMETERS_N) {
+		c->parametersMidiIn[pi - DATA_PRODUCT_PARAMETERS_N] = value;
+	} else {
+# endif
+# if DATA_PRODUCT_PARAMETERS_N > 0
+		ParameterData *p;
+		double *pv;
+		controllerGetParamDataValuePtrs(c, pi, &p, &pv);
+		*pv = parameterAdjust(p, parameterMap(p, value));
+# endif
+# if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+	}
+# endif
+# if defined(DATA_UI) && (DATA_PRODUCT_PARAMETERS_N > 0)
 	if (pi < DATA_PRODUCT_PARAMETERS_N)
 		for (size_t i = 0; i < c->viewsCount; i++)
-			if(c->views[i])
-				plugViewUpdateParameter(c->views[i], pi);
+			if(c->views[i]) {
+				if (parameterInfo[pi].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
+					plugViewUpdateParameterOut(c->views[i], pi);
+				else
+					plugViewUpdateParameterIn(c->views[i], pi);
+			}
 # endif
 	return Steinberg_kResultTrue;
 #else

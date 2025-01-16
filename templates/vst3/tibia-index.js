@@ -52,8 +52,21 @@ module.exports = function (data, api, outputCommon, outputData) {
 			}
 		};
 
-		for (var i = 0; i < data.product.parameters.length; i++)
+		var inIdx = 0;
+		var outIdx = 0;
+		for (var i = 0; i < data.product.parameters.length; i++) {
 			data.product.parameters[i].paramIndex = i;
+			if (data.product.parameters[i].isLatency)
+				continue;
+			data.product.parameters[i].paramInfoIndex = inIdx + outIdx;
+			if (data.product.parameters[i].direction == "input") {
+				data.product.parameters[i].paramDataIndex = inIdx;
+				inIdx++;
+			} else {
+				data.product.parameters[i].paramDataIndex = outIdx;
+				outIdx++;
+			}
+		}
 	}
 
 	api.copyFile(`data${sep}PkgInfo`, `data${sep}PkgInfo`);

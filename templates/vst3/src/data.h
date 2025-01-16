@@ -192,7 +192,7 @@ static struct Steinberg_Vst_ParameterInfo parameterInfo[DATA_PRODUCT_PARAMETERS_
 #  define DATA_PARAM_INTEGER	(1<<2)
 #  define DATA_PARAM_MAP_LOG	(1<<3)
 
-static struct {
+typedef struct {
 	size_t		index;
 	double		min;
 	double		max;
@@ -200,8 +200,11 @@ static struct {
 	uint32_t	flags;
 	double		mapK;
 	// scalePoints?
-} parameterData[DATA_PRODUCT_PARAMETERS_N] = {
-{{~it.product.parameters.filter(x => !x.isLatency) :p:i}}
+} ParameterData;
+
+#  if DATA_PRODUCT_PARAMETERS_IN_N > 0
+static ParameterData parameterInData[DATA_PRODUCT_PARAMETERS_IN_N] = {
+{{~it.product.parameters.filter(x => x.direction == "input") :p:i}}
 	{
 		/* .index	= */ {{=p.paramIndex}},
 		/* .min		= */ {{=p.minimum.toExponential()}},
@@ -211,6 +214,30 @@ static struct {
 		/* .mapK	= */ {{?p.map == "logarithmic"}}{{=Number(2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))).toExponential()}}{{??}}0.0{{?}}
 	},
 {{~}}
+};
+#  endif
+
+#  if DATA_PRODUCT_PARAMETERS_OUT_N > 0
+static ParameterData parameterOutData[DATA_PRODUCT_PARAMETERS_OUT_N] = {
+{{~it.product.parameters.filter(x => !x.isLatency && x.direction == "output") :p:i}}
+	{
+		/* .index	= */ {{=p.paramIndex}},
+		/* .min		= */ {{=p.minimum.toExponential()}},
+		/* .max		= */ {{=p.maximum.toExponential()}},
+		/* .def		= */ {{=p.defaultValue.toExponential()}},
+		/* .flags	= */ 0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?p.map == "logarithmic"}} | DATA_PARAM_MAP_LOG{{?}},
+		/* .mapK	= */ {{?p.map == "logarithmic"}}{{=Number(2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))).toExponential()}}{{??}}0.0{{?}}
+	},
+{{~}}
+};
+
+static size_t parameterOutDataToInfoIndex[DATA_PRODUCT_PARAMETERS_OUT_N] = {
+	{{=it.product.parameters.filter(x => !x.isLatency && x.direction == "output").map(x => x.paramInfoIndex).join(", ")}}
+};
+#  endif
+
+static size_t parameterInfoToDataIndex[DATA_PRODUCT_PARAMETERS_N] = {
+	{{=it.product.parameters.filter(x => !x.isLatency).map(x => x.paramDataIndex).join(", ")}}
 };
 
 # endif
@@ -230,11 +257,13 @@ static struct {
  * Parameter indices/ids:
  *
  * parameterInfo.id: hash of parameter id (+ extra sometimes), univocally identifies parameter across plugin versions (a la lv2:symbol)
- * parameterGetIndexById(): returns parameterData's array index based on id (parameterInfo.id)
- * parameterData.index/p.paramIndex: Tibia parameter index, as used in plugin.h
- * latency out parameter is never added to parameterInfo and parameterData (specially handled)
+ * parameterGetIndexById(): returns parameterInfo array index based on id (parameterInfo.id)
+ * parameterInfoToDataIndex: maps parameterInfo array indices to parameter(In/Out)Data indices
+ * parameterOutDataToInfoIndex: maps parameterOutData indices to parameterInfo array indices
+ * parameter(In/Out)Data.index/p.paramIndex: Tibia parameter index, as used in plugin.h
+ * latency out parameter is never added to parameterInfo and parameter(In/Out)Data (specially handled)
  */
 
 {{?it.product.state && it.product.state.dspCustom}}
-#define STATE_DSP_CUSTOM
+#define DATA_STATE_DSP_CUSTOM
 {{?}}
