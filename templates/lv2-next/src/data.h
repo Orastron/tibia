@@ -65,9 +65,9 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 };
 #endif
 
-{{?it.product.ui}}
+{{?it.lv2.ui}}
 #define DATA_UI
-#define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.uri + '#ui'))}}"
+#define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.ui.uri))}}"
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0

@@ -6,9 +6,6 @@
 		"uri": "@example:tibia_test",
 		"project": "@example:project",
 		"types": [ "@lv2:AmplifierPlugin" ],
-		"version": "1.0",
-		"ui": {
-			"uri": "@example:tibia_test_ui"
-		}
+		"version": "1.0"
 	}
 }

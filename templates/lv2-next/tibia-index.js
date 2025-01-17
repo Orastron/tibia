@@ -31,6 +31,7 @@ module.exports = function (data, api, outputCommon, outputData) {
 				{ id: "log",	uri: "http://lv2plug.in/ns/ext/log#" },
 				{ id: "lv2",	uri: "http://lv2plug.in/ns/lv2core#" },
 				{ id: "midi",	uri: "http://lv2plug.in/ns/ext/midi#" },
+				{ id: "patch",	uri: "http://lv2plug.in/ns/ext/patch#" },
 				{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 				{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 				{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
@@ -114,16 +115,19 @@ module.exports = function (data, api, outputCommon, outputData) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, audioPorts);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 
-		var ports = [];
-		for (var i = 0; i < data.product.parameters.length; i++) {
+		var hasCtrlIn = false;
+		var hasCtrlOut = false;
+		for (var i = 0; i < data.product.parameters.length && !(hasCtrlIn && hasCtrlOut); i++) {
 			var p = data.product.parameters[i];
-			var e = Object.create(p);
-			e.type = "control";
-			e.paramIndex = i;
-			ports.push(e);
+			if (p.direction == "input")
+				hasCtrlIn = true;
+			else
+				hasCtrlOut = true;
 		}
-		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
-		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+		if (hasCtrlIn)
+			data.tibia.lv2.ports.push({ type: "param", direction: "input", name: "Control in", id: "control_in", control: true });
+		if (hasCtrlOut)
+			data.tibia.lv2.ports.push({ type: "param", direction: "output", name: "Control out", id: "control_out", control: true });
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);

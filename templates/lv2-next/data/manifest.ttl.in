@@ -2,6 +2,18 @@
 @prefix {{=p.id}}: <{{=p.uri}}> .
 {{~}}
 
+{{~it.product.parameters :p}}
+plugin:{{=p.id}}
+	a lv2:Parameter ;
+	rdfs:label "{{=p.name}}" ;
+	lv2:name "{{=p.name}}" ;
+{{?"shortName" in p}}
+	lv2:shortName "{{=p.shortName.substring(0, 16)}}" ;
+{{?}}
+	lv2:symbol "{{=p.id}}" ;
+	rdfs:range atom:Float .
+{{~}}
+
 {{=it.tibia.lv2.ttlURI(it.lv2.uri)}}
 	a lv2:Plugin ;
 {{~it.lv2.types :t}}
@@ -20,9 +32,15 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
-{{?it.tibia.lv2.ports.find(p => p.type == "midi")}}
+{{?it.tibia.lv2.ports.find(p => p.type == "midi" || p.type == "param")}}
 	lv2:requiredFeature urid:map ;
 	lv2:optionalFeature log:log ;
+{{?}}
+{{?it.product.parameters.find(p => p.direction == "input")}}
+	patch:writable {{=it.product.parameters.filter(p => p.direction == "input").map(p => "plugin:" + p.id).join(" , ")}} ;
+{{?}}
+{{?it.product.parameters.find(p => p.direction == "output")}}
+	patch:readable {{=it.product.parameters.filter(p => p.direction == "output").map(p => "plugin:" + p.id).join(" , ")}} ;
 {{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
 {{?it.product.ui}}
@@ -30,48 +48,17 @@
 {{?}}
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
-{{?p.isBypass}}
-		a lv2:ControlPort ,
-			lv2:InputPort ;
-		lv2:designation lv2:enabled ;
-		lv2:name "Enabled" ;
-		lv2:shortName "Enabled" ;
-		lv2:symbol "enabled" ;
-		lv2:default 1 ;
-		lv2:minimum 0 ;
-		lv2:maximum 1 ;
-		lv2:portProperty lv2:toggled ;
-		lv2:portProperty lv2:connectionOptional ;
-		lv2:portProperty lv2:integer ;
-		lv2:scalePoint [
-			rdfs:label "Off" ;
-			rdf:value 0
-		] , [
-			rdfs:label "On" ;
-			rdf:value 1
-		] ;
-{{??p.isLatency}}
-		a lv2:ControlPort ,
-			lv2:OutputPort ;
-		lv2:designation lv2:latency ;
-		lv2:name "Latency" ;
-		lv2:shortName "Latency" ;
-		lv2:symbol "{{=p.id}}" ;
-		lv2:portProperty lv2:connectionOptional ;
-		lv2:portProperty lv2:integer ;
-		lv2:portProperty lv2:reportsLatency ;
-{{??}}
-		a {{?p.type == "control"}}lv2:ControlPort{{??p.type == "midi"}}atom:AtomPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
+		a {{?p.type == "control"}}lv2:ControlPort{{??(p.type == "midi" || p.type == "param")}}atom:AtomPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
 			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
 		lv2:name "{{=p.name}}" ;
 {{?"shortName" in p}}
 		lv2:shortName "{{=p.shortName.substring(0, 16)}}" ;
 {{?}}
 		lv2:symbol "{{=p.id}}" ;
-{{?p.type == "control"}}
-		lv2:minimum {{=p.minimum.toExponential()}} ;
-		lv2:maximum {{=p.maximum.toExponential()}} ;
-		lv2:default {{=p.defaultValue.toExponential()}} ;
+{{?p.type == "param"}}
+		atom:bufferType atom:Sequence ;
+		atom:supports atom:Object ;
+		atom:supports patch:Message ;
 {{??p.type == "midi"}}
 		atom:bufferType atom:Sequence ;
 		atom:supports midi:MidiEvent ;
@@ -82,36 +69,8 @@
 {{?p.control}}
 		lv2:designation lv2:control ;
 {{?}}
-{{?p.toggled}}
-		lv2:portProperty lv2:toggled ;
-{{?}}
 {{?p.optional}}
 		lv2:portProperty lv2:connectionOptional ;
-{{?}}
-{{?p.integer}}
-		lv2:portProperty lv2:integer ;
-{{?}}
-{{?p.map == "logarithmic"}}
-		lv2:portProperty pprops:logarithmic ;
-{{?}}
-{{?p.scalePoints}}
-		lv2:scalePoint [
-{{~Object.entries(p.scalePoints) :sp:j}}
-			rdfs:label "{{=sp[0]}}" ;
-			rdf:value {{=sp[1].toExponential()}}
-{{?j < Object.entries(p.scalePoints).length - 1}}
-		] , [
-{{??}}
-		] ;
-{{?}}
-{{~}}
-{{?}}
-{{?p.list}}
-		lv2:portProperty lv2:enumeration ;
-{{?}}
-{{?p.unit && p.unit in it.tibia.lv2.units}}
-		units:unit	{{=it.tibia.lv2.ttlURI(it.tibia.lv2.units[p.unit])}} ;
-{{?}}
 {{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
