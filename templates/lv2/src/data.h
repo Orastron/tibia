@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,10 +69,16 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 #define DATA_UI
 #define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.uri + '#ui'))}}"
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
+{{?}}
 
+{{?(it.product.ui || (it.product.state && it.product.state.dspCustom))}}
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control").map((e, i) => ({ i: i, pi: e.paramIndex })).sort((a, b) => a.pi - b.pi) :p}}{{=p.i + it.tibia.lv2.ports.filter(x => x.type != "control").length}}, {{~}}
 };
 #endif
+{{?}}
+
+{{?it.product.state && it.product.state.dspCustom}}
+#define DATA_STATE_DSP_CUSTOM
 {{?}}

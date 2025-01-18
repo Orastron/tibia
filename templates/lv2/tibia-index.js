@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ module.exports = function (data, api, outputCommon, outputData) {
 				{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 				{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 				{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
+				{ id: "state",	uri: "http://lv2plug.in/ns/extensions/state#" },
 				{ id: "ui",	uri: "http://lv2plug.in/ns/extensions/ui#" },
 				{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" },
 				{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" }

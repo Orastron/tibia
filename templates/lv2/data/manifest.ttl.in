@@ -20,13 +20,17 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
-{{?it.tibia.lv2.ports.find(p => p.type == "midi")}}
+{{?(it.tibia.lv2.ports.find(p => p.type == "midi") || (it.product.state && it.product.state.dspCustom))}}
 	lv2:requiredFeature urid:map ;
 	lv2:optionalFeature log:log ;
 {{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
 {{?it.product.ui}}
 	ui:ui plugin:ui ;
+	lv2:extensionData ui:idleInterface ;
+{{?}}
+{{?(it.product.state && it.product.state.dspCustom)}}
+	lv2:extensionData state:interface ;
 {{?}}
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}

@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,17 +32,22 @@
 #pragma GCC diagnostic pop
 
 #include "lv2/core/lv2.h"
-#include "lv2/core/lv2_util.h"
-#include "lv2/log/log.h"
-#include "lv2/log/logger.h"
-#include "lv2/urid/urid.h"
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-# include "lv2/atom/util.h"
+#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
+# include "lv2/core/lv2_util.h"
+# include "lv2/log/log.h"
+# include "lv2/log/logger.h"
+# include "lv2/urid/urid.h"
 # include "lv2/atom/atom.h"
-# include "lv2/midi/midi.h"
+# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+#  include "lv2/atom/util.h"
+#  include "lv2/midi/midi.h"
+# endif
 #endif
 #ifdef DATA_UI
 # include "lv2/ui/ui.h"
+#endif
+#ifdef DATA_STATE_DSP_CUSTOM
+# include "lv2/state/state.h"
 #endif
 
 #include <string.h>
@@ -52,6 +57,7 @@
 # include <pmmintrin.h>
 #endif
 
+#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static inline float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
 }
@@ -65,6 +71,7 @@ static float adjust_param(size_t index, float value) {
 		value = (int32_t)(value + (value >= 0.f ? 0.5f : -0.5f));
 	return clampf(value, param_data[index].min, param_data[index].max);
 }
+#endif
 
 typedef struct {
 	plugin				p;
@@ -88,10 +95,18 @@ typedef struct {
 #endif
 	void *				mem;
 	char *				bundle_path;
+#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
 	LV2_Log_Logger			logger;
 	LV2_URID_Map *			map;
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	LV2_URID			uri_midi_MidiEvent;
+# endif
+# ifdef DATA_STATE_DSP_CUSTOM
+	LV2_URID			uri_atom_Chunk;
+	LV2_URID			uri_state_data;
+	LV2_State_Store_Function	state_store;
+	LV2_State_Handle		state_handle;
+# endif
 #endif
 } plugin_instance;
 
@@ -99,6 +114,23 @@ static const char * get_bundle_path_cb(void *handle) {
 	plugin_instance *instance = (plugin_instance *)handle;
 	return instance->bundle_path;
 }
+
+#ifdef DATA_STATE_DSP_CUSTOM
+static int write_state_cb(void *handle, const char *data, size_t length) {
+	plugin_instance * i = (plugin_instance *)handle;
+	return i->state_store(i->state_handle, i->uri_state_data, data, length, i->uri_atom_Chunk, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+}
+
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+static void load_parameter_cb(void *handle, size_t index, float value) {
+	plugin_instance * i = (plugin_instance *)handle;
+	size_t idx = index_to_param[index];
+	value = adjust_param(idx, value);
+	i->params[idx] = value;
+	plugin_set_parameter(&i->p, index, value);
+}
+# endif
+#endif
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
 	(void)descriptor;
@@ -112,6 +144,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
 
+#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
 	// from https://lv2plug.in/book
 	const char* missing = lv2_features_query(features,
 		LV2_LOG__log,	&instance->logger.log,	false,
@@ -124,15 +157,31 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		goto err_urid;
 	}
 
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
+# endif
+# ifdef DATA_STATE_DSP_CUSTOM
+	instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
+	instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
+# endif
 #endif
 
 	plugin_callbacks cbs = {
 		/* .handle		= */ (void *)instance,
 		/* .format		= */ "lv2",
 		/* .get_bindir		= */ get_bundle_path_cb,
-		/* .get_datadir		= */ get_bundle_path_cb
+		/* .get_datadir		= */ get_bundle_path_cb,
+# ifdef DATA_STATE_DSP_CUSTOM
+		/* .write_state		= */ write_state_cb,
+#  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+		/* .load_parameter	= */ load_parameter_cb
+#  else
+		/* .load_parameter	= */ NULL
+#  endif
+# else
+		/* .write_state		= */ NULL,
+		/* .load_parameter	= */ NULL
+# endif
 	};
 	plugin_init(&instance->p, &cbs);
 
@@ -254,8 +303,8 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 #endif
 
-	// from https://lv2plug.in/book
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
+	// from https://lv2plug.in/book
 	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++) {
 		if (i->x_midi[j] == NULL)
 			continue;
@@ -308,6 +357,39 @@ static void cleanup(LV2_Handle instance) {
 	free(instance);
 }
 
+#ifdef DATA_STATE_DSP_CUSTOM
+static LV2_State_Status state_save(LV2_Handle instance, LV2_State_Store_Function store, LV2_State_Handle handle, uint32_t flags, const LV2_Feature * const * features) {
+	(void)flags;
+	(void)features;
+
+	plugin_instance * i = (plugin_instance *)instance;
+	i->state_store = store;
+	i->state_handle = handle;
+	return plugin_state_save(&i->p) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
+}
+
+static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Function retrieve, LV2_State_Handle handle, uint32_t flags, const LV2_Feature * const * features) {
+	(void)flags;
+	(void)features;
+
+	plugin_instance * i = (plugin_instance *)instance;
+	size_t length;
+	uint32_t type, xflags; // jalv 1.6.6 crashes using NULL as per spec, so we have these two
+	const char * data = retrieve(handle, i->uri_state_data, &length, &type, &xflags);
+	if (data == NULL) 
+		return LV2_STATE_ERR_NO_PROPERTY;
+	plugin_state_load(&i->p, data, length);
+	return LV2_STATE_SUCCESS;
+}
+
+static const void * extension_data(const char * uri) {
+	static const LV2_State_Interface state = { state_save, state_restore };
+	if (!strcmp(uri, LV2_STATE__interface))
+		return &state;
+	return NULL;
+}
+#endif
+
 static const LV2_Descriptor descriptor = {
 	/* .URI			= */ DATA_LV2_URI,
 	/* .instantiate		= */ instantiate,
@@ -316,7 +398,11 @@ static const LV2_Descriptor descriptor = {
 	/* .run			= */ run,
 	/* .deactivate		= */ NULL,
 	/* .cleanup		= */ cleanup,
+#ifdef DATA_STATE_DSP_CUSTOM
+	/* .extension_data	= */ extension_data
+#else
 	/* .extension_data	= */ NULL
+#endif
 };
 
 LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
