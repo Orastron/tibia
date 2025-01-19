@@ -31,23 +31,23 @@
 #endif
 #pragma GCC diagnostic pop
 
-#include "lv2/core/lv2.h"
+#include <lv2/core/lv2.h>
+#include <lv2/core/lv2_util.h>
+#include <lv2/log/log.h>
+#include <lv2/log/logger.h>
+#include <lv2/urid/urid.h>
 #if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
-# include "lv2/core/lv2_util.h"
-# include "lv2/log/log.h"
-# include "lv2/log/logger.h"
-# include "lv2/urid/urid.h"
-# include "lv2/atom/atom.h"
+# include <lv2/atom/atom.h>
 # if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-#  include "lv2/atom/util.h"
-#  include "lv2/midi/midi.h"
+#  include <lv2/atom/util.h>
+#  include <lv2/midi/midi.h>
 # endif
 #endif
 #ifdef DATA_UI
-# include "lv2/ui/ui.h"
+# include <lv2/ui/ui.h>
 #endif
 #ifdef DATA_STATE_DSP_CUSTOM
-# include "lv2/state/state.h"
+# include <lv2/state/state.h>
 #endif
 
 #include <string.h>
@@ -95,18 +95,16 @@ typedef struct {
 #endif
 	void *				mem;
 	char *				bundle_path;
-#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
 	LV2_Log_Logger			logger;
 	LV2_URID_Map *			map;
-# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	LV2_URID			uri_midi_MidiEvent;
-# endif
-# ifdef DATA_STATE_DSP_CUSTOM
+#endif
+#ifdef DATA_STATE_DSP_CUSTOM
 	LV2_URID			uri_atom_Chunk;
 	LV2_URID			uri_state_data;
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
-# endif
 #endif
 } plugin_instance;
 
@@ -144,9 +142,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
 
-#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
 	// from https://lv2plug.in/book
-	const char* missing = lv2_features_query(features,
+	const char * missing = lv2_features_query(features,
 		LV2_LOG__log,	&instance->logger.log,	false,
 		LV2_URID__map,	&instance->map,		true,
 		NULL);
@@ -154,16 +151,20 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	lv2_log_logger_set_map(&instance->logger, instance->map);
 	if (missing) {
 		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
+#ifdef DATA_PRODUCT_MIDI_REQUIRED
 		goto err_urid;
+#endif
 	}
 
-# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-	instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
-# endif
-# ifdef DATA_STATE_DSP_CUSTOM
-	instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
-	instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
-# endif
+#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+	if (instance->map)
+		instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
+#endif
+#ifdef DATA_STATE_DSP_CUSTOM
+	if (instance->map) {
+		instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
+		instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
+	}
 #endif
 
 	plugin_callbacks cbs = {
@@ -222,7 +223,9 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 
 err_mem:
 	plugin_fini(&instance->p);
+#ifdef DATA_PRODUCT_MIDI_REQUIRED
 err_urid:
+#endif
 	free(instance->bundle_path);
 err_bundle_path:
 	free(instance);
@@ -305,17 +308,18 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
 	// from https://lv2plug.in/book
-	for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++) {
-		if (i->x_midi[j] == NULL)
-			continue;
-		LV2_ATOM_SEQUENCE_FOREACH(i->x_midi[j], ev) {
-			if (ev->body.type == i->uri_midi_MidiEvent) {
-				const uint8_t * data = (const uint8_t *)(ev + 1);
-				if ((data[0] & 0xf0) != 0xf0)
-					plugin_midi_msg_in(&i->p, midi_in_index[j], data);
+	if (i->map)
+		for (size_t j = 0; j < DATA_PRODUCT_MIDI_INPUTS_N; j++) {
+			if (i->x_midi[j] == NULL)
+				continue;
+			LV2_ATOM_SEQUENCE_FOREACH(i->x_midi[j], ev) {
+				if (ev->body.type == i->uri_midi_MidiEvent) {
+					const uint8_t * data = (const uint8_t *)(ev + 1);
+					if ((data[0] & 0xf0) != 0xf0)
+						plugin_midi_msg_in(&i->p, midi_in_index[j], data);
+				}
 			}
 		}
-	}
 #endif
 
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
@@ -363,6 +367,8 @@ static LV2_State_Status state_save(LV2_Handle instance, LV2_State_Store_Function
 	(void)features;
 
 	plugin_instance * i = (plugin_instance *)instance;
+	if (!i->map)
+		return LV2_STATE_ERR_UNKNOWN; // evidently buggy host, we don't have an errcode for it, LV2_STATE_ERR_NO_FEATURE has a different meaning
 	i->state_store = store;
 	i->state_handle = handle;
 	return plugin_state_save(&i->p) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
@@ -373,6 +379,8 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 	(void)features;
 
 	plugin_instance * i = (plugin_instance *)instance;
+	if (!i->map)
+		return LV2_STATE_ERR_UNKNOWN; // evidently buggy host, we don't have an errcode for it, LV2_STATE_ERR_NO_FEATURE has a different meaning
 	size_t length;
 	uint32_t type, xflags; // jalv 1.6.6 crashes using NULL as per spec, so we have these two
 	const char * data = retrieve(handle, i->uri_state_data, &length, &type, &xflags);
