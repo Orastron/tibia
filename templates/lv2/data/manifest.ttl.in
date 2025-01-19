@@ -20,8 +20,12 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
-{{?(it.tibia.lv2.ports.find(p => p.type == "midi") || (it.product.state && it.product.state.dspCustom))}}
+{{?(it.tibia.lv2.ports.find(p => p.type == "midi" && !p.optional))}}
 	lv2:requiredFeature urid:map ;
+{{??(it.tibia.lv2.ports.find(p => p.type == "midi") || (it.product.state && it.product.state.dspCustom))}}
+	lv2:optionalFeature urid:map ;
+{{?}}
+{{?(it.tibia.lv2.ports.find(p => p.type == "midi") || (it.product.state && it.product.state.dspCustom))}}
 	lv2:optionalFeature log:log ;
 {{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
