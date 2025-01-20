@@ -25,10 +25,11 @@
 {{??}}
 	lv2:optionalFeature urid:map ;
 {{?}}
-{{?(it.tibia.lv2.ports.find(p => p.type == "midi") || (it.product.state && it.product.state.dspCustom))}}
 	lv2:optionalFeature log:log ;
-{{?}}
 	lv2:optionalFeature lv2:hardRTCapable ;
+{{?(it.product.state && it.product.state.dspCustom)}}
+	lv2:optionalFeature state:threadSafeRestore ;
+{{?}}
 {{?it.product.ui}}
 	ui:ui plugin:ui ;
 {{?}}
