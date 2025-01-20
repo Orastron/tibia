@@ -441,8 +441,10 @@ static LV2_State_Status state_save(LV2_Handle instance, LV2_State_Store_Function
 	(void)features;
 
 	plugin_instance * i = (plugin_instance *)instance;
-	if (!i->map)
+	if (!i->map) {
+		lv2_log_error(&i->logger, "Host is trying to store state but didn't provide URID map\n");
 		return LV2_STATE_ERR_UNKNOWN; // evidently buggy host, we don't have an errcode for it, LV2_STATE_ERR_NO_FEATURE has a different meaning
+	}
 	i->state_store = store;
 	i->state_handle = handle;
 	return plugin_state_save(&i->p) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
@@ -453,13 +455,17 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 	(void)features;
 
 	plugin_instance * i = (plugin_instance *)instance;
-	if (!i->map)
+	if (!i->map) {
+		lv2_log_error(&i->logger, "Host is trying to restore state but didn't provide URID map\n");
 		return LV2_STATE_ERR_UNKNOWN; // evidently buggy host, we don't have an errcode for it, LV2_STATE_ERR_NO_FEATURE has a different meaning
+	}
 	size_t length;
 	uint32_t type, xflags; // jalv 1.6.6 crashes using NULL as per spec, so we have these two
 	const char * data = retrieve(handle, i->uri_state_data, &length, &type, &xflags);
-	if (data == NULL) 
+	if (data == NULL) {
+		lv2_log_error(&i->logger, "Cannot restore state since property <%s> could not be retrieved\n", DATA_LV2_URI "#state_data");
 		return LV2_STATE_ERR_NO_PROPERTY;
+	}
 	plugin_state_load(&i->p, data, length);
 	return LV2_STATE_SUCCESS;
 }
@@ -547,16 +553,20 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 
 	char has_parent = 0;
 	void *parent = NULL;
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	instance->has_touch = 0;
+# endif
 	for (size_t i = 0; features[i] != NULL; i++) {
 		if (!strcmp(features[i]->URI, LV2_UI__parent)) {
 			has_parent = 1;
 			parent = features[i]->data;
 		}
-		if (!strcmp(features[i]->URI, LV2_UI__touch)) {
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+		else if (!strcmp(features[i]->URI, LV2_UI__touch)) {
 			instance->has_touch = 1;
 			instance->touch = *((LV2UI_Touch *)features[i]->data);
 		}
+# endif
 	}
 
 	plugin_ui_callbacks cbs = {
@@ -567,11 +577,7 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 		/* .set_parameter_begin	= */ ui_set_parameter_begin_cb,
 		/* .set_parameter	= */ ui_set_parameter_cb,
-		/* .set_parameter_end	= */ ui_set_parameter_end_cb
-# else
-		/* .set_parameter_begin	= */ NULL,
-		/* .set_parameter	= */ NULL,
-		/* .set_parameter_end	= */ NULL
+		/* .set_parameter_end	= */ ui_set_parameter_end_cb,
 # endif
 	};
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0

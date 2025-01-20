@@ -41,9 +41,11 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+{{?it.product.parameters.find(x => x.direction == "input")}}
 	void (*set_parameter_begin)(void *handle, size_t index);
 	void (*set_parameter)(void *handle, size_t index, float value);
 	void (*set_parameter_end)(void *handle, size_t index);
+{{?}}
 } plugin_ui_callbacks;
 
 {{?it.product.parameters.length > 0}}
