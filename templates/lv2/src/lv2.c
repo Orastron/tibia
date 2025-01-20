@@ -212,16 +212,9 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		/* .write_state		= */ write_state_cb,
 #  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 		/* .load_parameter	= */ load_parameter_cb,
-#  else
-		/* .load_parameter	= */ NULL,
 #  endif
 		/* .lock_state		= */ lock_state_cb,
-		/* .unlock_state	= */ unlock_state_cb
-# else
-		/* .write_state		= */ NULL,
-		/* .load_parameter	= */ NULL,
-		/* .state_lock		= */ NULL,
-		/* .state_unlock	= */ NULL
+		/* .unlock_state	= */ unlock_state_cb,
 # endif
 	};
 	plugin_init(&instance->p, &cbs);

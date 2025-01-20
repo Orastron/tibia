@@ -26,10 +26,14 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+{{?it.product.state && it.product.state.dspCustom}}
 	int (*write_state)(void *handle, const char *data, size_t length);
+{{?it.product.parameters.find(x => x.direction == "input")}}
 	void (*load_parameter)(void *handle, size_t index, float value);
+{{?}}
 	void (*lock_state)(void *handle);
 	void (*unlock_state)(void *handle);
+{{?}}
 } plugin_callbacks;
 
 typedef struct {
