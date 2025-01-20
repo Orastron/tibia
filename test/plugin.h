@@ -19,10 +19,9 @@
  */
 
 #include <stdint.h>
+#include <math.h>
 
 typedef struct plugin {
-	plugin_callbacks	cbs;
-
 	float			sample_rate;
 	size_t			delay_line_length;
 
@@ -38,8 +37,9 @@ typedef struct plugin {
 	float			yz1;
 } plugin;
 
-static void plugin_init(plugin *instance, plugin_callbacks *cbs) {
-	instance->cbs = *cbs;
+static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
+	(void)instance;
+	(void)cbs;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -139,32 +139,36 @@ static float parse_float(const uint8_t *data) {
 	return v.f;
 }
 
-static int plugin_state_save(plugin *instance) {
+static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs) {
 	uint8_t data[13];
-	instance->cbs.lock_state(instance->cbs.handle);
+	cbs->lock(cbs->handle);
 	const float gain = instance->gain;
 	const float delay = instance->delay;
 	const float cutoff = instance->cutoff;
 	const char bypass = instance->bypass;
-	instance->cbs.unlock_state(instance->cbs.handle);
+	cbs->unlock(cbs->handle);
 	serialize_float(data, gain);
 	serialize_float(data + 4, delay);
 	serialize_float(data + 8, cutoff);
 	data[12] = bypass ? 1 : 0;
-	return instance->cbs.write_state(instance->cbs.handle, (const char *)data, 13);
+	return cbs->write(cbs->handle, (const char *)data, 13);
 }
 
-static void plugin_state_load(plugin *instance, const char *data, size_t length) {
-	(void)length;
+static int plugin_state_load(const plugin_state_callbacks *cbs, const char *data, size_t length) {
+	if (length != 13)
+		return -1;
 	const uint8_t *d = (const uint8_t *)data;
 	const float gain = parse_float(d);
 	const float delay = parse_float(d + 4);
 	const float cutoff = parse_float(d + 8);
 	const float bypass = d[12] ? 1.f : 0.f;
-	instance->cbs.lock_state(instance->cbs.handle);
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, gain);
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, delay);
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, cutoff);
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, bypass);
-	instance->cbs.unlock_state(instance->cbs.handle);
+	if (isnan(gain) || isnan(delay) || isnan(cutoff))
+		return -1;
+	cbs->lock(cbs->handle);
+	cbs->set_parameter(cbs->handle, plugin_parameter_gain, gain);
+	cbs->set_parameter(cbs->handle, plugin_parameter_delay, delay);
+	cbs->set_parameter(cbs->handle, plugin_parameter_cutoff, cutoff);
+	cbs->set_parameter(cbs->handle, plugin_parameter_bypass, bypass);
+	cbs->unlock(cbs->handle);
+	return 0;
 }

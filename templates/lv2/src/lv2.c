@@ -127,6 +127,7 @@ typedef struct {
 #ifdef DATA_STATE_DSP_CUSTOM
 	LV2_URID			uri_atom_Chunk;
 	LV2_URID			uri_state_data;
+	plugin_state_callbacks		state_cbs;
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
 #endif
@@ -138,13 +139,25 @@ static const char * get_bundle_path_cb(void *handle) {
 }
 
 #ifdef DATA_STATE_DSP_CUSTOM
-static int write_state_cb(void *handle, const char *data, size_t length) {
+static void state_lock_cb(void *handle) {
+	plugin_instance * i = (plugin_instance *)handle;
+	while (atomic_flag_test_and_set(&i->sync_lock_flag))
+		yield();
+	i->synced = 0;
+}
+
+static void state_unlock_cb(void *handle) {
+	plugin_instance * i = (plugin_instance *)handle;
+	atomic_flag_clear(&i->sync_lock_flag);
+}
+
+static int state_write_cb(void *handle, const char *data, size_t length) {
 	plugin_instance * i = (plugin_instance *)handle;
 	return i->state_store(i->state_handle, i->uri_state_data, data, length, i->uri_atom_Chunk, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
 }
 
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-static void load_parameter_cb(void *handle, size_t index, float value) {
+static void state_set_parameter_cb(void *handle, size_t index, float value) {
 	plugin_instance * i = (plugin_instance *)handle;
 	size_t idx = index_to_param[index] - CONTROL_INPUT_INDEX_OFFSET;
 	value = adjust_param(idx, value);
@@ -152,18 +165,6 @@ static void load_parameter_cb(void *handle, size_t index, float value) {
 	i->loaded = 1;
 }
 # endif
-
-static void lock_state_cb(void *handle) {
-	plugin_instance * i = (plugin_instance *)handle;
-	while (atomic_flag_test_and_set(&i->sync_lock_flag))
-		yield();
-	i->synced = 0;
-}
-
-static void unlock_state_cb(void *handle) {
-	plugin_instance * i = (plugin_instance *)handle;
-	atomic_flag_clear(&i->sync_lock_flag);
-}
 #endif
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
@@ -207,15 +208,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		/* .handle		= */ (void *)instance,
 		/* .format		= */ "lv2",
 		/* .get_bindir		= */ get_bundle_path_cb,
-		/* .get_datadir		= */ get_bundle_path_cb,
-# ifdef DATA_STATE_DSP_CUSTOM
-		/* .write_state		= */ write_state_cb,
-#  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-		/* .load_parameter	= */ load_parameter_cb,
-#  endif
-		/* .lock_state		= */ lock_state_cb,
-		/* .unlock_state	= */ unlock_state_cb,
-# endif
+		/* .get_datadir		= */ get_bundle_path_cb
 	};
 	plugin_init(&instance->p, &cbs);
 
@@ -447,7 +440,16 @@ static LV2_State_Status state_save(LV2_Handle instance, LV2_State_Store_Function
 	}
 	i->state_store = store;
 	i->state_handle = handle;
-	return plugin_state_save(&i->p) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
+	plugin_state_callbacks cbs = {
+		/* .handle		= */ (void *)i,
+		/* .lock		= */ state_lock_cb,
+		/* .unlock		= */ state_unlock_cb,
+		/* .write		= */ state_write_cb,
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+		/* .set_parameter	= */ NULL
+# endif
+	};
+	return plugin_state_save(&i->p, &cbs) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
 }
 
 static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Function retrieve, LV2_State_Handle handle, uint32_t flags, const LV2_Feature * const * features) {
@@ -466,8 +468,16 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 		lv2_log_error(&i->logger, "Cannot restore state since property <%s> could not be retrieved\n", DATA_LV2_URI "#state_data");
 		return LV2_STATE_ERR_NO_PROPERTY;
 	}
-	plugin_state_load(&i->p, data, length);
-	return LV2_STATE_SUCCESS;
+	plugin_state_callbacks cbs = {
+		/* .handle		= */ (void *)i,
+		/* .lock		= */ state_lock_cb,
+		/* .unlock		= */ state_unlock_cb,
+		/* .write		= */ NULL,
+# if DATA_PRODUCT_CONTROL_INPUTS_N > 0
+		/* .set_parameter	= */ state_set_parameter_cb
+# endif
+	};
+	return plugin_state_load(&cbs, data, length) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
 }
 
 static const void * extension_data(const char * uri) {
