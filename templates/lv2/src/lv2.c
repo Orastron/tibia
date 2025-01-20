@@ -57,6 +57,24 @@
 # include <pmmintrin.h>
 #endif
 
+#if (DATA_PRODUCT_CONTROL_INPUTS_N > 0) && defined(DATA_STATE_DSP_CUSTOM)
+# include <stdatomic.h>
+# if defined(_WIN32) || defined(__CYGWIN__)
+#  include <processthreadsapi.h>
+#  define yield SwitchToThread
+# else
+#  include <sched.h>
+#  define yield sched_yield
+# endif
+#endif
+
+#define CONTROL_INPUT_INDEX_OFFSET ( \
+		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
+		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
+		+ DATA_PRODUCT_MIDI_INPUTS_N \
+		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
+#define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
+
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static inline float clampf(float x, float m, float M) {
 	return x < m ? m : (x > M ? M : x);
@@ -92,6 +110,12 @@ typedef struct {
 #endif
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	float				params[DATA_PRODUCT_CONTROL_INPUTS_N];
+# ifdef DATA_STATE_DSP_CUSTOM
+	float				params_sync[DATA_PRODUCT_CONTROL_INPUTS_N];
+	atomic_flag			sync_lock_flag;
+	char				synced;
+	char				loaded;
+# endif
 #endif
 	void *				mem;
 	char *				bundle_path;
@@ -122,12 +146,24 @@ static int write_state_cb(void *handle, const char *data, size_t length) {
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void load_parameter_cb(void *handle, size_t index, float value) {
 	plugin_instance * i = (plugin_instance *)handle;
-	size_t idx = index_to_param[index];
+	size_t idx = index_to_param[index] - CONTROL_INPUT_INDEX_OFFSET;
 	value = adjust_param(idx, value);
-	i->params[idx] = value;
-	plugin_set_parameter(&i->p, index, value);
+	i->params_sync[idx] = value;
+	i->loaded = 1;
 }
 # endif
+
+static void lock_state_cb(void *handle) {
+	plugin_instance * i = (plugin_instance *)handle;
+	while (atomic_flag_test_and_set(&i->sync_lock_flag))
+		yield();
+	i->synced = 0;
+}
+
+static void unlock_state_cb(void *handle) {
+	plugin_instance * i = (plugin_instance *)handle;
+	atomic_flag_clear(&i->sync_lock_flag);
+}
 #endif
 
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
@@ -175,13 +211,17 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 # ifdef DATA_STATE_DSP_CUSTOM
 		/* .write_state		= */ write_state_cb,
 #  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-		/* .load_parameter	= */ load_parameter_cb
+		/* .load_parameter	= */ load_parameter_cb,
 #  else
-		/* .load_parameter	= */ NULL
+		/* .load_parameter	= */ NULL,
 #  endif
+		/* .lock_state		= */ lock_state_cb,
+		/* .unlock_state	= */ unlock_state_cb
 # else
 		/* .write_state		= */ NULL,
-		/* .load_parameter	= */ NULL
+		/* .load_parameter	= */ NULL,
+		/* .state_lock		= */ NULL,
+		/* .state_unlock	= */ NULL
 # endif
 	};
 	plugin_init(&instance->p, &cbs);
@@ -275,6 +315,15 @@ static void activate(LV2_Handle instance) {
 		i->params[j] = i->c[j] != NULL ? *i->c[j] : param_data[j].def;
 		plugin_set_parameter(&i->p, param_data[j].index, i->params[j]);
 	}
+# ifdef DATA_STATE_DSP_CUSTOM
+	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
+		i->params_sync[j] = i->params[j];
+	// why is this not correct?
+	// i->sync_lock_flag = ATOMIC_FLAG_INIT;
+	atomic_flag_clear(&i->sync_lock_flag);
+	i->synced = 1;
+	i->loaded = 0;
+# endif
 #endif
 	plugin_reset(&i->p);
 }
@@ -295,15 +344,47 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #endif
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-		if (i->c[j] == NULL)
-			continue;
-		float v = adjust_param(j, *i->c[j]);
-		if (v != i->params[j]) {
-			i->params[j] = v;
-			plugin_set_parameter(&i->p, param_data[j].index, v);
+# ifdef DATA_STATE_DSP_CUSTOM
+	if (!atomic_flag_test_and_set(&i->sync_lock_flag)) {
+		if (!i->synced) {
+			if (i->loaded) {
+				for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+					i->params[j] = i->params_sync[j];
+					plugin_set_parameter(&i->p, param_data[j].index, i->params[j]);
+				}
+			} else {
+				for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
+					if (i->params[j] != i->params_sync[j]) {
+						i->params_sync[j] = i->params[j];
+						plugin_set_parameter(&i->p, param_data[j].index, i->params[j]);
+					}
+			}
+		}
+		i->synced = 1;
+		i->loaded = 0;
+		atomic_flag_clear(&i->sync_lock_flag);
+# endif
+
+		for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+			if (i->c[j] == NULL)
+				continue;
+			float v = adjust_param(j, *i->c[j]);
+			if (v != i->params[j]) {
+				i->params[j] = v;
+				plugin_set_parameter(&i->p, param_data[j].index, v);
+			}
+		}
+# ifdef DATA_STATE_DSP_CUSTOM
+	} else {
+		for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+			if (i->c[j] == NULL)
+				continue;
+			float v = adjust_param(j, *i->c[j]);
+			if (v != i->params[j])
+				i->params[j] = v;
 		}
 	}
+# endif
 #endif
 
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
@@ -428,13 +509,6 @@ typedef struct {
 	LV2UI_Touch		touch;
 # endif
 } ui_instance;
-
-# define CONTROL_INPUT_INDEX_OFFSET ( \
-		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
-		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
-		+ DATA_PRODUCT_MIDI_INPUTS_N \
-		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
-# define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
 static const char * ui_get_bundle_path_cb(void *handle) {
 	ui_instance *instance = (ui_instance *)handle;

@@ -28,6 +28,8 @@ typedef struct {
 	const char * (*get_datadir)(void *handle);
 	int (*write_state)(void *handle, const char *data, size_t length);
 	void (*load_parameter)(void *handle, size_t index, float value);
+	void (*lock_state)(void *handle);
+	void (*unlock_state)(void *handle);
 } plugin_callbacks;
 
 typedef struct {

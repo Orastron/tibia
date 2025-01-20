@@ -141,18 +141,30 @@ static float parse_float(const uint8_t *data) {
 
 static int plugin_state_save(plugin *instance) {
 	uint8_t data[13];
-	serialize_float(data, instance->gain);
-	serialize_float(data + 4, instance->delay);
-	serialize_float(data + 8, instance->cutoff);
-	data[12] = instance->bypass ? 1 : 0;
+	instance->cbs.lock_state(instance->cbs.handle);
+	const float gain = instance->gain;
+	const float delay = instance->delay;
+	const float cutoff = instance->cutoff;
+	const char bypass = instance->bypass;
+	instance->cbs.unlock_state(instance->cbs.handle);
+	serialize_float(data, gain);
+	serialize_float(data + 4, delay);
+	serialize_float(data + 8, cutoff);
+	data[12] = bypass ? 1 : 0;
 	return instance->cbs.write_state(instance->cbs.handle, (const char *)data, 13);
 }
 
 static void plugin_state_load(plugin *instance, const char *data, size_t length) {
 	(void)length;
 	const uint8_t *d = (const uint8_t *)data;
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, parse_float(d));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, parse_float(d + 4));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, parse_float(d + 8));
-	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, d[12] ? 1.f : 0.f);
+	const float gain = parse_float(d);
+	const float delay = parse_float(d + 4);
+	const float cutoff = parse_float(d + 8);
+	const float bypass = d[12] ? 1.f : 0.f;
+	instance->cbs.lock_state(instance->cbs.handle);
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_gain, gain);
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_delay, delay);
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_cutoff, cutoff);
+	instance->cbs.load_parameter(instance->cbs.handle, plugin_parameter_bypass, bypass);
+	instance->cbs.unlock_state(instance->cbs.handle);
 }
