@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023, 2024 Orastron Srl unipersonale
+ * Copyright (C) 2023-2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -190,6 +190,11 @@ void (^midiReceiveBlock)(const MIDIEventList *evtlist, void *srcConnRefCon) = ^(
 
 extern "C"
 char audioStart() {
+#ifdef STATE_DSP_CUSTOM
+	(void)plugin_state_load;
+	(void)plugin_state_save;
+#endif
+
 #if NUM_CHANNELS_IN + NUM_CHANNELS_OUT > 0
 # if NUM_CHANNELS_IN == 0
 	deviceConfig = ma_device_config_init(ma_device_type_playback);

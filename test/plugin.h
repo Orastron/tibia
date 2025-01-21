@@ -19,7 +19,6 @@
  */
 
 #include <stdint.h>
-#include <math.h>
 
 typedef struct plugin {
 	float			sample_rate;
@@ -154,6 +153,12 @@ static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs
 	return cbs->write(cbs->handle, (const char *)data, 13);
 }
 
+static char x_isnan(float x) {
+	union { uint32_t u; float f; } v;
+	v.f = x;
+	return ((v.u & 0x7f800000) == 0x7f800000) && (v.u & 0x7fffff);
+}
+
 static int plugin_state_load(const plugin_state_callbacks *cbs, const char *data, size_t length) {
 	if (length != 13)
 		return -1;
@@ -162,7 +167,7 @@ static int plugin_state_load(const plugin_state_callbacks *cbs, const char *data
 	const float delay = parse_float(d + 4);
 	const float cutoff = parse_float(d + 8);
 	const float bypass = d[12] ? 1.f : 0.f;
-	if (isnan(gain) || isnan(delay) || isnan(cutoff))
+	if (x_isnan(gain) || x_isnan(delay) || x_isnan(cutoff))
 		return -1;
 	cbs->lock(cbs->handle);
 	cbs->set_parameter(cbs->handle, plugin_parameter_gain, gain);

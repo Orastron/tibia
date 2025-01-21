@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,3 +98,7 @@ static int midi_cc_maps[NUM_PARAMETERS] = { {{~it.daisy_seed.midiCCMaps :p}}{{=p
 # endif
 
 #endif
+
+{{?it.product.state && it.product.state.dspCustom}}
+#define STATE_DSP_CUSTOM
+{{?}}

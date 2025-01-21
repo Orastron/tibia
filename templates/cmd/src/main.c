@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -162,6 +162,11 @@ float clampf(float x, float m, float M) {
 }
 
 int main(int argc, char * argv[]) {
+#ifdef STATE_DSP_CUSTOM
+	(void)plugin_state_load;
+	(void)plugin_state_save;
+#endif
+
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++)
 		param_values[i] = param_data[i].def;

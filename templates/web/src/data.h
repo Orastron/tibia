@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024 Orastron Srl unipersonale
+ * Copyright (C) 2024, 2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,3 +44,7 @@ static size_t param_out_index[DATA_PRODUCT_PARAMETERS_OUTPUT_N] = {
 	{{~it.product.parameters :p:i}}{{?p.direction == "output"}}{{=i}}, {{?}}{{~}}
 };
 #endif
+
+{{?it.product.state && it.product.state.dspCustom}}
+#define DATA_STATE_DSP_CUSTOM
+{{?}}

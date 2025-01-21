@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2022-2024 Orastron Srl unipersonale
+ * Copyright (C) 2022-2025 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,11 @@ typedef struct {
 } instance;
 
 instance * processor_new(float sample_rate) {
+#ifdef DATA_STATE_DSP_CUSTOM
+	(void)plugin_state_load;
+	(void)plugin_state_save;
+#endif
+
 	instance * i = malloc(sizeof(instance));
 	if (i == NULL)
 		return NULL;
