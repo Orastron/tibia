@@ -79,12 +79,6 @@ LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
-ifeq ($(HAS_PARAMETER_IN), yes)
-	RUTEX_DIR ?= ../rutex
-	CFLAGS_ALL := -I$(RUTEX_DIR) $(CFLAGS_ALL)
-	CXXFLAGS_ALL := -I$(RUTEX_DIR) $(CXXFLAGS_ALL)
-endif
-
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
