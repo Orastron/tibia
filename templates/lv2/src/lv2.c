@@ -331,6 +331,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 # ifdef DATA_STATE_DSP_CUSTOM
+	char do_set;
 	if (!atomic_flag_test_and_set(&i->sync_lock_flag)) {
 		if (!i->synced) {
 			if (i->loaded) {
@@ -349,28 +350,23 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		i->synced = 1;
 		i->loaded = 0;
 		atomic_flag_clear(&i->sync_lock_flag);
+		do_set = 1;
+	} else
+		do_set = 0;
 # endif
 
-		for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-			if (i->c[j] == NULL)
-				continue;
-			float v = adjust_param(j, *i->c[j]);
-			if (v != i->params[j]) {
-				i->params[j] = v;
-				plugin_set_parameter(&i->p, param_data[j].index, v);
-			}
-		}
+	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
+		if (i->c[j] == NULL)
+			continue;
+		float v = adjust_param(j, *i->c[j]);
+		if (v != i->params[j]) {
+			i->params[j] = v;
 # ifdef DATA_STATE_DSP_CUSTOM
-	} else {
-		for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++) {
-			if (i->c[j] == NULL)
-				continue;
-			float v = adjust_param(j, *i->c[j]);
-			if (v != i->params[j])
-				i->params[j] = v;
+			if (do_set)
+# endif
+				plugin_set_parameter(&i->p, param_data[j].index, v);
 		}
 	}
-# endif
 #endif
 
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0

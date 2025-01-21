@@ -669,6 +669,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 	};
 	int err = plugin_state_load(&cbs, data, length);
 #else
+	// we need to provide a default implementation because of certain hosts (e.g. Ardour)
 	int err = 0;
 	if (length != DATA_PRODUCT_PARAMETERS_IN_N * 4) {
 		if (data)
@@ -723,6 +724,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	};
 	int err = plugin_state_save(&p->p, &cbs);
 #else
+	// we need to provide a default implementation because of certain hosts (e.g. Ardour)
 	int err = 0;
 # if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	size_t length = DATA_PRODUCT_PARAMETERS_IN_N * 4;
@@ -865,6 +867,31 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 
 static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *data, char before) {
 #if DATA_PRODUCT_PARAMETERS_IN_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
+# ifdef DATA_STATE_DSP_CUSTOM
+	char do_set;
+	if (!atomic_flag_test_and_set(&p->syncLockFlag)) {
+		if (!p->synced) {
+			if (p->loaded) {
+				for (uint32_t j = 0; j < DATA_PRODUCT_PARAMETERS_IN_N; j++) {
+					p->parametersIn[j] = p->parametersInSync[j];
+					plugin_set_parameter(&p->p, parameterInData[j].index, p->parametersIn[j]);
+				}
+			} else {
+				for (uint32_t j = 0; j < DATA_PRODUCT_PARAMETERS_IN_N; j++)
+					if (p->parametersIn[j] != p->parametersInSync[j]) {
+						p->parametersInSync[j] = p->parametersIn[j];
+						plugin_set_parameter(&p->p, parameterInData[j].index, p->parametersIn[j]);
+					}
+			}
+		}
+		p->synced = 1;
+		p->loaded = 0;
+		atomic_flag_clear(&p->syncLockFlag);
+		do_set = 1;
+	} else
+		do_set = 0;
+# endif
+
 	if (data->inputParameterChanges == NULL)
 		return;
 	Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
@@ -924,7 +951,10 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 		v = parameterAdjust(parameterInData + ii, parameterMap(parameterInData + ii, v));
 		if (v != p->parametersIn[ii]) {
 			p->parametersIn[ii] = v;
-			plugin_set_parameter(&p->p, parameterInData[ii].index, v);
+#  ifdef DATA_STATE_DSP_CUSTOM
+			if (do_set)
+#  endif
+				plugin_set_parameter(&p->p, parameterInData[ii].index, v);
 		}
 # endif
 	}
@@ -1798,6 +1828,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 	};
 	int err = plugin_state_load(&cbs, data, length);
 #else
+	// we need to provide a default implementation because of certain hosts (e.g. Reaper)
 	int err = 0;
 # if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
