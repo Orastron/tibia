@@ -701,6 +701,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 
 	if (data)
 		free(data);
+	TRACE(err == 0 ? " ok" : " err");
 	return err == 0 ? Steinberg_kResultOk : Steinberg_kResultFalse;
 }
 
@@ -743,6 +744,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	err = pluginStateWriteCb(p, data, length);
 # endif
 #endif
+	TRACE(err == 0 ? " ok" : " err");
 	return err == 0 ? Steinberg_kResultOk : Steinberg_kResultFalse;
 }
 
@@ -867,9 +869,8 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 
 static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *data, char before) {
 #if DATA_PRODUCT_PARAMETERS_IN_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-# ifdef DATA_STATE_DSP_CUSTOM
-	char do_set;
-	if (!atomic_flag_test_and_set(&p->syncLockFlag)) {
+	_Bool locked = !atomic_flag_test_and_set(&p->syncLockFlag);
+	if (locked) {
 		if (!p->synced) {
 			if (p->loaded) {
 				for (uint32_t j = 0; j < DATA_PRODUCT_PARAMETERS_IN_N; j++) {
@@ -886,14 +887,13 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 		}
 		p->synced = 1;
 		p->loaded = 0;
-		atomic_flag_clear(&p->syncLockFlag);
-		do_set = 1;
-	} else
-		do_set = 0;
-# endif
+	}
 
-	if (data->inputParameterChanges == NULL)
+	if (data->inputParameterChanges == NULL) {
+		if (locked)
+			atomic_flag_clear(&p->syncLockFlag);
 		return;
+	}
 	Steinberg_int32 n = data->inputParameterChanges->lpVtbl->getParameterCount(data->inputParameterChanges);
 	for (Steinberg_int32 i = 0; i < n; i++) {
 		struct Steinberg_Vst_IParamValueQueue *q = data->inputParameterChanges->lpVtbl->getParameterData(data->inputParameterChanges, i);
@@ -951,13 +951,16 @@ static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *d
 		v = parameterAdjust(parameterInData + ii, parameterMap(parameterInData + ii, v));
 		if (v != p->parametersIn[ii]) {
 			p->parametersIn[ii] = v;
-#  ifdef DATA_STATE_DSP_CUSTOM
-			if (do_set)
-#  endif
+			if (locked) {
+				p->parametersInSync[ii] = p->parametersIn[ii];
 				plugin_set_parameter(&p->p, parameterInData[ii].index, v);
+			}
 		}
 # endif
 	}
+
+	if (locked)
+		atomic_flag_clear(&p->syncLockFlag);
 #endif
 }
 
