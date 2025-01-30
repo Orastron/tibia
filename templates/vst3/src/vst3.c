@@ -2110,10 +2110,16 @@ static Steinberg_tresult controllerSetParamNormalized(void* thisInterface, Stein
 	if (pi < DATA_PRODUCT_PARAMETERS_N)
 		for (size_t i = 0; i < c->viewsCount; i++)
 			if(c->views[i]) {
+#  if DATA_PRODUCT_PARAMETERS_IN_N == 0
+				plugViewUpdateParameterOut(c->views[i], parameterInfoToDataIndex[pi]);
+#  elif DATA_PRODUCT_PARAMETERS_OUT_N == 0
+				plugViewUpdateParameterIn(c->views[i], parameterInfoToDataIndex[pi]);
+#  else
 				if (parameterInfo[pi].flags & Steinberg_Vst_ParameterInfo_ParameterFlags_kIsReadOnly)
 					plugViewUpdateParameterOut(c->views[i], parameterInfoToDataIndex[pi]);
 				else
 					plugViewUpdateParameterIn(c->views[i], parameterInfoToDataIndex[pi]);
+#  endif
 			}
 # endif
 	return Steinberg_kResultTrue;
