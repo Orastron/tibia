@@ -1065,6 +1065,8 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			continue;
 		q->lpVtbl->addPoint(q, data->numSamples - 1, parameterUnmap(parameterOutData + i, v), &index);
 	}
+#else
+	(void)plugin_get_parameter;
 #endif
 
 	// TBD: latency + IComponentHandler::restartComponent (kLatencyChanged), see https://steinbergmedia.github.io/vst3_dev_portal/pages/Technical+Documentation/Workflow+Diagrams/Get+Latency+Call+Sequence.html
