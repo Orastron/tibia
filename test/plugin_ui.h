@@ -159,22 +159,19 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 			    && ev->y >= y + 0.15 * h && ev->y <= y + 0.25 * h) {
 				instance->param_down = 0;
 				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 0);
-				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.3 * h && ev->y <= y + 0.4 * h) {
 				instance->param_down = 1;
 				instance->delay = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 1);
-				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 1, 1000.f * instance->delay);
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.45 * h && ev->y <= y + 0.55 * h) {
 				instance->param_down = 2;
 				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 2);
-				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
+				instance->cbs.set_parameter_begin(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
 				puglPostRedisplay(instance->view);
 			} else if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
 			    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
@@ -227,7 +224,24 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				}
 
 			if (instance->param_down != -1) {
-				instance->cbs.set_parameter_end(instance->cbs.handle, instance->param_down);
+				float v = ev->x < x + 0.1 * w ? 0.f : (ev->x > x + 0.9 * w ? 1.f : (float)((ev->x - (x + 0.1 * w)) / (0.8 * w)));
+				switch (instance->param_down) {
+				case 0:
+					instance->gain = v;
+					instance->cbs.set_parameter_end(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
+					puglPostRedisplay(instance->view);
+					break;
+				case 1:
+					instance->delay = v;
+					instance->cbs.set_parameter_end(instance->cbs.handle, 1, 1000.f * instance->delay);
+					puglPostRedisplay(instance->view);
+					break;
+				case 2:
+					instance->cutoff = v;
+					instance->cbs.set_parameter_end(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
+					puglPostRedisplay(instance->view);
+					break;
+				}
 				instance->param_down = -1;
 			}
 		}

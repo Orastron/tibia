@@ -1397,7 +1397,7 @@ static void plugViewUpdateAllParameters(plugView *view) {
 #  endif
 }
 
-static void plugViewSetParameterBeginCb(void *handle, size_t index) {
+static void plugViewSetParameterBeginCb(void *handle, size_t index, float value) {
 	TRACE("set parameter begin cb\n");
 
 #  ifdef DATA_PARAM_LATENCY_INDEX
@@ -1406,7 +1406,12 @@ static void plugViewSetParameterBeginCb(void *handle, size_t index) {
 	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
 #  endif
 	plugView *v = (plugView *)handle;
+	ParameterData *p;
+	double *pv;
+	controllerGetParamDataValuePtrs(v->ctrl, index, &p, &pv);
+	*pv = parameterAdjust(p, value); // let Reaper find the updated value
 	v->ctrl->componentHandler->lpVtbl->beginEdit(v->ctrl->componentHandler, parameterInfo[index].id);
+	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(p, *pv));
 }
 
 static void plugViewSetParameterCb(void *handle, size_t index, float value) {
@@ -1426,7 +1431,7 @@ static void plugViewSetParameterCb(void *handle, size_t index, float value) {
 	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(p, *pv));
 }
 
-static void plugViewSetParameterEndCb(void *handle, size_t index) {
+static void plugViewSetParameterEndCb(void *handle, size_t index, float value) {
 	TRACE("set parameter end cb\n");
 
 #  ifdef DATA_PARAM_LATENCY_INDEX
@@ -1435,6 +1440,11 @@ static void plugViewSetParameterEndCb(void *handle, size_t index) {
 	index = index >= DATA_PARAM_LATENCY_INDEX ? index - 1 : index;
 #  endif
 	plugView *v = (plugView *)handle;
+	ParameterData *p;
+	double *pv;
+	controllerGetParamDataValuePtrs(v->ctrl, index, &p, &pv);
+	*pv = parameterAdjust(p, value); // let Reaper find the updated value
+	v->ctrl->componentHandler->lpVtbl->performEdit(v->ctrl->componentHandler, parameterInfo[index].id, parameterUnmap(p, *pv));
 	v->ctrl->componentHandler->lpVtbl->endEdit(v->ctrl->componentHandler, parameterInfo[index].id);
 }
 
