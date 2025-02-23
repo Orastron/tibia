@@ -56,10 +56,16 @@ static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
 }
 
 static void plugin_ui_update_geometry(plugin_ui *instance) {
-	PuglRect frame = puglGetFrame(instance->view);
-	instance->fw = frame.width;
-	instance->fh = frame.height;
-	if (frame.width == 0 || frame.height == 0)
+	//PuglRect frame = puglGetFrame(instance->view);
+	//instance->fw = frame.width;
+	//instance->fh = frame.height;
+	//if (frame.width == 0 || frame.height == 0)
+	//	return;
+
+	PuglArea size = puglGetSizeHint(instance->view, PUGL_CURRENT_SIZE);
+	instance->fw = size.width;
+	instance->fh = size.height;
+	if (instance->fw == 0 || instance->fh == 0)
 		return;
 
 	if (instance->fw / instance->fh > RATIO) {
@@ -143,7 +149,7 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 		{
 			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
 			plugin_ui_update_geometry(instance);
-			puglPostRedisplay(instance->view);
+			puglObscureView(instance->view);
 		}
 			break;
 		case PUGL_BUTTON_PRESS:
@@ -160,19 +166,19 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				instance->param_down = 0;
 				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
 				instance->cbs.set_parameter_begin(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.3 * h && ev->y <= y + 0.4 * h) {
 				instance->param_down = 1;
 				instance->delay = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
 				instance->cbs.set_parameter_begin(instance->cbs.handle, 1, 1000.f * instance->delay);
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
 			    && ev->y >= y + 0.45 * h && ev->y <= y + 0.55 * h) {
 				instance->param_down = 2;
 				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
 				instance->cbs.set_parameter_begin(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 			} else if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
 			    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
 				instance->param_down = 3;
@@ -191,17 +197,17 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 			case 0:
 				instance->gain = v;
 				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 				break;
 			case 1:
 				instance->delay = v;
 				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 				break;
 			case 2:
 				instance->cutoff = v;
 				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-				puglPostRedisplay(instance->view);
+				puglObscureView(instance->view);
 				break;
 			}
 		}
@@ -220,7 +226,7 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
 					instance->bypass = !instance->bypass;
 					instance->cbs.set_parameter(instance->cbs.handle, 3, instance->bypass ? 1.f : 0.f);
-					puglPostRedisplay(instance->view);
+					puglObscureView(instance->view);
 				}
 
 			if (instance->param_down != -1) {
@@ -229,17 +235,17 @@ static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
 				case 0:
 					instance->gain = v;
 					instance->cbs.set_parameter_end(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-					puglPostRedisplay(instance->view);
+					puglObscureView(instance->view);
 					break;
 				case 1:
 					instance->delay = v;
 					instance->cbs.set_parameter_end(instance->cbs.handle, 1, 1000.f * instance->delay);
-					puglPostRedisplay(instance->view);
+					puglObscureView(instance->view);
 					break;
 				case 2:
 					instance->cutoff = v;
 					instance->cbs.set_parameter_end(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-					puglPostRedisplay(instance->view);
+					puglObscureView(instance->view);
 					break;
 				}
 				instance->param_down = -1;
@@ -270,11 +276,11 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	puglSetViewHint(instance->view, PUGL_RESIZABLE, PUGL_TRUE);
 	puglSetHandle(instance->view, instance);
 	puglSetBackend(instance->view, puglCairoBackend());
-	PuglRect frame = { 0, 0, WIDTH, HEIGHT };
-	puglSetFrame(instance->view, frame);
+	//PuglRect frame = { 0, 0, WIDTH, HEIGHT };
+	//puglSetFrame(instance->view, frame);
 	puglSetEventFunc(instance->view, plugin_ui_on_event);
 	if (has_parent)
-		puglSetParentWindow(instance->view, (PuglNativeView)parent);
+		puglSetParent(instance->view, (PuglNativeView)parent);
 	if (puglRealize(instance->view)) {
 		puglFreeView(instance->view);
 		puglFreeWorld(instance->world);
@@ -282,7 +288,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	}
 	instance->widget = (void *)puglGetNativeView(instance->view);
 	instance->cbs = *cbs;
-	puglSetFrame(instance->view, frame); // Intentionally duplicated because of ardour/lv2/mac strange event order call
+	//puglSetFrame(instance->view, frame); // Intentionally duplicated because of ardour/lv2/mac strange event order call
 	puglShow(instance->view, PUGL_SHOW_RAISE); // Cocoa calls events at this so it's better this happens late
 	return instance;
 }
@@ -316,5 +322,5 @@ static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float val
 		instance->y_z1 = 0.5f * value + 0.5f;
 		break;
 	}
-	puglPostRedisplay(instance->view);
+	puglObscureView(instance->view);
 }
