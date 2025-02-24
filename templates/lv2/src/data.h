@@ -37,11 +37,55 @@ static uint32_t midi_in_index[DATA_PRODUCT_MIDI_INPUTS_N] = {
 };
 #endif
 
-#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-
 # define DATA_PARAM_BYPASS	1
 # define DATA_PARAM_TOGGLED	(1<<1)
 # define DATA_PARAM_INTEGER	(1<<2)
+
+{{?it.lv2.use_parameters}}
+#define DATA_PRODUCT_USE_PARAMETERS 1
+
+{{?it.tibia.lv2.ports.find(p => p.isInputParameterMessage)}}
+#define DATA_PRODUCT_IPM {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.isInputParameterMessage))}}
+{{?}}
+{{?it.tibia.lv2.ports.find(p => p.isOutputParameterMessage)}}
+#define DATA_PRODUCT_OPM {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.isOutputParameterMessage))}}
+{{?}}
+
+
+#if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+
+static struct {
+	uint32_t	index;
+	float		min;
+	float		max;
+	float		def;
+	uint32_t	flags;
+	const char *id;
+} param_data[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
+	{{~it.tibia.lv2.parameters :p}}
+	{
+		/* .index	= */ {{=p.paramIndex}},
+		/* .min		= */ {{=p.minimum.toExponential()}}f,
+		/* .max		= */ {{=p.maximum.toExponential()}}f,
+		/* .def		= */ {{=p.defaultValue.toExponential()}}f,
+		/* .flags	= */ {{?p.isBypass}}DATA_PARAM_BYPASS{{??p.isLatency}}DATA_PARAM_INTEGER{{??}}0{{?p.toggled}} | DATA_PARAM_TOGGLED{{?}}{{?p.integer}} | DATA_PARAM_INTEGER{{?}}{{?}},
+		/* .id      = */ DATA_LV2_URI"#{{=p.id}}"
+	},
+	{{~}}
+};
+
+#endif
+
+#if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
+	{{~it.tibia.lv2.parameters.filter(x => x.direction == "output") :p}}{{=p.paramIndex}}, {{~}}
+};
+#endif
+
+
+{{??}}
+
+#if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 
 static struct {
 	uint32_t	index;
@@ -68,6 +112,8 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control" && x.direction == "output") :p}}{{=p.paramIndex}}, {{~}}
 };
 #endif
+
+{{?}}
 
 {{?it.product.ui}}
 #define DATA_UI

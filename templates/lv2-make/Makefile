@@ -62,7 +62,7 @@ else
 	endif
 endif
 
-CFLAGS := -O3 -Wall -Wpedantic -Wextra
+CFLAGS := -O0 -g -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=

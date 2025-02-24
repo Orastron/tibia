@@ -49,6 +49,10 @@
 #ifdef DATA_STATE_DSP_CUSTOM
 # include <lv2/state/state.h>
 #endif
+#if DATA_PRODUCT_USE_PARAMETERS
+# include "lv2/lv2plug.in/ns/ext/patch/patch.h"
+# include <lv2/lv2plug.in/ns/ext/atom/forge.h>
+#endif
 
 #include <string.h>
 
@@ -131,6 +135,25 @@ typedef struct {
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
 #endif
+#if DATA_PRODUCT_USE_PARAMETERS
+	LV2_URID                 uri_atom_Blank;
+	LV2_URID                 uri_atom_Object;
+	LV2_URID                 uri_atom_URID;
+	LV2_URID                 uri_atom_Float;
+	LV2_URID                 uri_atom_Bool;
+	LV2_URID                 uri_patch_Set;
+	LV2_URID                 uri_patch_Get;
+	LV2_URID                 uri_patch_property;
+	LV2_URID                 uri_patch_value;
+	LV2_URID                 uri_parameters[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N]; // TODO: Fix 0 params case
+# if DATA_PRODUCT_IPM
+	const LV2_Atom_Sequence *controlIn;
+# endif
+# if DATA_PRODUCT_OPM
+	const LV2_Atom_Sequence *controlOut;
+	LV2_Atom_Forge           forge;
+# endif
+#endif
 } plugin_instance;
 
 static const char * get_bundle_path_cb(void *handle) {
@@ -203,6 +226,20 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
 	}
 #endif
+#if DATA_PRODUCT_USE_PARAMETERS
+	instance->uri_atom_Blank        = instance->map->map (instance->map->handle, LV2_ATOM__Blank);
+	instance->uri_atom_Object       = instance->map->map (instance->map->handle, LV2_ATOM__Object);
+	instance->uri_atom_URID         = instance->map->map (instance->map->handle, LV2_ATOM__URID);
+	instance->uri_atom_Float        = instance->map->map (instance->map->handle, LV2_ATOM__Float);
+	instance->uri_atom_Bool         = instance->map->map (instance->map->handle, LV2_ATOM__Bool);
+	instance->uri_patch_Set         = instance->map->map (instance->map->handle, LV2_PATCH__Set);
+	instance->uri_patch_Get         = instance->map->map (instance->map->handle, LV2_PATCH__Get);
+	instance->uri_patch_property    = instance->map->map (instance->map->handle, LV2_PATCH__property);
+	instance->uri_patch_value       = instance->map->map (instance->map->handle, LV2_PATCH__value);
+	for (int i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++) {
+		instance->uri_parameters[i] = instance->map->map (instance->map->handle, param_data[i].id);
+	}
+#endif
 
 	plugin_callbacks cbs = {
 		/* .handle		= */ (void *)instance,
@@ -260,6 +297,7 @@ err_instance:
 }
 
 static void connect_port(LV2_Handle instance, uint32_t port, void * data_location) {
+	const uint32_t port0 = port;
 	plugin_instance * i = (plugin_instance *)instance;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	if (port < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N) {
@@ -289,8 +327,24 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 	}
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
 #endif
-#if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
+
+#if DATA_PRODUCT_USE_PARAMETERS
+# if DATA_PRODUCT_IPM
+	if (port0 == DATA_PRODUCT_IPM) {
+		i->controlIn = (const LV2_Atom_Sequence*) data_location;
+		return;
+	}
+# endif
+# if DATA_PRODUCT_OPM
+	if (port0 == DATA_PRODUCT_OPM) {
+		i->controlOut = (const LV2_Atom_Sequence*) data_location;
+		return;
+	}
+# endif
+#else
+# if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	i->c[port] = data_location;
+# endif
 #endif
 }
 
@@ -312,6 +366,60 @@ static void activate(LV2_Handle instance) {
 # endif
 #endif
 	plugin_reset(&i->p);
+}
+
+static inline int getParamIndexByURI(plugin_instance *instance, LV2_URID uri) {
+	for (int i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
+		if (instance->uri_parameters[i] == uri)
+			return i;
+	return -1;
+}
+
+static inline bool parse_property (plugin_instance *self, const LV2_Atom_Object *obj) {
+	const LV2_Atom* property = NULL;
+	lv2_atom_object_get (obj, self->uri_patch_property, &property, 0);
+
+	/* Get property URI.
+	 *
+	 * Note: Real world code would only call
+	 *  if (!property || property->type != self->uris.atom_URID) { return; }
+	 * However this is example and test code, so..
+	 */
+	if (!property) {
+		lv2_log_error (&self->logger, "PropEx.lv2: Malformed set message has no body.\n");
+		return false;
+	}
+	if (property->type != self->uri_atom_URID) {
+		lv2_log_error (&self->logger, "PropEx.lv2: Malformed set message has non-URID property.\n");
+		return false;
+	}
+
+	/* Get value */
+	const LV2_Atom* val = NULL;
+	lv2_atom_object_get (obj, self->uri_patch_value, &val, 0);
+	if (!val) {
+		lv2_log_error (&self->logger, "PropEx.lv2: Malformed set message has no value.\n");
+		return false;
+	}
+
+	/* NOTE: This code errs towards the verbose side
+	 *  - the type is usually implicit and does not need to be checked.
+	 *  - consolidate code e.g.
+	 *
+	 *    const LV2_URID urid = (LV2_Atom_URID*)property)->body
+	 *    PropExURIs* urid    = self->uris;
+	 *
+	 *  - no need to lv2_log warnings or errors
+	 */
+
+	int index = getParamIndexByURI(self, ((LV2_Atom_URID*)property)->body);
+	if (index < 0)
+		return false;
+
+	float f = *((float*)(val + 1));
+	lv2_log_note (&self->logger, "PropEx.lv2: Received %d = %f\n", index, f);
+
+	return true;
 }
 
 static void run(LV2_Handle instance, uint32_t sample_count) {
@@ -389,6 +497,52 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 				}
 			}
 		}
+#endif
+
+#if DATA_PRODUCT_USE_PARAMETERS
+
+	// Initially, self->out_port contains a Chunk with size set to capacity
+	// Set up forge to write directly to output port
+	const uint32_t out_capacity = i->controlOut->atom.size;
+	lv2_atom_forge_set_buffer(&i->forge, (uint8_t*)i->controlOut, out_capacity);
+
+	if (!i->controlIn) {
+		lv2_log_error (&i->logger, "controlIn is not.\n");
+	}
+	else if (i->map) {
+		LV2_ATOM_SEQUENCE_FOREACH (i->controlIn, ev) {
+			if (ev->body.type != i->uri_atom_Object) {
+				continue;
+			}
+			const LV2_Atom_Object *obj      = (LV2_Atom_Object*)&ev->body;
+			const LV2_Atom_URID   *property = NULL;
+			if (obj->body.otype == i->uri_patch_Set) {
+				parse_property (i, obj);
+			}
+			else if (obj->body.otype == i->uri_patch_Get) {
+
+				lv2_atom_object_get(obj, i->uri_patch_property, (const LV2_Atom**)&property, 0);
+
+				if (!property) {
+					lv2_log_error (&i->logger, "PropEx.lv2: Malformed set message has no body.\n");
+					continue;
+				}
+				if (property->atom.type != i->uri_atom_URID) {
+					lv2_log_error(&i->logger, "Get property is not a URID\n");
+					continue;			
+				}
+
+				const LV2_URID  key   = property->body;
+				lv2_log_note(&i->logger, "AAAAAAAAAAAAAAAAA key: %d, getParamIndexByURI: %d \n", key, getParamIndexByURI(i, key));		
+
+
+
+
+
+			}
+		}
+	}
+
 #endif
 
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0

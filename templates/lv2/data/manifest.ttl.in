@@ -36,6 +36,11 @@
 {{?(it.product.state && it.product.state.dspCustom)}}
 	lv2:extensionData state:interface ;
 {{?}}
+
+{{~it.tibia.lv2.parameters:p:i}}
+	patch:writable plugin:{{=p.id}};
+{{~}}
+
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
 {{?p.isBypass}}
@@ -68,6 +73,22 @@
 		lv2:portProperty lv2:connectionOptional ;
 		lv2:portProperty lv2:integer ;
 		lv2:portProperty lv2:reportsLatency ;
+{{??p.isInputParameterMessage}}
+		a lv2:InputPort ,
+    	    atom:AtomPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports patch:Message ;
+		lv2:designation lv2:control ;
+		lv2:symbol "InputParameterMessage" ;
+		lv2:name "InputParameterMessage" ;
+{{??p.isOutputParameterMessage}}
+        a lv2:OutputPort ,
+			atom:AtomPort ;
+        atom:bufferType atom:Sequence ;
+        atom:supports patch:Message ;
+        lv2:designation lv2:control ;
+        lv2:symbol "OutputParameterMessage" ;
+        lv2:name "OutputParameterMessage" ;
 {{??}}
 		a {{?p.type == "control"}}lv2:ControlPort{{??p.type == "midi"}}atom:AtomPort{{??}}{{?p.cv}}lv2:CVPort{{??}}lv2:AudioPort{{?}}{{?}} ,
 			{{?p.direction == "input"}}lv2:InputPort{{??}}lv2:OutputPort{{?}} ;
@@ -127,6 +148,20 @@
 {{??}}
 	] .
 {{?}}
+{{~}}
+
+{{~it.tibia.lv2.parameters:p:i}}
+
+plugin:{{=p.id}}
+	a lv2:Parameter ;
+	rdfs:label "{{=p.name}}" ;
+	rdfs:range {{?p.toggled}}atom:Bool{{??p.integer}}atom:Int{{??}}atom:Float{{?}} ;
+{{?p.unit && p.unit in it.tibia.lv2.units}}
+	units:unit	{{=it.tibia.lv2.ttlURI(it.tibia.lv2.units[p.unit])}} ;
+{{?}}
+	lv2:minimum {{=p.minimum.toExponential()}} ;
+	lv2:maximum {{=p.maximum.toExponential()}} ;
+	lv2:default {{=p.defaultValue.toExponential()}} .
 {{~}}
 
 {{?it.product.ui}}
