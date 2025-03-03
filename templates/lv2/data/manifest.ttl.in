@@ -38,7 +38,11 @@
 {{?}}
 
 {{~it.tibia.lv2.parameters:p:i}}
+{{?p.direction == "input"}}
 	patch:writable plugin:{{=p.id}};
+{{??}}
+	patch:readable plugin:{{=p.id}};
+{{?}}	
 {{~}}
 
 	lv2:port [
