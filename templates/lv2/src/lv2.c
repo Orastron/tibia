@@ -93,6 +93,7 @@ static float adjust_param(size_t index, float value) {
 
 typedef struct {
 	plugin				p;
+	float				sample_rate;
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	const float *			x[DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N];
 #endif
@@ -212,7 +213,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	};
 	plugin_init(&instance->p, &cbs);
 
-	plugin_set_sample_rate(&instance->p, sample_rate);
+	instance->sample_rate = (float)sample_rate;
+	plugin_set_sample_rate(&instance->p, instance->sample_rate);
 	size_t req = plugin_mem_req(&instance->p);
 	if (req != 0) {
 		instance->mem = malloc(req);
@@ -451,7 +453,7 @@ static LV2_State_Status state_save(LV2_Handle instance, LV2_State_Store_Function
 		/* .set_parameter	= */ NULL
 # endif
 	};
-	return plugin_state_save(&i->p, &cbs) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
+	return plugin_state_save(&i->p, &cbs, i->sample_rate) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
 }
 
 static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Function retrieve, LV2_State_Handle handle, uint32_t flags, const LV2_Feature * const * features) {
@@ -479,7 +481,7 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 		/* .set_parameter	= */ state_set_parameter_cb
 # endif
 	};
-	return plugin_state_load(&cbs, data, length) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
+	return plugin_state_load(&cbs, i->sample_rate, data, length) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
 }
 
 static const void * extension_data(const char * uri) {

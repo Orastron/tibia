@@ -138,7 +138,8 @@ static float parse_float(const uint8_t *data) {
 	return v.f;
 }
 
-static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs) {
+static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs, float last_sample_rate) {
+	(void)last_sample_rate;
 	uint8_t data[13];
 	cbs->lock(cbs->handle);
 	const float gain = instance->gain;
@@ -159,7 +160,8 @@ static char x_isnan(float x) {
 	return ((v.u & 0x7f800000) == 0x7f800000) && (v.u & 0x7fffff);
 }
 
-static int plugin_state_load(const plugin_state_callbacks *cbs, const char *data, size_t length) {
+static int plugin_state_load(const plugin_state_callbacks *cbs, float cur_sample_rate, const char *data, size_t length) {
+	(void)cur_sample_rate;
 	if (length != 13)
 		return -1;
 	const uint8_t *d = (const uint8_t *)data;

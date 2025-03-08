@@ -271,7 +271,9 @@ typedef struct pluginInstance {
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
 	plugin						p;
-	float						sampleRate;
+	float						lastSampleRate;
+	float						curSampleRate;
+	float						nextSampleRate;
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	float						parametersIn[DATA_PRODUCT_PARAMETERS_IN_N];
 	float						parametersInSync[DATA_PRODUCT_PARAMETERS_IN_N];
@@ -412,6 +414,9 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
+	p->lastSampleRate = 0.f;
+	p->curSampleRate = 0.f;
+	p->nextSampleRate = 0.f;
 
 	plugin_callbacks cbs = {
 		/* .handle		= */ (void *)p,
@@ -628,7 +633,7 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 				p->neededBusesActive = 0;
 # endif
 #endif
-		plugin_set_sample_rate(&p->p, p->sampleRate);
+		plugin_set_sample_rate(&p->p, p->nextSampleRate);
 		size_t req = plugin_mem_req(&p->p);
 		if (req != 0) {
 			p->mem = malloc(req);
@@ -636,8 +641,11 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 				return Steinberg_kOutOfMemory;
 			plugin_mem_set(&p->p, p->mem);
 		}
+		p->curSampleRate = p->nextSampleRate;
+		p->lastSampleRate = p->nextSampleRate;
 		plugin_reset(&p->p);
-	}
+	} else
+		p->curSampleRate = 0.f;
 	return Steinberg_kResultOk;
 }
 
@@ -667,7 +675,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 		/* .set_parameter	= */ pluginStateSetParameterCb
 # endif
 	};
-	int err = plugin_state_load(&cbs, data, length);
+	int err = plugin_state_load(&cbs, p->curSampleRate, data, length);
 #else
 	// we need to provide a default implementation because of certain hosts (e.g. Ardour)
 	int err = 0;
@@ -723,7 +731,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 		/* .set_parameter	= */ NULL
 # endif
 	};
-	int err = plugin_state_save(&p->p, &cbs);
+	int err = plugin_state_save(&p->p, &cbs, p->lastSampleRate);
 #else
 	// we need to provide a default implementation because of certain hosts (e.g. Ardour)
 	int err = 0;
@@ -855,7 +863,7 @@ static Steinberg_uint32 pluginGetLatencySamples(void* thisInterface) {
 static Steinberg_tresult pluginSetupProcessing(void* thisInterface, struct Steinberg_Vst_ProcessSetup* setup) {
 	TRACE("plugin IAudioProcessor setup processing\n");
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
-	p->sampleRate = (float)setup->sampleRate;
+	p->nextSampleRate = (float)setup->sampleRate;
 	return Steinberg_kResultOk;
 }
 
@@ -1858,7 +1866,7 @@ static Steinberg_tresult controllerSetComponentState(void* thisInterface, struct
 		/* .set_parameter	= */ controllerStateSetParameterCb
 # endif
 	};
-	int err = plugin_state_load(&cbs, data, length);
+	int err = plugin_state_load(&cbs, -1.f, data, length); // -1.f means "does not apply"
 #else
 	// we need to provide a default implementation because of certain hosts (e.g. Reaper)
 	int err = 0;
