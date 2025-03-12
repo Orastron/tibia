@@ -709,7 +709,7 @@ static Steinberg_tresult pluginSetState(void* thisInterface, struct Steinberg_IB
 
 	if (data)
 		free(data);
-	TRACE(err == 0 ? " ok" : " err");
+	TRACE(err == 0 ? " ok\n" : " err\n");
 	return err == 0 ? Steinberg_kResultOk : Steinberg_kResultFalse;
 }
 
@@ -1380,20 +1380,20 @@ static Steinberg_tresult plugViewIsPlatformTypeSupported(void* thisInterface, St
 # if DATA_PRODUCT_PARAMETERS_N > 0
 #  if DATA_PRODUCT_PARAMETERS_IN_N > 0
 static void plugViewUpdateParameterIn(plugView *view, size_t index) {
-	if (view->ui)
+	if (view && view->ui)
 		plugin_ui_set_parameter(view->ui, parameterInData[index].index, view->ctrl->parametersIn[index]);
 }
 #  endif
 
 #  if DATA_PRODUCT_PARAMETERS_OUT_N > 0
 static void plugViewUpdateParameterOut(plugView *view, size_t index) {
-	if (view->ui)
+	if (view && view->ui)
 		plugin_ui_set_parameter(view->ui, parameterOutData[index].index, view->ctrl->parametersOut[index]);
 }
 #  endif
 
 static void plugViewUpdateAllParameters(plugView *view) {
-	if (view->ui == NULL)
+	if (view == NULL || view->ui == NULL)
 		return;
 #  if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
