@@ -38,8 +38,8 @@ BUILD_DATA_DIR := build/$(BUNDLE_DIR)
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX := .dll
 	UI_TYPE := WindowsUI
-	LV2DIR := $(shell echo '$(COMMONPROGRAMFILES)' | sed 's:\\:/:g')/LV2
-	LV2DIR_USER := $(shell echo '$(APPDATA)' | sed 's:\\:/:g')/LV2
+	LV2DIR := $(subst \,/,$(COMMONPROGRAMFILES))/LV2
+	LV2DIR_USER := $(subst \,/,$(APPDATA))/LV2
 	CC := gcc
 	CXX := g++
 else

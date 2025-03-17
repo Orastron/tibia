@@ -49,8 +49,8 @@ BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
 
 ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX := .vst3
-	VST3DIR := $(shell echo '$(COMMONPROGRAMFILES)' | sed 's:\\:/:g')/VST3
-	VST3DIR_USER := $(shell echo '$(LOCALAPPDATA)' | sed 's:\\:/:g')/Programs/Common/VST3
+	VST3DIR := $(subst \,/,$(COMMONPROGRAMFILES))/VST3
+	VST3DIR_USER := $(subst \,/,$(LOCALAPPDATA))/Programs/Common/VST3
 	CC := gcc
 	CXX := g++
 else
