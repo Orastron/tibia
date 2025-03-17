@@ -50,8 +50,20 @@ KOTLIN_STDLIB_FILE := $(KOTLIN_DIR)/kotlin-stdlib-$(KOTLIN_STDLIB_VERSION).jar
 KOTLINX_COROUTINES_CORE_FILE := $(KOTLIN_DIR)/kotlinx-coroutines-core-$(KOTLINX_COROUTINES_CORE_VERSION).jar
 KOTLINX_COROUTINES_CORE_JVM_FILE := $(KOTLIN_DIR)/kotlinx-coroutines-core-jvm-$(KOTLINX_COROUTINES_CORE_JVM_VERSION).jar
 
-CC := $(NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi$(MIN_API)-clang
-CXX := $(NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi$(MIN_API)-clang++
+ifeq ($(OS), Windows_NT)
+	VST3_PLATFORM := x86_64-win
+	NDK_BIN_DIR ?= $(NDK_DIR)/toolchains/llvm/prebuilt/windows-x86_64/bin/
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Darwin)
+		NDK_BIN_DIR ?= $(NDK_DIR)/toolchains/llvm/prebuilt/darwin-x86_64/bin/
+	else
+		NDK_BIN_DIR ?= $(NDK_DIR)/toolchains/llvm/prebuilt/linux-x86_64/bin/
+	endif
+endif
+
+CC := $(NDK_BIN_DIR)/armv7a-linux-androideabi$(MIN_API)-clang
+CXX := $(NDK_BIN_DIR)/armv7a-linux-androideabi$(MIN_API)-clang++
 JC := javac
 
 APKSIGNER := $(BUILD_TOOLS_DIR)/apksigner
