@@ -40,7 +40,7 @@ ifeq ($(OS), Windows_NT)
 		VST3_PLATFORM := x86_64-win
 	endif
 	ifeq ($(shell $(CC) -dumpmachine), aarch64-w64-windows-gnu)
-		VST3_PLATFORM := arm64x-win
+		VST3_PLATFORM := arm64-win
 	endif
 else
 	UNAME_S := $(shell uname -s)
