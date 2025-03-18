@@ -20,6 +20,7 @@
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #elif defined(__APPLE__)
+# include "ui_apple.h"
 #else
 # include <X11/Xlib.h>
 #endif
@@ -59,6 +60,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 		return NULL;
 #if defined(_WIN32) || defined(__CYGWIN__)
 #elif defined(__APPLE__)
+	instance->widget = (void *)ui_create(has_parent, parent, WIDTH, HEIGHT);
 #else
 	instance->display = XOpenDisplay(NULL);
 	if (instance->display == NULL) {
@@ -82,8 +84,12 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 }
 
 static void plugin_ui_free(plugin_ui *instance) {
+#if defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(__APPLE__)
+#else
 	XDestroyWindow(instance->display, (Window)instance->widget);
 	XCloseDisplay(instance->display);
+#endif
 	free(instance);
 }
 

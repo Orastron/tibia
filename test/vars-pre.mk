@@ -6,13 +6,31 @@ ifeq ($(TEMPLATE), cmd)
 endif
 
 ifeq ($(TEMPLATE), lv2)
-	CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
-	LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+	ifeq ($(OS), Windows_NT)
+	else
+		UNAME_S := $(shell uname -s)
+		ifeq ($(UNAME_S), Darwin)
+			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
+			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
+		else
+			CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
+			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+		endif
+	endif
 endif
 
 ifeq ($(TEMPLATE), vst3)
-	CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
-	LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+	ifeq ($(OS), Windows_NT)
+	else
+		UNAME_S := $(shell uname -s)
+		ifeq ($(UNAME_S), Darwin)
+			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
+			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
+		else
+			CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
+			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+		endif
+	endif
 endif
 
 ifeq ($(TEMPLATE), daisy-seed)

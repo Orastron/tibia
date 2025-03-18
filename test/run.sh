@@ -6,12 +6,12 @@ $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/api $dir/../
 
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/vst3.json $dir/../templates/vst3 $dir/../out/vst3
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/vst3.json $dir/../templates/vst3-make $dir/../out/vst3
-cp $dir/plugin.h $dir/plugin_ui.h $dir/../out/vst3/src
+cp $dir/plugin.h $dir/plugin_ui.h $dir/ui_apple.h $dir/ui_apple.m $dir/../out/vst3/src
 cp $dir/vars-pre.mk $dir/../out/vst3
 
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/lv2.json $dir/../templates/lv2 $dir/../out/lv2
 $dir/../tibia $dir/product.json,$dir/company.json,$dir/lv2.json $dir/../templates/lv2-make $dir/../out/lv2
-cp $dir/plugin.h $dir/plugin_ui.h $dir/../out/lv2/src
+cp $dir/plugin.h $dir/plugin_ui.h $dir/ui_apple.h $dir/ui_apple.m $dir/../out/lv2/src
 cp $dir/vars-pre.mk $dir/../out/lv2
 
 $dir/../tibia $dir/product.json,$dir/company.json $dir/../templates/web $dir/../out/web
