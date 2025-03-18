@@ -18,21 +18,20 @@
  * File author: Stefano D'Angelo, Paolo Marrone
  */
 
-#include <pugl/pugl.h>
-#include <pugl/cairo.h>
-#include <cairo.h>
+#if defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(__APPLE__)
+#else
+# include <X11/Xlib.h>
+#endif
 
 typedef struct {
 	void *			widget;
-	PuglWorld *		world;
-	PuglView *		view;
 
-	double			fw;
-	double			fh;
-	double			x;
-	double			y;
-	double			w;
-	double			h;
+#if defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(__APPLE__)
+#else
+	Display *		display;
+#endif
 
 	float			gain;
 	float			delay;
@@ -40,267 +39,76 @@ typedef struct {
 	char			bypass;
 	float			y_z1;
 
-	int			param_down;
+	unsigned int		width;
+	unsigned int		height;
 
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
 #define WIDTH		600.0
 #define HEIGHT		400.0
-#define RATIO		(WIDTH / HEIGHT)
-#define INV_RATIO	(HEIGHT / WIDTH)
 
 static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
 	*width = WIDTH;
 	*height = HEIGHT;
 }
 
-static void plugin_ui_update_geometry(plugin_ui *instance) {
-	//PuglRect frame = puglGetFrame(instance->view);
-	//instance->fw = frame.width;
-	//instance->fh = frame.height;
-	//if (frame.width == 0 || frame.height == 0)
-	//	return;
-
-	PuglArea size = puglGetSizeHint(instance->view, PUGL_CURRENT_SIZE);
-	instance->fw = size.width;
-	instance->fh = size.height;
-	if (instance->fw == 0 || instance->fh == 0)
-		return;
-
-	if (instance->fw / instance->fh > RATIO) {
-		instance->w = RATIO * instance->fh;
-		instance->h = instance->fh;
-		instance->x = 0.5 * (instance->fw - instance->w);
-		instance->y = 0.0;
-	} else {
-		instance->w = instance->fw;
-		instance->h = INV_RATIO * instance->fw;
-		instance->x = 0.0;
-		instance->y = 0.5 * (instance->fh - instance->h);
-	}
-}
-
-static void plugin_ui_draw(plugin_ui *instance) {
-	cairo_t *cr = (cairo_t *)puglGetContext(instance->view);
-	double x = instance->x;
-	double y = instance->y;
-	double w = instance->w;
-	double h = instance->h;
-
-	cairo_set_line_width(cr, 0.005 * h);
-
-	cairo_set_source_rgb(cr, 0, 0, 0);
-	cairo_paint(cr);
-
-	cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-	cairo_rectangle(cr, x, y, w, h);
-	cairo_fill(cr);
-
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w * instance->gain, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.15 * h, 0.8 * w, 0.1 * h);
-	cairo_stroke(cr);
-
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w * instance->delay, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.3 * h, 0.8 * w, 0.1 * h);
-	cairo_stroke(cr);
-
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w * instance->cutoff, 0.1 * h);
-	cairo_fill(cr);
-	cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.45 * h, 0.8 * w, 0.1 * h);
-	cairo_stroke(cr);
-
-	if (instance->bypass)
-		cairo_set_source_rgb(cr, 1.0, 0, 0);
-	else
-		cairo_set_source_rgb(cr, 0.7, 0.7, 0.7);
-	cairo_rectangle(cr, x + 0.4 * w, y + 0.6 * h, 0.2 * w, 0.1 * h);
-	cairo_fill(cr);
-
-	cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.75 * h, 0.8 * w, 0.1 * h);
-	cairo_fill(cr);
-
-	cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-	cairo_rectangle(cr, x + 0.1 * w, y + 0.75 * h, 0.8 * w * instance->y_z1, 0.1 * h);
-	cairo_fill(cr);
-}
-
-static PuglStatus plugin_ui_on_event(PuglView *view, const PuglEvent *event) {
-	switch (event->type) {
-		case PUGL_CONFIGURE:
-		{
-			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			plugin_ui_update_geometry(instance);
-			puglObscureView(instance->view);
-		}
-			break;
-		case PUGL_BUTTON_PRESS:
-		{
-			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
-			double x = instance->x;
-			double y = instance->y;
-			double w = instance->w;
-			double h = instance->h;
-
-			if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
-			    && ev->y >= y + 0.15 * h && ev->y <= y + 0.25 * h) {
-				instance->param_down = 0;
-				instance->gain = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-				puglObscureView(instance->view);
-			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
-			    && ev->y >= y + 0.3 * h && ev->y <= y + 0.4 * h) {
-				instance->param_down = 1;
-				instance->delay = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 1, 1000.f * instance->delay);
-				puglObscureView(instance->view);
-			} else if (ev->x >= x + 0.1 * w && ev->x <= x + 0.9 * w
-			    && ev->y >= y + 0.45 * h && ev->y <= y + 0.55 * h) {
-				instance->param_down = 2;
-				instance->cutoff = (float)((ev->x - (x + 0.1 * w)) / (0.8 * w));
-				instance->cbs.set_parameter_begin(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-				puglObscureView(instance->view);
-			} else if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
-			    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
-				instance->param_down = 3;
-			}
-		}
-			break;
-		case PUGL_MOTION:
-		{
-			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			const PuglMotionEvent *ev = (const PuglMotionEvent *)event;
-			double x = instance->x;
-			double w = instance->w;
-			float v = ev->x < x + 0.1 * w ? 0.f : (ev->x > x + 0.9 * w ? 1.f : (float)((ev->x - (x + 0.1 * w)) / (0.8 * w)));
-
-			switch (instance->param_down) {
-			case 0:
-				instance->gain = v;
-				instance->cbs.set_parameter(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-				puglObscureView(instance->view);
-				break;
-			case 1:
-				instance->delay = v;
-				instance->cbs.set_parameter(instance->cbs.handle, 1, 1000.f * instance->delay);
-				puglObscureView(instance->view);
-				break;
-			case 2:
-				instance->cutoff = v;
-				instance->cbs.set_parameter(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-				puglObscureView(instance->view);
-				break;
-			}
-		}
-			break;
-		case PUGL_BUTTON_RELEASE:
-		{
-			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			const PuglButtonEvent *ev = (const PuglButtonEvent *)event;
-			double x = instance->x;
-			double y = instance->y;
-			double w = instance->w;
-			double h = instance->h;
-
-			if (instance->param_down == 3)
-				if (ev->x >= x + 0.4 * w && ev->x <= x + 0.6 * w
-				    && ev->y >= y + 0.6 * h && ev->y <= y + 0.7 * h) {
-					instance->bypass = !instance->bypass;
-					instance->cbs.set_parameter(instance->cbs.handle, 3, instance->bypass ? 1.f : 0.f);
-					puglObscureView(instance->view);
-				}
-
-			if (instance->param_down != -1) {
-				float v = ev->x < x + 0.1 * w ? 0.f : (ev->x > x + 0.9 * w ? 1.f : (float)((ev->x - (x + 0.1 * w)) / (0.8 * w)));
-				switch (instance->param_down) {
-				case 0:
-					instance->gain = v;
-					instance->cbs.set_parameter_end(instance->cbs.handle, 0, -60.f + 80.f * instance->gain);
-					puglObscureView(instance->view);
-					break;
-				case 1:
-					instance->delay = v;
-					instance->cbs.set_parameter_end(instance->cbs.handle, 1, 1000.f * instance->delay);
-					puglObscureView(instance->view);
-					break;
-				case 2:
-					instance->cutoff = v;
-					instance->cbs.set_parameter_end(instance->cbs.handle, 2, (632.4555320336746f * instance->cutoff + 20.653108640674372f) / (1.0326554320337158f - instance->cutoff));
-					puglObscureView(instance->view);
-					break;
-				}
-				instance->param_down = -1;
-			}
-		}
-			break;
-		case PUGL_EXPOSE:
-		{
-			plugin_ui *instance = (plugin_ui *)puglGetHandle(view);
-			plugin_ui_update_geometry(instance); // I didn't expect this was needed here for X11 to work decently when resizing
-			plugin_ui_draw(instance);
-		}
-			break;
-		default:
-			break;
-	}
-	return PUGL_SUCCESS;
-}
-
 static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
 	plugin_ui *instance = malloc(sizeof(plugin_ui));
 	if (instance == NULL)
 		return NULL;
-	instance->param_down = -1;
-	instance->world = puglNewWorld(PUGL_MODULE, 0);
-	instance->view = puglNewView(instance->world);
-	puglSetSizeHint(instance->view, PUGL_DEFAULT_SIZE, WIDTH, HEIGHT);
-	puglSetViewHint(instance->view, PUGL_RESIZABLE, PUGL_TRUE);
-	puglSetHandle(instance->view, instance);
-	puglSetBackend(instance->view, puglCairoBackend());
-	//PuglRect frame = { 0, 0, WIDTH, HEIGHT };
-	//puglSetFrame(instance->view, frame);
-	puglSetEventFunc(instance->view, plugin_ui_on_event);
-	if (has_parent)
-		puglSetParent(instance->view, (PuglNativeView)parent);
-	if (puglRealize(instance->view)) {
-		puglFreeView(instance->view);
-		puglFreeWorld(instance->world);
+#if defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(__APPLE__)
+#else
+	instance->display = XOpenDisplay(NULL);
+	if (instance->display == NULL) {
+		free(instance);
 		return NULL;
 	}
-	instance->widget = (void *)puglGetNativeView(instance->view);
+	int s = DefaultScreen(instance->display);
+	Window w = XCreateSimpleWindow(instance->display, has_parent ? (Window)parent : RootWindow(instance->display, s), 0, 0, WIDTH, HEIGHT, 0, 0, 0);
+	XSelectInput(instance->display, w, ExposureMask | StructureNotifyMask);
+
+	XMapWindow(instance->display, w);
+	XSync(instance->display, False);
+
+	instance->widget = (void *)w;
+
+	instance->width = WIDTH;
+	instance->height = HEIGHT;
+#endif
 	instance->cbs = *cbs;
-	//puglSetFrame(instance->view, frame); // Intentionally duplicated because of ardour/lv2/mac strange event order call
-	puglShow(instance->view, PUGL_SHOW_RAISE); // Cocoa calls events at this so it's better this happens late
 	return instance;
 }
 
 static void plugin_ui_free(plugin_ui *instance) {
-	puglFreeView(instance->view);
-	puglFreeWorld(instance->world);
+	XDestroyWindow(instance->display, (Window)instance->widget);
+	XCloseDisplay(instance->display);
 	free(instance);
 }
 
 static void plugin_ui_idle(plugin_ui *instance) {
-	puglUpdate(instance->world, 0);
+#if defined(_WIN32) || defined(__CYGWIN__)
+#elif defined(__APPLE__)
+#else
+	Window w = (Window)instance->widget;
+	while (XEventsQueued(instance->display, QueuedAfterFlush) > 0) {
+		XEvent e;
+		XNextEvent(instance->display, &e);
+		if (e.type == Expose) {
+			XClearWindow(instance->display, w);
+			GC gc = DefaultGC(instance->display, DefaultScreen(instance->display));
+
+			XSetForeground(instance->display, gc, 0xff0000);
+			XFillRectangle(instance->display, w, gc, 10, 10, instance->width - 20, instance->height - 20);
+		} else if (e.type == ConfigureNotify) {
+			XWindowAttributes attrs;
+			XGetWindowAttributes(instance->display, w, &attrs);
+			instance->width = attrs.width;
+			instance->height = attrs.height;
+		}
+	}
+#endif
 }
 
 static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float value) {
@@ -322,5 +130,4 @@ static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float val
 		instance->y_z1 = 0.5f * value + 0.5f;
 		break;
 	}
-	puglObscureView(instance->view);
 }
