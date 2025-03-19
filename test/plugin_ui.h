@@ -196,6 +196,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	instance->widget = window_get_handle(instance->window);
 	window_set_data(instance->window, (void*) instance);
 	window_show(instance->window);
+	on_window_resize(instance->window, window_get_width(instance->window), window_get_height(instance->window));
 
 	instance->cbs = *cbs;
 	return instance;
@@ -203,6 +204,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 
 static void plugin_ui_free(plugin_ui *instance) {
 	window_free(instance->window);
+	vinci_destroy(instance->vinci);
 	free(instance);
 }
 

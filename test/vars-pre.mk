@@ -17,8 +17,8 @@ ifeq ($(TEMPLATE), lv2)
 			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
 			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
 		else
-			CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
-			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
+			LDFLAGS_EXTRA := -lxcb
 		endif
 	endif
 	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I${VINCI_DIR}
@@ -34,8 +34,8 @@ ifeq ($(TEMPLATE), vst3)
 			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
 			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
 		else
-			CFLAGS_EXTRA := $(shell pkg-config --cflags x11)
-			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
+			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
+			LDFLAGS_EXTRA := -lxcb
 		endif
 	endif
 	CFLAGS_EXTRA := $(CFLAGS_EXTRA)	-I../../../vst3_c_api
