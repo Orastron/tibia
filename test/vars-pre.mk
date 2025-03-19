@@ -1,5 +1,7 @@
 API_DIR := ../api
 
+VINCI_DIR := ../../../vinci
+
 ifeq ($(TEMPLATE), cmd)
 	TINYWAV_DIR := ../../../tinywav
 	MIDI_PARSER_DIR := ../../../midi-parser
@@ -7,6 +9,8 @@ endif
 
 ifeq ($(TEMPLATE), lv2)
 	ifeq ($(OS), Windows_NT)
+		C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-win32.c
+		LDFLAGS_EXTRA := -mwindows
 	else
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
@@ -17,10 +21,13 @@ ifeq ($(TEMPLATE), lv2)
 			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
 		endif
 	endif
+	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I${VINCI_DIR}
 endif
 
 ifeq ($(TEMPLATE), vst3)
 	ifeq ($(OS), Windows_NT)
+		C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-win32.c
+		LDFLAGS_EXTRA := -mwindows
 	else
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
@@ -31,6 +38,8 @@ ifeq ($(TEMPLATE), vst3)
 			LDFLAGS_EXTRA := $(shell pkg-config --libs x11) -Wl,-rpath,$(shell pkg-config --variable=libdir x11)
 		endif
 	endif
+	CFLAGS_EXTRA := $(CFLAGS_EXTRA)	-I../../../vst3_c_api
+	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I${VINCI_DIR}
 endif
 
 ifeq ($(TEMPLATE), daisy-seed)
