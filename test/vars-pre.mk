@@ -14,8 +14,8 @@ ifeq ($(TEMPLATE), lv2)
 	else
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
-			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
-			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
+			M_SRCS_EXTRA  := $(VINCI_DIR)/vinci-cocoa.m
+			LDFLAGS_EXTRA := -framework Cocoa -lobjc
 		else
 			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
 			LDFLAGS_EXTRA := -lxcb
@@ -31,8 +31,8 @@ ifeq ($(TEMPLATE), vst3)
 	else
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
-			M_SRCS_EXTRA := $(PLUGIN_DIR)/ui_apple.m
-			LDFLAGS_EXTRA := -framework Cocoa -framework WebKit
+			M_SRCS_EXTRA  := $(VINCI_DIR)/vinci-cocoa.m
+			LDFLAGS_EXTRA := -framework Cocoa -lobjc
 		else
 			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
 			LDFLAGS_EXTRA := -lxcb
