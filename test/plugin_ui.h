@@ -196,6 +196,14 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	instance->widget = window_get_handle(instance->window);
 	window_set_data(instance->window, (void*) instance);
 	window_show(instance->window);
+
+	// just some valid values to allow drawing
+	instance->gain = 0.f;
+	instance->delay = 0.f;
+	instance->cutoff = 0.f;
+	instance->bypass = 0;
+	instance->y_z1 = 0.f;
+
 	on_window_resize(instance->window, window_get_width(instance->window), window_get_height(instance->window));
 
 	instance->cbs = *cbs;
