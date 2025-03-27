@@ -20,7 +20,7 @@ Feel free to try it out anyway and perhaps give us some feedback (we'd appreciat
 
 ## Legal
 
-Copyright (C) 2021-2024 Orastron Srl unipersonale.
+Copyright (C) 2021-2025 Orastron Srl unipersonale.
 
 Authors: Stefano D'Angelo, Paolo Marrone.
 
