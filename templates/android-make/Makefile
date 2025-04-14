@@ -51,7 +51,6 @@ KOTLINX_COROUTINES_CORE_FILE := $(KOTLIN_DIR)/kotlinx-coroutines-core-$(KOTLINX_
 KOTLINX_COROUTINES_CORE_JVM_FILE := $(KOTLIN_DIR)/kotlinx-coroutines-core-jvm-$(KOTLINX_COROUTINES_CORE_JVM_VERSION).jar
 
 ifeq ($(OS), Windows_NT)
-	VST3_PLATFORM := x86_64-win
 	NDK_BIN_DIR ?= $(NDK_DIR)/toolchains/llvm/prebuilt/windows-x86_64/bin/
 else
 	UNAME_S := $(shell uname -s)

@@ -123,6 +123,8 @@ strip: $(STRIP_PREREQS)
 	#rdfproc lv2_store parse build/$(BUNDLE_DIR)/manifest.ttl turtle || (rm lv2_store* && exit 1)
 	#rdfproc lv2_store serialize ntriples > build/$(BUNDLE_DIR)/manifest.ttl || (rm lv2_store* && exit 1)
 	#rm lv2_store*
+	#f=`cat build/$(BUNDLE_DIR)/manifest.ttl` && echo "$f" | sed '/^[[:space:]]**$/d' > build/$(BUNDLE_DIR)/manifest.ttl
+	f=`sed '/^[[:space:]]*$$/d' build/$(BUNDLE_DIR)/manifest.ttl` && echo "$$f" > build/$(BUNDLE_DIR)/manifest.ttl
 
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
