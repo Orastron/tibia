@@ -36,10 +36,11 @@ ifeq ($(OS), Windows_NT)
 	VST3DIR_USER := $(subst \,/,$(LOCALAPPDATA))/Programs/Common/VST3
 	CC := gcc
 	CXX := g++
-	ifeq ($(shell $(CC) -dumpmachine), x86_64-w64-windows-gnu)
+	MACHINE := $(shell $(CC) -dumpmachine | sed 's:-.*::g')
+	ifeq ($(MACHINE), x86_64)
 		VST3_PLATFORM := x86_64-win
 	endif
-	ifeq ($(shell $(CC) -dumpmachine), aarch64-w64-windows-gnu)
+	ifeq ($(MACHINE), aarch64)
 		VST3_PLATFORM := arm64-win
 	endif
 else
