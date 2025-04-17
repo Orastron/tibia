@@ -8,7 +8,7 @@
 {{??}}
     <uses-sdk android:minSdkVersion="26" /> <!-- for androidx core and AAudio -->
 {{?}}
-    <uses-sdk android:targetSdkVersion="34" />
+    <uses-sdk android:targetSdkVersion="{{=it.android.androidVersion}}" />
     <application android:label="{{=it.product.name}}">
       <activity android:name=".MainActivity" android:label="{{=it.product.name}}" android:exported="true">
         <intent-filter>

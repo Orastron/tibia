@@ -20,6 +20,7 @@
 
 BUNDLE_NAME := {{=it.product.bundleName}}
 JAVA_PACKAGE_NAME := {{=it.android.javaPackageName}}
+ANDROID_VERSION := {{=it.android.androidVersion}}
 
 {{?(it.android_make?.commonDir || it.make?.commonDir)}}
 COMMON_DIR := {{=it.android_make?.commonDir ?? (it.make?.commonDir ?? "")}}
