@@ -989,7 +989,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
 
-	processParams(p, data, 1); 
+	processParams(p, data, 1);
 
 #if DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
 	if (data->inputEvents != NULL) {
@@ -1056,7 +1056,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	plugin_process(&p->p, NULL, NULL, data->numSamples);
 #endif
 
-	processParams(p, data, 0); 
+	processParams(p, data, 0);
 
 #if DATA_PRODUCT_PARAMETERS_OUT_N > 0
 	for (Steinberg_int32 i = 0; i < DATA_PRODUCT_PARAMETERS_OUT_N; i++) {
@@ -1133,7 +1133,7 @@ static Steinberg_uint32 pluginGetProcessContextRequirements(void* thisInterface)
 	(void)thisInterface;
 
 	// TBD
-	return 0; 
+	return 0;
 }
 
 static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRequirements = {
@@ -1985,7 +1985,7 @@ static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
 		x *= 0.1;
 		precision--;
 	}
-	
+
 	s[i] = '\0';
 }
 
@@ -2591,7 +2591,7 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 	return (Steinberg_IPluginFactory *)&factory;
 }
 
-static int refs = 0; 
+static int refs = 0;
 
 static char vstExit(void) {
 	refs--;
@@ -2609,36 +2609,77 @@ EXPORT APIENTRY BOOL
 DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 	(void)hInstance;
 	(void)lpReserved;
+	
+	char * path;
+
 	if (dwReason == DLL_PROCESS_ATTACH) {
 		if (refs == 0) {
-			int pathLength;
-			char path[260];
-			HMODULE hm = NULL;
-			if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR) &bindir, &hm) == 0) {
-			    TRACE("GetModuleHandle failed, error = %lu\n", GetLastError());
-			    return 0;
+			DWORD path_length;
+			DWORD n_size;
+			char * new_path;
+			char * c;
+
+			HMODULE hm;
+			if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&bindir, &hm) == 0) {
+				TRACE("GetModuleHandle failed, error = %lu\n", GetLastError());
+				goto err_handle;
 			}
-			if ((pathLength = GetModuleFileName(hm, path, sizeof(path))) == 0) {
-			    TRACE("GetModuleFileName failed, error = %lu\n", GetLastError());
-			    return 0;
+
+			path = NULL;
+			n_size = MAX_PATH;
+			while (1) {
+				new_path = (char *)realloc(path, n_size);
+				if (new_path == NULL) {
+					TRACE("GetModuleFileName failed, not enough memory (requested %lu bytes)\n", n_size);
+					goto err_realloc;
+				}
+				path = new_path;
+
+				path_length = GetModuleFileNameA(hm, path, n_size);
+				if (path_length == 0) {
+					TRACE("GetModuleFileName failed, error = %lu\n", GetLastError());
+					goto err_filename;
+				}
+
+				if (path_length < n_size)
+					break;
+				n_size *= 2;
 			}
-			char *c = strrchr(path, '\\');
-			*c = '\0';
-			bindir = (char*) malloc(strlen(path) + 1);
-			memcpy(bindir, path, strlen(path));
-			bindir[strlen(path)] = '\0';
+
 			c = strrchr(path, '\\');
 			*c = '\0';
-			static char* res = "\\Resources";
-			datadir = malloc(strlen(path) + strlen(res) + 1);
-			sprintf(datadir, "%s%s", path, res);
+			bindir = _strdup(path);
+			if (bindir == NULL) {
+				TRACE("bindir _strdup failed\n");
+				goto err_bindir;
+			}
+
+			c = strrchr(path, '\\');
+			*c = '\0';
+			datadir = (char *)malloc(strlen(path) + sizeof("\\Resources") + 1);
+			if (datadir == NULL) {
+				TRACE("datadir malloc failed\n");
+				goto err_datadir;
+			}
+			sprintf(datadir, "%s\\Resources", path);
+
 			TRACE("bindir = %s \ndatadir = %s\n", bindir, datadir);
 		}
 		refs++;
-	} else if (dwReason == DLL_PROCESS_DETACH) {
+	} else if (dwReason == DLL_PROCESS_DETACH)
 		vstExit();
-	}
+
 	return 1;
+
+err_datadir:
+	free(bindir);
+err_bindir:
+err_filename:
+err_realloc:
+	if (path != NULL)
+		free(path);
+err_handle:
+	return 0;
 }
 
 #elif defined(__APPLE__) || defined(__linux__)
@@ -2658,9 +2699,11 @@ char ModuleEntry(void *handle) {
 		v.f = vstExit;
 		if (dladdr((void*) v.d, &info) == 0)
 			return 0;
+
 		file = realpath(info.dli_fname, NULL);
 		if (file == NULL)
 			return 0;
+
 		char *c = strrchr(file, '/');
 		*c = '\0';
 		bindir = strdup(file);
@@ -2668,10 +2711,13 @@ char ModuleEntry(void *handle) {
 			goto err_bindir;
 		c = strrchr(file, '/');
 		*c = '\0';
+
 		datadir = x_asprintf("%s/Resources", file);
 		if (datadir == NULL)
 			goto err_datadir;
+
 		free(file);
+
 		TRACE("bindir = %s \ndatadir = %s\n", bindir, datadir);
 	}
 	refs++;
