@@ -75,12 +75,12 @@ var Player = {
 };
 
 function map(index, value) {
-	var p = demo.Module.data.product.parameters[index];
+	var p = demo.Module.parameters[index];
 	return p.map == "logarithmic" ? p.minimum * Math.exp((2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) * value) : p.minimum + (p.maximum - p.minimum) * value;
 }
 
 function unmap(index, value) {
-	var p = demo.Module.data.product.parameters[index];
+	var p = demo.Module.parameters[index];
 	return p.map == "logarithmic" ? Math.log(value / p.minimum) / (2.0 * Math.log(Math.sqrt(p.maximum * p.minimum) / Math.abs(p.minimum))) : (value - p.minimum) / (p.maximum - p.minimum);
 }
 
@@ -112,7 +112,7 @@ var units = {
 };
 
 function displayValue(elem, index, value) {
-	var param = demo.Module.data.product.parameters[index];
+	var param = demo.Module.parameters[index];
 	var unit = param.unit;
 	if (param.integer)
 		value = Math.round(value);
@@ -132,9 +132,9 @@ window.addEventListener("load", function (e) {
 	var playPause = document.getElementById("playPause");
 	var controls = document.getElementById("controls");
 
-	audioInputIndex = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "input").findIndex(x => !x.cv && !x.sidechain);
-	audioOutputIndex = demo.Module.data.product.buses.filter(x => x.type == "audio" && x.direction == "output").findIndex(x => !x.cv && !x.sidechain);
-	hasMidiInput = demo.Module.data.product.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0;
+	audioInputIndex = demo.Module.buses.filter(x => x.type == "audio" && x.direction == "input").findIndex(x => !x.cv && !x.sidechain);
+	audioOutputIndex = demo.Module.buses.filter(x => x.type == "audio" && x.direction == "output").findIndex(x => !x.cv && !x.sidechain);
+	hasMidiInput = demo.Module.buses.filter(x => x.type == "midi" && x.direction == "input").length > 0;
 
 	if (hasMidiInput && !navigator.requestMIDIAccess)
 		alert("Your browser doesn't support the Web MIDI API");
@@ -145,7 +145,7 @@ window.addEventListener("load", function (e) {
 	file.value = "";
 	playPause.disabled = true; 
 
-	var parameters = demo.Module.data.product.parameters;
+	var parameters = demo.Module.parameters;
 	for (var i = 0; i < parameters.length; i++) {
 		var div = document.createElement("div");
 
@@ -241,8 +241,8 @@ window.addEventListener("load", function (e) {
 					if ((e.data[0] & 0xf0) == 0xf0)
 						return;
 					var msg = { type: "midi", data: e.data };
-					for (var i = 0; i < demo.Module.data.product.buses.length; i++) {
-						var b = demo.Module.data.product.buses[i];
+					for (var i = 0; i < demo.Module.buses.length; i++) {
+						var b = demo.Module.buses[i];
 						if (b.type != "midi" || b.direction != "input")
 							continue;
 						msg.index = i;
