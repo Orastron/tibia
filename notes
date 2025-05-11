@@ -268,3 +268,8 @@ product {
 		}
 	]
 }
+
+makefile vars:
+- COMMON_DIR: static common sources (e.g., src/lv2.c)
+- DATA_DIR: generated sources/data (e.g., src/data.h, data/manifest.ttl.in)
+- PLUGIN_DIR: plugin source (e.g., plugin.h)
