@@ -95,23 +95,6 @@ var doT = require("dot");
 doT.templateSettings.strip = false;
 
 var api = {
-	// https://coderrocketfuel.com/article/recursively-list-all-the-files-in-a-directory-using-node-js
-	getAllFiles: function (dirPath, arrayOfFiles, relDir) {
-		var files = fs.readdirSync(dirPath);
-
-		var arrayOfFiles = arrayOfFiles || [];
-		var relDir = relDir || "";
-
-		files.forEach(function(file) {
-			if (fs.statSync(dirPath + path.sep + file).isDirectory())
-				arrayOfFiles = api.getAllFiles(dirPath + path.sep + file, arrayOfFiles, relDir + file + path.sep);
-			else
-				arrayOfFiles.push(relDir + file);
-		});
-
-		return arrayOfFiles
-	},
-
 	generateFileFromTemplateFile: function (templateFile, outFile, data) {
 		if (!outputData)
 			return;
@@ -127,7 +110,9 @@ var api = {
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
 		fs.copyFileSync(template + path.sep + inFile, outputDir + path.sep + outFile);
-	}
+	},
+
+	templateDir: template
 };
 
 data.tibia = {
