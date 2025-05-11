@@ -269,7 +269,11 @@ product {
 	]
 }
 
-makefile vars:
+makefile dirs:
+- make always executed from Makefile directory
 - COMMON_DIR: static common sources (e.g., src/lv2.c)
 - DATA_DIR: generated sources/data (e.g., src/data.h, data/manifest.ttl.in)
-- PLUGIN_DIR: plugin source (e.g., plugin.h)
+- PLUGIN_DIR: plugin sources (e.g., plugin.h)
+- API_DIR: generated Tibia-related API sources (e.g., plugin_api.h)
+- MKINC_DIR: Makefile includes (e.g., vars-pre.mk)
+- build: build files
