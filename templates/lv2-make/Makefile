@@ -124,7 +124,10 @@ strip: $(STRIP_PREREQS)
 	#rdfproc lv2_store serialize ntriples > build/$(BUNDLE_DIR)/manifest.ttl || (rm lv2_store* && exit 1)
 	#rm lv2_store*
 	#f=`cat build/$(BUNDLE_DIR)/manifest.ttl` && echo "$f" | sed '/^[[:space:]]**$/d' > build/$(BUNDLE_DIR)/manifest.ttl
-	f=`sed '/^[[:space:]]*$$/d' build/$(BUNDLE_DIR)/manifest.ttl` && echo "$$f" > build/$(BUNDLE_DIR)/manifest.ttl
+	$(eval TMP := $(shell mktemp /tmp/index.XXXXXX))
+	sed '/^[[:space:]]*$$/d' build/$(BUNDLE_DIR)/manifest.ttl > $(TMP) || (rm $(TMP) && exit 1)
+	cp $(TMP) build/$(BUNDLE_DIR)/manifest.ttl || (rm $(TMP) && exit 1)
+	rm $(TMP)
 
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
@@ -172,3 +175,5 @@ $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cp
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
 -include $(MKINC_DIR)/rules-secondexp-extra.mk
+
+.DELETE_ON_ERROR:

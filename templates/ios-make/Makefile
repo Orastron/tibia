@@ -95,3 +95,5 @@ $(RESOURCES_OUT): build/gen/res/%: $$(filter $$(PERCENT)/%,$$(RESOURCES)) | buil
 	cp -R $^ $@
 
 -include $(MKINC_DIR)/rules-secondexp-extra.mk
+
+.DELETE_ON_ERROR:

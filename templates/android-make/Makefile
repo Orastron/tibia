@@ -169,3 +169,5 @@ $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cp
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
 
 -include $(MKINC_DIR)/rules-secondexp-extra.mk
+
+.DELETE_ON_ERROR:
