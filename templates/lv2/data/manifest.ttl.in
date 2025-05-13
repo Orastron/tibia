@@ -31,7 +31,7 @@
 	lv2:optionalFeature state:threadSafeRestore ;
 {{?}}
 {{?it.product.ui}}
-	ui:ui plugin:ui ;
+	ui:ui {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}} ;
 {{?}}
 {{?(it.product.state && it.product.state.dspCustom)}}
 	lv2:extensionData state:interface ;
@@ -130,7 +130,7 @@
 {{~}}
 
 {{?it.product.ui}}
-plugin:ui
+{{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}}
 	a ui:@UI_TYPE@ ;
 	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;
 {{?!it.product.ui.userResizable}}

@@ -88,8 +88,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 		for (var id in data.lv2.prefixes)
 			data.tibia.lv2.prefixes.push({ id: id, uri: data.lv2.prefixes[id] });
 
-		data.tibia.lv2.prefixes.push({ id: "plugin", uri: data.tibia.lv2.expandURI(data.lv2.uri) + "#" });
-
 		var buses = data.product.buses;
 		var audioPorts = [];
 		var midiPorts = [];
