@@ -3,7 +3,7 @@
 		"name":	"Tibia test product",
 		"version": "1.0.0",
 		"buildVersion": "1",
-		"bundleName": "tibia_test",
+		"bundleName": "tibia-test",
 		"buses": [
 			{
 				"type":	"audio",
