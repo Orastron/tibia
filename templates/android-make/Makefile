@@ -115,6 +115,8 @@ DIRS := build build/gen build/apk build/obj build/apk/lib build/apk/lib/armeabi-
 
 ALL := build/$(BUNDLE_NAME).apk
 
+PHONY := all clean install
+
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
@@ -156,7 +158,7 @@ install: build/$(BUNDLE_NAME).apk
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean install
+.PHONY: $(PHONY)
 
 .SECONDEXPANSION:
 

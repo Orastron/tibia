@@ -86,8 +86,9 @@ DIRS := build build/obj build/web build/web/$(BUNDLE_NAME)
 ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
 
 STRIP_ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
-STRIP_PHONY :=
-STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
+STRIP_PREREQS := $(STRIP_ALL)
+
+PHONY := all clean strip
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -121,7 +122,7 @@ strip: $(STRIP_PREREQS)
 
 -include $(MKINC_DIR)/rules-extra.mk
 
-.PHONY: all clean strip $(STRIP_PHONY)
+.PHONY: $(PHONY)
 
 .SECONDEXPANSION:
 

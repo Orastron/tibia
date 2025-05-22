@@ -79,8 +79,12 @@ DIRS := build build/obj
 ALL := build/$(PROGRAM)
 
 STRIP_ALL := build/$(PROGRAM)
-STRIP_PHONY :=
-STRIP_PREREQS := $(STRIP_ALL) $(STRIP_PHONY)
+STRIP_PREREQS := $(STRIP_ALL)
+
+PHONY := all clean strip
+ifneq ($(OS), Windows_NT)
+	PHONY := $(PHONY) install
+endif
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -103,15 +107,13 @@ clean:
 strip: $(STRIP_PREREQS)
 	strip build/$(PROGRAM)
 
-ifeq ($(OS), Windows_NT)
-.PHONY: all clean strip $(STRIP_PHONY)
-else
+ifneq ($(OS), Windows_NT)
 install: all
 	mkdir -m 0755 -p $(BINDIR)
 	install -m 0755 build/$(PROGRAM) $(BINDIR)
-
-.PHONY: all clean strip $(STRIP_PHONY) install
 endif
+
+.PHONY: $(PHONY)
 
 -include $(MKINC_DIR)/rules-extra.mk
 
