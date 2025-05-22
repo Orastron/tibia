@@ -134,28 +134,28 @@ install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
 		d=`echo $$d | sed 's:^build/::'` ; \
 		echo mkdir -m 0755 -p "$(LV2DIR)/$$d"; \
-		mkdir -m 0755 -p "$(LV2DIR)/$$d"; \
+		mkdir -m 0755 -p "$(LV2DIR)/$$d" || exit 1; \
 	done
 	@for f in `find build/$(BUNDLE_DIR) -type f`; do \
 		m=`[ -x $$f ] && echo 0755 || echo 0644`; \
 		d=`echo $$f | sed 's:^build/::'` ; \
 		d=`dirname $$d`; \
 		echo install -m $$m $$f "$(LV2DIR)/$$d"; \
-		install -m $$m $$f "$(LV2DIR)/$$d"; \
+		install -m $$m $$f "$(LV2DIR)/$$d" || exit 1; \
 	done
 
 install-user: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
 		d=`echo $$d | sed 's:^build/::'` ; \
 		echo mkdir -m 0755 -p "$(LV2DIR_USER)/$$d"; \
-		mkdir -m 0755 -p "$(LV2DIR_USER)/$$d"; \
+		mkdir -m 0755 -p "$(LV2DIR_USER)/$$d" || exit 1; \
 	done
 	@for f in `find build/$(BUNDLE_DIR) -type f`; do \
 		m=`[ -x $$f ] && echo 0755 || echo 0644`; \
 		d=`echo $$f | sed 's:^build/::'` ; \
 		d=`dirname $$d`; \
 		echo install -m $$m $$f "$(LV2DIR_USER)/$$d"; \
-		install -m $$m $$f "$(LV2DIR_USER)/$$d"; \
+		install -m $$m $$f "$(LV2DIR_USER)/$$d" || exit 1; \
 	done
 
 -include $(MKINC_DIR)/rules-extra.mk
