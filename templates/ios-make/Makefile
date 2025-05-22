@@ -34,10 +34,10 @@ BUILD_DATA_DIR := build/gen/res
 -include $(MKINC_DIR)/vars-pre.mk
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisiblity=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 LDFLAGS :=
 LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
