@@ -265,7 +265,7 @@ static int stateRead(struct Steinberg_IBStream * state, char ** data, Steinberg_
 }
 
 typedef struct pluginInstance {
-	Steinberg_Vst_IComponentVtbl *			vtblIComponent;
+	Steinberg_Vst_IComponentVtbl *			vtblIComponent; // must stay first
 	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
 	Steinberg_Vst_IProcessContextRequirementsVtbl *	vtblIProcessContextRequirements;
 	Steinberg_uint32				refs;
@@ -1149,7 +1149,7 @@ static Steinberg_Vst_IProcessContextRequirementsVtbl pluginVtblIProcessContextRe
 typedef struct plugView plugView;
 
 typedef struct controller {
-	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController;
+	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController; // must stay first
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
 #ifdef DATA_UI
 	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
@@ -2419,25 +2419,10 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 	TRACE("createInstance\n");
 	if (memcmp(cid, dataPluginCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" plugin\n");
-		size_t offset; // does it actually work like this? or is offset always 0? this seems to be correct and works...
-		if ((memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0)
-		    || (memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID)) != 0)
-		    || (memcmp(iid, Steinberg_Vst_IComponent_iid, sizeof(Steinberg_TUID)) != 0)) {
-			TRACE("  IComponent\n");
-			offset = offsetof(pluginInstance, vtblIComponent);
-		} else if (memcmp(iid, Steinberg_Vst_IAudioProcessor_iid, sizeof(Steinberg_TUID)) != 0) {
-			TRACE("  IAudioProcessor\n");
-			offset = offsetof(pluginInstance, vtblIAudioProcessor);
-		} else if (memcmp(iid, Steinberg_Vst_IProcessContextRequirements_iid, sizeof(Steinberg_TUID)) != 0) {
-			TRACE("  IProcessContextRequirements\n");
-			offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
-		} else {
-			TRACE("  INothing :(\n");
-			for (int i = 0; i < 16; i++)
-				TRACE(" %x", iid[i]);
-			TRACE("\n");
+		if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID))
+		    && memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID))
+		    && memcmp(iid, Steinberg_Vst_IComponent_iid, sizeof(Steinberg_TUID)))
 			return Steinberg_kNoInterface;
-		}
 		pluginInstance *p = malloc(sizeof(pluginInstance));
 		if (p == NULL)
 			return Steinberg_kOutOfMemory;
@@ -2446,7 +2431,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		p->vtblIProcessContextRequirements = &pluginVtblIProcessContextRequirements;
 		p->refs = 1;
 		p->context = NULL;
-		*obj = (void *)((char *)p + offset);
+		*obj = p;
 		TRACE(" instance: %p\n", (void *)p);
 	} else if (memcmp(cid, dataControllerCID, sizeof(Steinberg_TUID)) == 0) {
 		TRACE(" controller\n");
