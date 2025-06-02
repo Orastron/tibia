@@ -2,7 +2,7 @@
 	"product": {
 		"name":	"Tibia test product",
 		"version": "1.0.0",
-		"buildVersion": "1",
+		"buildVersion": "0",
 		"bundleName": "tibia-test",
 		"buses": [
 			{
