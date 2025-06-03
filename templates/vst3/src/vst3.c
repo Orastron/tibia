@@ -308,6 +308,9 @@ typedef struct pluginInstance {
 #endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
+
+	Steinberg_Vst_IConnectionPointVtbl *vtblIConnectionPoint;
+	Steinberg_Vst_IConnectionPoint     *connectedPoint;
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -364,6 +367,8 @@ static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg
 		offset = offsetof(pluginInstance, vtblIAudioProcessor);
 	else if (memcmp(iid, Steinberg_Vst_IProcessContextRequirements_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
+	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
+		offset = offsetof(pluginInstance, vtblIConnectionPoint);
 	else {
 		TRACE(" not supported\n");
 		for (int i = 0; i < 16; i++)
@@ -391,6 +396,76 @@ static Steinberg_uint32 pluginRelease(pluginInstance *p) {
 	}
 	return p->refs;
 }
+
+static Steinberg_tresult pluginIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
+	TRACE("plugin IConnectionPoint queryInterface %p\n", thisInterface);
+	return pluginQueryInterface((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)), iid, obj);
+}
+
+static Steinberg_uint32 pluginIConnectionPointAddRef(void* thisInterface) {
+	TRACE("plugin IConnectionPoint addRef %p\n", thisInterface);
+	return pluginAddRef((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)));
+}
+
+static Steinberg_uint32 pluginIConnectionPointRelease(void* thisInterface) {
+	TRACE("plugin IConnectionPoint release %p\n", thisInterface);
+	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)));
+}
+
+static Steinberg_tresult pluginIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+	printf("pluginIConnectionPointConnect %p to %p \n", (void*) p, (void*) other);  fflush(stdout);
+
+	if (!other) return Steinberg_kInvalidArgument;
+	if (p->connectedPoint) return Steinberg_kResultFalse;
+	p->connectedPoint = other;
+
+	printf("pluginIConnectionPointConnect Z ok \n"); fflush(stdout);
+	return Steinberg_kResultOk;
+}
+
+static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	printf("pluginIConnectionPointDisconnect \n");  fflush(stdout);
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+	if (p->connectedPoint && other == p->connectedPoint) {
+		p->connectedPoint = NULL;
+		return Steinberg_kResultOk;
+	}
+	return Steinberg_kResultFalse;
+}
+
+static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
+	(void)thisInterface;
+	(void)message;
+	printf("pluginIConnectionPointNotify A \n"); fflush(stdout);
+	printf("pluginIConnectionPointNotify B Message ID: %s\n", message->lpVtbl->getMessageID(message));  fflush(stdout);
+
+	Steinberg_Vst_IAttributeList *alist = message->lpVtbl->getAttributes(message);
+	printf("pluginIConnectionPointNotify C alist: %p\n", (void*) alist); fflush(stdout);
+
+	const void *data = NULL;
+	unsigned int size = 0;
+	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
+
+	printf("pluginIConnectionPointNotify D yoyoyo : %p %d \n", data, size); fflush(stdout);
+	for (unsigned int i = 0; i < size; i++)
+		printf("%d ", ((uint8_t*) data)[i]);
+	printf("pluginIConnectionPointNotify Z \n"); fflush(stdout);
+	
+	return Steinberg_kResultOk;
+}
+
+static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
+	/* FUnknown */
+	/* .queryInterface  = */ pluginIConnectionPointQueryInterface,
+	/* .addRef          = */ pluginIConnectionPointAddRef,
+	/* .release         = */ pluginIConnectionPointRelease,
+
+	/* IConnectionPoint */
+	/* .connect         = */ pluginIConnectionPointConnect,
+	/* .disconnect      = */ pluginIConnectionPointDisconnect,
+	/* .notify          = */ pluginIConnectionPointNotify
+};
 
 static Steinberg_tresult pluginIComponentQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
 	TRACE("plugin IComponent queryInterface %p\n", thisInterface);
@@ -1152,7 +1227,8 @@ typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController; // must stay first
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
 #ifdef DATA_UI
-	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
+	Steinberg_Vst_IConnectionPointVtbl *vtblIConnectionPoint;
+	Steinberg_Vst_IConnectionPoint     *connectedPoint;
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -1700,6 +1776,7 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 # endif
 }
 
+int counter = 0;
 # ifdef __linux__
 static void plugViewOnTimer(void *thisInterface) {
 	TRACE("plugView onTimer %p\n", thisInterface);
@@ -1719,6 +1796,37 @@ static void plugViewOnTimer(void *thisInterface) {
 			XResizeWindow(v->display, w, parent_attr.width, parent_attr.height);
 	}
 
+	// lame test
+	if (counter++ == 60) {
+
+		Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
+
+		printf("gonna A ov: %p \n", (void*) ov);
+		printf("gonna AA ctx: %p \n", (void*) v->ctrl->context);
+
+		Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) v->ctrl->context;
+
+		Steinberg_Vst_IMessage *msg = NULL;
+
+		app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
+
+		printf("gonna AB msgp: %p \n", (void*) msg);
+
+		printf("gonna B \n");
+		msg->lpVtbl->setMessageID(msg, "HelloMessage");
+		printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
+
+		Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
+
+		printf("gonna CA alist %p \n", (void*) alist);
+
+		const uint8_t tmp[8] = { 2, 3, 4, 5, 6, 7, 8, 9 };
+
+		alist->lpVtbl->setBinary(alist, "yoyoyo", tmp, 8);
+
+		ov->notify(v->ctrl->connectedPoint, msg);
+		printf("gonna Z \n");
+	}
 	plugin_ui_idle(v->ui);
 }
 # endif
@@ -1746,9 +1854,6 @@ static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 #endif
 
 static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping;
-#ifdef DATA_UI
-//static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint;
-#endif
 
 static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg_TUID iid, void ** obj) {
 	// Same as above (pluginQueryInterface)
@@ -1760,8 +1865,8 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 	else if (memcmp(iid, Steinberg_Vst_IMidiMapping_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIMidiMapping);
 #ifdef DATA_UI
-	/*else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
-		offset = offsetof(controller, vtblIConnectionPoint);*/
+	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
+		offset = offsetof(controller, vtblIConnectionPoint);
 #endif
 	else {
 		TRACE(" not supported\n");
@@ -2291,7 +2396,7 @@ static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 };
 
 #ifdef DATA_UI
-# if 0
+
 static Steinberg_tresult controllerIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("controller IConnectionPoint queryInterface %p\n", thisInterface);
 	return controllerQueryInterface((controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint)), iid, obj);
@@ -2308,37 +2413,43 @@ static Steinberg_uint32 controllerIConnectionPointRelease(void* thisInterface) {
 }
 
 static Steinberg_tresult controllerIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
-	(void)thisInterface;
-
-	return other ? Steinberg_kResultOk : Steinberg_kInvalidArgument;
+	printf("controllerIConnectionPointConnect to %p \n", (void*) other); fflush(stdout);
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+	if (!other) return Steinberg_kInvalidArgument;
+	if (c->connectedPoint) return Steinberg_kResultFalse;
+	c->connectedPoint = other;
+	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult controllerIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
-	(void)thisInterface;
-	(void)other;
-
-	return Steinberg_kResultOk;
+	printf("controllerIConnectionPointDisconnect \n"); fflush(stdout);
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+	if (c->connectedPoint && other == c->connectedPoint) {
+		c->connectedPoint = NULL;
+		return Steinberg_kResultOk;
+	}
+	return Steinberg_kResultFalse;
 }
 
 static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
 	(void)thisInterface;
 	(void)message;
-
+	printf("controllerIConnectionPointNotify \n"); fflush(stdout);
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint = {
 	/* FUnknown */
-	/* .queryInterface		= */ controllerIConnectionPointQueryInterface,
-	/* .addRef			= */ controllerIConnectionPointAddRef,
-	/* .release			= */ controllerIConnectionPointRelease,
+	/* .queryInterface  = */ controllerIConnectionPointQueryInterface,
+	/* .addRef          = */ controllerIConnectionPointAddRef,
+	/* .release         = */ controllerIConnectionPointRelease,
 
 	/* IConnectionPoint */
-	/* .connect			= */ controllerIConnectionPointConnect,
-	/* .disconnect			= */ controllerIConnectionPointDisconnect,
-	/* .notify			= */ controllerIConnectionPointNotify
+	/* .connect         = */ controllerIConnectionPointConnect,
+	/* .disconnect      = */ controllerIConnectionPointDisconnect,
+	/* .notify          = */ controllerIConnectionPointNotify
 };
-# endif
+
 #endif
 
 static Steinberg_tresult factoryQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -2431,6 +2542,8 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		p->vtblIProcessContextRequirements = &pluginVtblIProcessContextRequirements;
 		p->refs = 1;
 		p->context = NULL;
+		p->vtblIConnectionPoint = &pluginVtblIConnectionPoint;
+		p->connectedPoint = NULL;
 		*obj = p;
 		TRACE(" instance: %p\n", (void *)p);
 	} else if (memcmp(cid, dataControllerCID, sizeof(Steinberg_TUID)) == 0) {
@@ -2445,7 +2558,8 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->vtblIEditController = &controllerVtblIEditController;
 		c->vtblIMidiMapping = &controllerVtblIMidiMapping;
 #ifdef DATA_UI
-		//c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
+		c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
+		c->connectedPoint = NULL;
 #endif
 		c->refs = 1;
 		c->context = NULL;
