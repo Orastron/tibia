@@ -115,21 +115,27 @@ var doT = require("dot");
 doT.templateSettings.strip = false;
 
 var api = {
-	generateFileFromTemplateFile: function (templateFile, outFile, data) {
+	generateFileFromTemplateFile: function (templateFile, outFile, data, mode) {
 		if (!outputData)
 			return;
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
 		var t = doT.template(fs.readFileSync(template + path.sep + templateFile, { encoding: "utf-8" }));
-		fs.writeFileSync(outputDir + path.sep + outFile, t(data), { encoding: "utf-8" });
+		var outputFile = outputDir + path.sep + outFile;
+		fs.writeFileSync(outputFile, t(data), { encoding: "utf-8" });
+		if (mode !== undefined)
+			fs.chmodSync(outputFile, mode);
 	},
 
-	copyFile: function (inFile, outFile) {
+	copyFile: function (inFile, outFile, mode) {
 		if (!outputCommon)
 			return;
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
-		fs.copyFileSync(template + path.sep + inFile, outputDir + path.sep + outFile);
+		var outputFile = outputDir + path.sep + outFile;
+		fs.copyFileSync(template + path.sep + inFile, outputFile);
+		if (mode !== undefined)
+			fs.chmodSync(outputFile, mode);
 	},
 
 	templateDir: template
