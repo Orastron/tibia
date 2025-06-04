@@ -138,6 +138,9 @@
 			"userResizable": true,
 			"selfResizable": false
 		},
+		"messaging": {
+			"maxSize": 10240
+		},
 		"state": {
 			"dspCustom": true
 		}

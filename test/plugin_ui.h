@@ -38,6 +38,19 @@ typedef struct {
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
+#if TEMPLATE_SUPPORTS_MESSAGING
+static void plugin_ui_receive_from_dsp (plugin_ui *instance, const void *data, size_t bytes) {
+	(void) instance;
+	printf("plugin_ui_receive_from_ui %ld bytes at %p: \n", bytes, data);
+	for (size_t i = 0; i < bytes; i++) {
+		printf("%d ", ((uint8_t*) data)[i]);
+	}
+	printf("plugin_ui_receive_from_ui END \n");
+}
+#endif
+#define RANDOM_DATA_SIZE 11
+const uint8_t random_data[RANDOM_DATA_SIZE] = { 2, 3, 4, 5, 6, 7, 8, 9, 6, 9, 6 };
+
 #define WIDTH		600.0
 #define HEIGHT		400.0
 
@@ -112,6 +125,9 @@ static void on_mouse_release (window *win, int32_t x, int32_t y, uint32_t state)
 			pui->bypass = !pui->bypass;
 			pui->cbs.set_parameter(pui->cbs.handle, 3, pui->bypass ? 1.f : 0.f);
 			draw_button(pui, 3, pui->bypass);
+#if TEMPLATE_SUPPORTS_MESSAGING
+			pui->cbs.send_to_dsp(pui->cbs.handle, (const void*) random_data, RANDOM_DATA_SIZE);
+#endif
 		}
 
 	if (pui->param_down != -1) {

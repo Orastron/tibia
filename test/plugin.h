@@ -179,3 +179,15 @@ static int plugin_state_load(const plugin_state_callbacks *cbs, float cur_sample
 	cbs->unlock(cbs->handle);
 	return 0;
 }
+
+#include <stdio.h>
+#if TEMPLATE_SUPPORTS_MESSAGING
+static void plugin_receive_from_ui (plugin *instance, const void *data, size_t bytes) {
+	(void) instance;
+	printf("plugin_receive_from_ui %ld bytes at %p: \n", bytes, data);
+	for (size_t i = 0; i < bytes; i++) {
+		printf("%d ", ((uint8_t*) data)[i]);
+	}
+	printf("plugin_receive_from_ui END \n");
+}
+#endif
