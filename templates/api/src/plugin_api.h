@@ -26,6 +26,9 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+{{?it.product.messaging}}
+	char (*send_to_ui)(void *handle, const void *data, size_t bytes); 
+{{?}}
 } plugin_callbacks;
 
 {{?it.product.state && it.product.state.dspCustom}}
@@ -49,6 +52,9 @@ typedef struct {
 	void (*set_parameter_begin)(void *handle, size_t index, float value);
 	void (*set_parameter)(void *handle, size_t index, float value);
 	void (*set_parameter_end)(void *handle, size_t index, float value);
+{{?}}
+{{?it.product.messaging}}
+	char (*send_to_dsp)(void *handle, const void *data, size_t bytes); 
 {{?}}
 } plugin_ui_callbacks;
 
