@@ -267,3 +267,7 @@ static size_t parameterInfoToDataIndex[DATA_PRODUCT_PARAMETERS_N] = {
 {{?it.product.state && it.product.state.dspCustom}}
 #define DATA_STATE_DSP_CUSTOM
 {{?}}
+
+{{?it.product.messaging}}
+#define DATA_MESSAGING 1
+{{?}}

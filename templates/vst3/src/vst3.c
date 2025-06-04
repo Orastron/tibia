@@ -26,6 +26,8 @@
 #include "vst3_c_api.h"
 #pragma GCC diagnostic pop
 
+#define TEMPLATE_SUPPORTS_MESSAGING 1
+
 #include "data.h"
 #include "plugin_api.h"
 #include "plugin.h"
@@ -435,8 +437,9 @@ static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, s
 }
 
 static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
-	(void)thisInterface;
-	(void)message;
+
+	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+
 	printf("pluginIConnectionPointNotify A \n"); fflush(stdout);
 	printf("pluginIConnectionPointNotify B Message ID: %s\n", message->lpVtbl->getMessageID(message));  fflush(stdout);
 
@@ -447,10 +450,7 @@ static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struc
 	unsigned int size = 0;
 	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
 
-	printf("pluginIConnectionPointNotify D yoyoyo : %p %d \n", data, size); fflush(stdout);
-	for (unsigned int i = 0; i < size; i++)
-		printf("%d ", ((uint8_t*) data)[i]);
-	printf("pluginIConnectionPointNotify Z \n"); fflush(stdout);
+	plugin_receive_from_ui(&(p->p), data, size);
 	
 	return Steinberg_kResultOk;
 }
@@ -466,6 +466,38 @@ static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
 	/* .disconnect      = */ pluginIConnectionPointDisconnect,
 	/* .notify          = */ pluginIConnectionPointNotify
 };
+
+# ifdef DATA_MESSAGING
+static char send_to_ui (void *handle, const void *data, size_t bytes) {
+	pluginInstance *p = (pluginInstance *)handle;
+
+	Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) p->connectedPoint->lpVtbl;
+
+	printf("gonna A ov: %p \n", (void*) ov);
+	printf("gonna AA ctx: %p \n", (void*) p->context);
+
+	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) p->context;
+	Steinberg_Vst_IMessage *msg = NULL;
+	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
+
+	printf("gonna AB msgp: %p \n", (void*) msg);
+
+	printf("gonna B \n");
+	msg->lpVtbl->setMessageID(msg, "HelloMessage");
+	printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
+
+	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
+
+	printf("gonna CA alist %p \n", (void*) alist);
+
+	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
+
+	ov->notify(p->connectedPoint, msg);
+	printf("gonna Z \n");
+
+	return 0;
+}
+# endif
 
 static Steinberg_tresult pluginIComponentQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
 	TRACE("plugin IComponent queryInterface %p\n", thisInterface);
@@ -497,7 +529,10 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		/* .handle		= */ (void *)p,
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
-		/* .get_datadir		= */ getDatadirCb
+		/* .get_datadir		= */ getDatadirCb,
+#ifdef DATA_MESSAGING
+		/* .send_to_ui = */ send_to_ui
+#endif
 	};
 	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
@@ -1226,9 +1261,10 @@ typedef struct plugView plugView;
 typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController; // must stay first
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
-#ifdef DATA_UI
+#ifdef DATA_MESSAGING
 	Steinberg_Vst_IConnectionPointVtbl *vtblIConnectionPoint;
 	Steinberg_Vst_IConnectionPoint     *connectedPoint;
+	Steinberg_Vst_IMessage             *msg;
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -1534,6 +1570,36 @@ static void plugViewSetParameterEndCb(void *handle, size_t index, float value) {
 
 # endif
 
+# ifdef DATA_MESSAGING
+static char send_to_dsp (void *handle, const void *data, size_t bytes) {
+	plugView *v = (plugView *)handle;
+
+	Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
+
+	printf("gonna A ov: %p \n", (void*) ov);
+	printf("gonna AA ctx: %p \n", (void*) v->ctrl->context);
+
+	Steinberg_Vst_IMessage *msg = v->ctrl->msg;
+
+	printf("gonna AB msgp: %p \n", (void*) msg);
+
+	printf("gonna B \n");
+	msg->lpVtbl->setMessageID(msg, "HelloMessage");
+	printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
+
+	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
+
+	printf("gonna CA alist %p \n", (void*) alist);
+
+	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
+
+	ov->notify(v->ctrl->connectedPoint, msg);
+	printf("gonna Z \n");
+
+	return 0;
+}
+# endif
+
 # ifdef __APPLE__
 static void plugViewTimerCb(CFRunLoopTimerRef timer, void *info) {
 	(void)timer;
@@ -1569,7 +1635,10 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
 		/* .set_parameter	= */ plugViewSetParameterCb,
-		/* .set_parameter_end	= */ plugViewSetParameterEndCb
+		/* .set_parameter_end	= */ plugViewSetParameterEndCb,
+# endif
+# ifdef DATA_MESSAGING
+		/* .send_to_dsp = */ send_to_dsp
 # endif
 	};
 	v->ui = plugin_ui_create(1, parent, &cbs);
@@ -1776,7 +1845,6 @@ static Steinberg_tresult plugViewCheckSizeConstraint(void* thisInterface, struct
 # endif
 }
 
-int counter = 0;
 # ifdef __linux__
 static void plugViewOnTimer(void *thisInterface) {
 	TRACE("plugView onTimer %p\n", thisInterface);
@@ -1796,37 +1864,6 @@ static void plugViewOnTimer(void *thisInterface) {
 			XResizeWindow(v->display, w, parent_attr.width, parent_attr.height);
 	}
 
-	// lame test
-	if (counter++ == 60) {
-
-		Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
-
-		printf("gonna A ov: %p \n", (void*) ov);
-		printf("gonna AA ctx: %p \n", (void*) v->ctrl->context);
-
-		Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) v->ctrl->context;
-
-		Steinberg_Vst_IMessage *msg = NULL;
-
-		app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
-
-		printf("gonna AB msgp: %p \n", (void*) msg);
-
-		printf("gonna B \n");
-		msg->lpVtbl->setMessageID(msg, "HelloMessage");
-		printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
-
-		Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
-
-		printf("gonna CA alist %p \n", (void*) alist);
-
-		const uint8_t tmp[8] = { 2, 3, 4, 5, 6, 7, 8, 9 };
-
-		alist->lpVtbl->setBinary(alist, "yoyoyo", tmp, 8);
-
-		ov->notify(v->ctrl->connectedPoint, msg);
-		printf("gonna Z \n");
-	}
 	plugin_ui_idle(v->ui);
 }
 # endif
@@ -1939,6 +1976,10 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 		c->parametersMidiIn[i + 1] = 0.5;
 		c->parametersMidiIn[i + 2] = 0.0;
 	}
+#endif
+#ifdef DATA_MESSAGING
+	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
+	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&(c->msg));
 #endif
 	return Steinberg_kResultOk;
 }
@@ -2542,8 +2583,10 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		p->vtblIProcessContextRequirements = &pluginVtblIProcessContextRequirements;
 		p->refs = 1;
 		p->context = NULL;
+#ifdef DATA_MESSAGING
 		p->vtblIConnectionPoint = &pluginVtblIConnectionPoint;
 		p->connectedPoint = NULL;
+#endif
 		*obj = p;
 		TRACE(" instance: %p\n", (void *)p);
 	} else if (memcmp(cid, dataControllerCID, sizeof(Steinberg_TUID)) == 0) {
@@ -2557,9 +2600,10 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 			return Steinberg_kOutOfMemory;
 		c->vtblIEditController = &controllerVtblIEditController;
 		c->vtblIMidiMapping = &controllerVtblIMidiMapping;
-#ifdef DATA_UI
+#ifdef DATA_MESSAGING
 		c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
 		c->connectedPoint = NULL;
+		c->msg = NULL;
 #endif
 		c->refs = 1;
 		c->context = NULL;
