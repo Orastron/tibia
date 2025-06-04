@@ -270,4 +270,5 @@ static size_t parameterInfoToDataIndex[DATA_PRODUCT_PARAMETERS_N] = {
 
 {{?it.product.messaging}}
 #define DATA_MESSAGING 1
+#define DATA_MESSAGING_MAX {{=it.product.messaging.maxSize}}
 {{?}}

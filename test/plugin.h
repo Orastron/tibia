@@ -34,11 +34,30 @@ typedef struct plugin {
 	float			z1;
 	float			cutoff_k;
 	float			yz1;
+
+	int				communication_state;
+
+	plugin_callbacks cbs;
 } plugin;
 
+#if TEMPLATE_SUPPORTS_MESSAGING
+#include <stdio.h>
+static void plugin_receive_from_ui (plugin *instance, const void *data, size_t bytes) {
+	printf("plugin_receive_from_ui %ld bytes at %p: \n", bytes, data);
+	for (size_t i = 0; i < bytes; i++) {
+		printf("%d ", ((uint8_t*) data)[i]);
+	}
+	instance->communication_state = 1;
+	printf("\nplugin_receive_from_ui END - going to reply at next proc \n");
+}
+#define RANDOM_DATA_UI_SIZE 13
+const uint8_t random_ui_data[RANDOM_DATA_UI_SIZE] = { 66, 69, 2, 3, 4, 5, 6, 7, 8, 9, 6, 9, 6 };
+#endif
+
+
 static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
-	(void)instance;
-	(void)cbs;
+	instance->cbs = *cbs;
+	instance->communication_state = 0;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -111,6 +130,12 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 		outputs[0][i] = instance->bypass ? inputs[0][i] : gain * y;
 		instance->yz1 = outputs[0][i];
 	}
+#ifdef TEMPLATE_SUPPORTS_MESSAGING
+	if (instance->communication_state == 1) {
+		instance->cbs.send_to_ui(instance->cbs.handle, random_ui_data, RANDOM_DATA_UI_SIZE);
+		instance->communication_state = 2;
+	}
+#endif
 }
 
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
@@ -179,15 +204,3 @@ static int plugin_state_load(const plugin_state_callbacks *cbs, float cur_sample
 	cbs->unlock(cbs->handle);
 	return 0;
 }
-
-#include <stdio.h>
-#if TEMPLATE_SUPPORTS_MESSAGING
-static void plugin_receive_from_ui (plugin *instance, const void *data, size_t bytes) {
-	(void) instance;
-	printf("plugin_receive_from_ui %ld bytes at %p: \n", bytes, data);
-	for (size_t i = 0; i < bytes; i++) {
-		printf("%d ", ((uint8_t*) data)[i]);
-	}
-	printf("plugin_receive_from_ui END \n");
-}
-#endif

@@ -47,9 +47,9 @@ static void plugin_ui_receive_from_dsp (plugin_ui *instance, const void *data, s
 	}
 	printf("plugin_ui_receive_from_ui END \n");
 }
-#endif
 #define RANDOM_DATA_SIZE 11
 const uint8_t random_data[RANDOM_DATA_SIZE] = { 2, 3, 4, 5, 6, 7, 8, 9, 6, 9, 6 };
+#endif
 
 #define WIDTH		600.0
 #define HEIGHT		400.0

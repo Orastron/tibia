@@ -66,6 +66,10 @@
 # endif
 #endif
 
+#ifdef DATA_MESSAGING
+# include <threads.h>
+#endif
+
 // COM in C doc:
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
@@ -311,8 +315,18 @@ typedef struct pluginInstance {
 	void *						mem;
 	struct Steinberg_IBStream *			state;
 
+#ifdef DATA_MESSAGING
 	Steinberg_Vst_IConnectionPointVtbl *vtblIConnectionPoint;
 	Steinberg_Vst_IConnectionPoint     *connectedPoint;
+	uint8_t                             message_data[DATA_MESSAGING_MAX];
+	size_t                              message_data_size;
+	char                                message_data_tosend; // This is to tell message_thread to send data
+	thrd_t                              message_thread;
+	int                                 message_flag;
+	mtx_t                               message_mutex;
+	cnd_t                               message_cond;
+
+#endif
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
@@ -468,33 +482,13 @@ static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
 };
 
 # ifdef DATA_MESSAGING
+// Assuming this gets called by audio thread only
 static char send_to_ui (void *handle, const void *data, size_t bytes) {
 	pluginInstance *p = (pluginInstance *)handle;
 
-	Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) p->connectedPoint->lpVtbl;
-
-	printf("gonna A ov: %p \n", (void*) ov);
-	printf("gonna AA ctx: %p \n", (void*) p->context);
-
-	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) p->context;
-	Steinberg_Vst_IMessage *msg = NULL;
-	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
-
-	printf("gonna AB msgp: %p \n", (void*) msg);
-
-	printf("gonna B \n");
-	msg->lpVtbl->setMessageID(msg, "HelloMessage");
-	printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
-
-	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
-
-	printf("gonna CA alist %p \n", (void*) alist);
-
-	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
-
-	ov->notify(p->connectedPoint, msg);
-	printf("gonna Z \n");
-
+	memcpy(p->message_data, data, bytes);
+	p->message_data_size = bytes;
+	p->message_data_tosend = 1;
 	return 0;
 }
 # endif
@@ -512,6 +506,43 @@ static Steinberg_uint32 pluginIComponentAddRef(void *thisInterface) {
 static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 	TRACE("plugin IComponent release %p\n", thisInterface);
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent)));
+}
+
+int message_thread_f(void *arg) {
+	pluginInstance *p = (pluginInstance *) arg;
+
+	while (1) {
+		mtx_lock(&p->message_mutex);
+
+		while (p->message_flag == 0) {
+			cnd_wait(&p->message_cond, &p->message_mutex);
+		}
+
+		if (p->message_flag == 1) {
+			printf("message_thread_f: got flag 1...\n");
+
+			Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) p->connectedPoint->lpVtbl;
+			Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) p->context;
+			Steinberg_Vst_IMessage *msg = NULL;
+
+			app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
+			msg->lpVtbl->setMessageID(msg, "HelloMessage");
+			Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
+			alist->lpVtbl->setBinary(alist, "yoyoyo", p->message_data, p->message_data_size);
+			ov->notify(p->connectedPoint, msg);
+
+			p->message_flag = 0;
+
+		} else if (p->message_flag == 2) {
+			printf("message_thread_f: got flag 2: Exiting.\n");
+			mtx_unlock(&p->message_mutex);
+			break;
+		}
+
+		mtx_unlock(&p->message_mutex);
+	}
+
+	return 0;
 }
 
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
@@ -570,6 +601,16 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 # endif
 #endif
 	p->mem = NULL;
+
+#ifdef DATA_MESSAGING
+	mtx_init(&p->message_mutex, mtx_plain);
+	cnd_init(&p->message_cond);
+	if (thrd_create(&p->message_thread, message_thread_f, p) != thrd_success) {
+		fprintf(stderr, "Failed to create message_thread\n");
+		return Steinberg_kResultFalse;
+	}
+#endif
+
 	return Steinberg_kResultOk;
 }
 
@@ -580,6 +621,15 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	plugin_fini(&p->p);
 	if (p->mem)
 		free(p->mem);
+
+	mtx_lock(&p->message_mutex);
+	p->message_flag = 2;
+	cnd_signal(&p->message_cond);
+	mtx_unlock(&p->message_mutex);
+	thrd_join(p->message_thread, NULL);
+	mtx_destroy(&p->message_mutex);
+	cnd_destroy(&p->message_cond);
+
 	return Steinberg_kResultOk;
 }
 
@@ -1194,6 +1244,17 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 #elif defined(__i386__) || defined(__x86_64__)
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+#endif
+
+#ifdef DATA_MESSAGING
+	if (p->message_data_tosend) { // message_data_tosend is manipulated by audio thread only
+		if (mtx_trylock(&p->message_mutex) == thrd_success) {
+			p->message_flag = 1;
+			cnd_signal(&p->message_cond);
+			mtx_unlock(&p->message_mutex);
+			p->message_data_tosend = 0;
+		}
+	}
 #endif
 
 	return Steinberg_kResultOk;
@@ -2476,6 +2537,25 @@ static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, s
 	(void)thisInterface;
 	(void)message;
 	printf("controllerIConnectionPointNotify \n"); fflush(stdout);
+
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+
+	printf("controllerIConnectionPointNotify A \n"); fflush(stdout);
+	printf("controllerIConnectionPointNotify B Message ID: %s\n", message->lpVtbl->getMessageID(message));  fflush(stdout);
+
+	Steinberg_Vst_IAttributeList *alist = message->lpVtbl->getAttributes(message);
+	printf("controllerIConnectionPointNotify C alist: %p\n", (void*) alist); fflush(stdout);
+
+	const void *data = NULL;
+	unsigned int size = 0;
+	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
+
+	// This is tmp, TODO: fix
+	for (size_t i = 0; i < c->viewsCount; i++) {
+		plugView *v = c->views[i];
+		plugin_ui_receive_from_dsp(v->ui, data, size);
+	}
+	
 	return Steinberg_kResultOk;
 }
 
@@ -2586,6 +2666,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 #ifdef DATA_MESSAGING
 		p->vtblIConnectionPoint = &pluginVtblIConnectionPoint;
 		p->connectedPoint = NULL;
+		p->message_data_tosend = 0;
 #endif
 		*obj = p;
 		TRACE(" instance: %p\n", (void *)p);
