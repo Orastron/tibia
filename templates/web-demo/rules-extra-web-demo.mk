@@ -24,7 +24,7 @@ build/web/index.html: $(DATA_DIR)/src/index.html | build/web
 build/web/key.pem: build/web/cert.pem
 
 build/web/cert.pem: | build
-	yes "" | openssl req -x509 -newkey rsa:2048 -keyout build/web/key.pem -out build/web/cert.pem -days 365 -nodes 2>/dev/null
+	openssl req -x509 -newkey rsa:2048 -keyout build/web/key.pem -out build/web/cert.pem -days 365 -nodes -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com" 2>/dev/null
 
 strip-web-demo: build/web/index.html
 	$(eval TMP := $(shell mktemp /tmp/index.XXXXXX))

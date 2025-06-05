@@ -18,6 +18,8 @@
 # File author: Stefano D'Angelo
 #
 
+SHELL := bash -o pipefail
+
 TEMPLATE := web
 
 include vars.mk
