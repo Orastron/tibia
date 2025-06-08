@@ -164,6 +164,7 @@ void (^midiNotifyBlock)(const MIDINotification *message) = ^(const MIDINotificat
 };
 
 void (^midiReceiveBlock)(const MIDIEventList *evtlist, void *srcConnRefCon) = ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
+	(void)srcConnRefCon;
 	const MIDIEventPacket *p = evtlist->packet;
 	for (UInt32 i = 0; i < evtlist->numPackets; i++) {
 		for (UInt32 j = 0; j < p->wordCount; j++) {
