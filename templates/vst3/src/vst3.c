@@ -383,8 +383,10 @@ static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg
 		offset = offsetof(pluginInstance, vtblIAudioProcessor);
 	else if (memcmp(iid, Steinberg_Vst_IProcessContextRequirements_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
+#ifdef DATA_MESSAGING
 	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(pluginInstance, vtblIConnectionPoint);
+#endif
 	else {
 		TRACE(" not supported\n");
 		for (int i = 0; i < 16; i++)
@@ -413,6 +415,7 @@ static Steinberg_uint32 pluginRelease(pluginInstance *p) {
 	return p->refs;
 }
 
+#ifdef DATA_MESSAGING
 static Steinberg_tresult pluginIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("plugin IConnectionPoint queryInterface %p\n", thisInterface);
 	return pluginQueryInterface((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)), iid, obj);
@@ -481,7 +484,6 @@ static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
 	/* .notify          = */ pluginIConnectionPointNotify
 };
 
-# ifdef DATA_MESSAGING
 // Assuming this gets called by audio thread only
 static char send_to_ui (void *handle, const void *data, size_t bytes) {
 	pluginInstance *p = (pluginInstance *)handle;
@@ -510,6 +512,7 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent)));
 }
 
+#ifdef DATA_MESSAGING
 int message_thread_f(void *arg) {
 	pluginInstance *p = (pluginInstance *) arg;
 
@@ -560,6 +563,7 @@ int message_thread_f(void *arg) {
 
 	return 0;
 }
+#endif
 
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
 	TRACE("plugin initialize\n");
@@ -638,6 +642,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	if (p->mem)
 		free(p->mem);
 
+#ifdef DATA_MESSAGING
 	mtx_lock(&p->message_mutex);
 	p->message_flag = 2;
 	cnd_signal(&p->message_cond);
@@ -645,6 +650,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 	thrd_join(p->message_thread, NULL);
 	mtx_destroy(&p->message_mutex);
 	cnd_destroy(&p->message_cond);
+#endif
 
 	return Steinberg_kResultOk;
 }
@@ -1983,7 +1989,7 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 		offset = offsetof(controller, vtblIEditController);
 	else if (memcmp(iid, Steinberg_Vst_IMidiMapping_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIMidiMapping);
-#ifdef DATA_UI
+#ifdef DATA_MESSAGING
 	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIConnectionPoint);
 #endif
@@ -2514,7 +2520,7 @@ static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 	/* .getMidiControllerAssignment	= */ controllerGetMidiControllerAssignment
 };
 
-#ifdef DATA_UI
+#ifdef DATA_MESSAGING
 
 static Steinberg_tresult controllerIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("controller IConnectionPoint queryInterface %p\n", thisInterface);
