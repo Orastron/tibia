@@ -430,18 +430,15 @@ static Steinberg_uint32 pluginIConnectionPointRelease(void* thisInterface) {
 
 static Steinberg_tresult pluginIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
-	printf("pluginIConnectionPointConnect %p to %p \n", (void*) p, (void*) other);  fflush(stdout);
 
 	if (!other) return Steinberg_kInvalidArgument;
 	if (p->connectedPoint) return Steinberg_kResultFalse;
 	p->connectedPoint = other;
 
-	printf("pluginIConnectionPointConnect Z ok \n"); fflush(stdout);
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
-	printf("pluginIConnectionPointDisconnect \n");  fflush(stdout);
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
 	if (p->connectedPoint && other == p->connectedPoint) {
 		p->connectedPoint = NULL;
@@ -451,21 +448,24 @@ static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, s
 }
 
 static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
-
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
 
-	printf("pluginIConnectionPointNotify A \n"); fflush(stdout);
-	printf("pluginIConnectionPointNotify B Message ID: %s\n", message->lpVtbl->getMessageID(message));  fflush(stdout);
+	if (!message)
+		return Steinberg_kResultFalse;
 
 	Steinberg_Vst_IAttributeList *alist = message->lpVtbl->getAttributes(message);
-	printf("pluginIConnectionPointNotify C alist: %p\n", (void*) alist); fflush(stdout);
+
+	if (!alist)
+		return Steinberg_kResultFalse;
 
 	const void *data = NULL;
 	unsigned int size = 0;
 	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
 
+	if (!data || size <= 0)
+		return Steinberg_kResultFalse;
+
 	plugin_receive_from_ui(&(p->p), data, size);
-	
 	return Steinberg_kResultOk;
 }
 
@@ -485,7 +485,9 @@ static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
 // Assuming this gets called by audio thread only
 static char send_to_ui (void *handle, const void *data, size_t bytes) {
 	pluginInstance *p = (pluginInstance *)handle;
-
+	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+		return 1;
+	}
 	memcpy(p->message_data, data, bytes);
 	p->message_data_size = bytes;
 	p->message_data_tosend = 1;
@@ -514,27 +516,41 @@ int message_thread_f(void *arg) {
 	while (1) {
 		mtx_lock(&p->message_mutex);
 
-		while (p->message_flag == 0) {
+		while (p->message_flag == 0) { // Wait
 			cnd_wait(&p->message_cond, &p->message_mutex);
 		}
 
-		if (p->message_flag == 1) {
-			printf("message_thread_f: got flag 1...\n");
+		if (p->message_flag == 1) { // do work
+			if (!p->connectedPoint || ! p->context) {
+				// TODO: What to do there?
+				continue;
+			}
 
 			Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) p->connectedPoint->lpVtbl;
 			Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) p->context;
 			Steinberg_Vst_IMessage *msg = NULL;
 
 			app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&msg);
+			if (!msg) {
+				// TODO: what to do here?
+				continue;
+			}
+			// TODO: addref?
+
 			msg->lpVtbl->setMessageID(msg, "HelloMessage");
 			Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
+			if (!alist) {
+				// TODO: what to do here?
+				continue;
+			}
+
 			alist->lpVtbl->setBinary(alist, "yoyoyo", p->message_data, p->message_data_size);
 			ov->notify(p->connectedPoint, msg);
+			// TODO: release?
 
 			p->message_flag = 0;
 
-		} else if (p->message_flag == 2) {
-			printf("message_thread_f: got flag 2: Exiting.\n");
+		} else if (p->message_flag == 2) { // exit
 			mtx_unlock(&p->message_mutex);
 			break;
 		}
@@ -1325,7 +1341,6 @@ typedef struct controller {
 #ifdef DATA_MESSAGING
 	Steinberg_Vst_IConnectionPointVtbl *vtblIConnectionPoint;
 	Steinberg_Vst_IConnectionPoint     *connectedPoint;
-	Steinberg_Vst_IMessage             *msg;
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -1635,27 +1650,33 @@ static void plugViewSetParameterEndCb(void *handle, size_t index, float value) {
 static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	plugView *v = (plugView *)handle;
 
-	Steinberg_Vst_IConnectionPointVtbl *ov = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
+	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+		return 1;
+	}
 
-	printf("gonna A ov: %p \n", (void*) ov);
-	printf("gonna AA ctx: %p \n", (void*) v->ctrl->context);
+	if (!v->ctrl->connectedPoint || !v->ctrl->context)
+		return 2;
 
-	Steinberg_Vst_IMessage *msg = v->ctrl->msg;
+	Steinberg_Vst_IConnectionPointVtbl *ov  = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
+	Steinberg_Vst_IHostApplication     *app = (Steinberg_Vst_IHostApplication*) v->ctrl->context;
+	Steinberg_Vst_IMessage             *msg = NULL;
+	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&(msg));
 
-	printf("gonna AB msgp: %p \n", (void*) msg);
+	if (!msg)
+		return 3;
 
-	printf("gonna B \n");
+	// TODO: addRef?
+
 	msg->lpVtbl->setMessageID(msg, "HelloMessage");
-	printf("gonna C Message ID: %s \n", msg->lpVtbl->getMessageID(msg));
-
 	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
 
-	printf("gonna CA alist %p \n", (void*) alist);
+	if (!alist)
+		return 4;
 
 	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
-
 	ov->notify(v->ctrl->connectedPoint, msg);
-	printf("gonna Z \n");
+
+	// TODO: release msg?
 
 	return 0;
 }
@@ -2037,10 +2058,6 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 		c->parametersMidiIn[i + 1] = 0.5;
 		c->parametersMidiIn[i + 2] = 0.0;
 	}
-#endif
-#ifdef DATA_MESSAGING
-	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
-	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&(c->msg));
 #endif
 	return Steinberg_kResultOk;
 }
@@ -2515,7 +2532,6 @@ static Steinberg_uint32 controllerIConnectionPointRelease(void* thisInterface) {
 }
 
 static Steinberg_tresult controllerIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
-	printf("controllerIConnectionPointConnect to %p \n", (void*) other); fflush(stdout);
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
 	if (!other) return Steinberg_kInvalidArgument;
 	if (c->connectedPoint) return Steinberg_kResultFalse;
@@ -2524,7 +2540,6 @@ static Steinberg_tresult controllerIConnectionPointConnect(void* thisInterface, 
 }
 
 static Steinberg_tresult controllerIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
-	printf("controllerIConnectionPointDisconnect \n"); fflush(stdout);
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
 	if (c->connectedPoint && other == c->connectedPoint) {
 		c->connectedPoint = NULL;
@@ -2534,21 +2549,22 @@ static Steinberg_tresult controllerIConnectionPointDisconnect(void* thisInterfac
 }
 
 static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
-	(void)thisInterface;
-	(void)message;
-	printf("controllerIConnectionPointNotify \n"); fflush(stdout);
-
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
 
-	printf("controllerIConnectionPointNotify A \n"); fflush(stdout);
-	printf("controllerIConnectionPointNotify B Message ID: %s\n", message->lpVtbl->getMessageID(message));  fflush(stdout);
+	if (!message)
+		return Steinberg_kResultFalse;
 
 	Steinberg_Vst_IAttributeList *alist = message->lpVtbl->getAttributes(message);
-	printf("controllerIConnectionPointNotify C alist: %p\n", (void*) alist); fflush(stdout);
+
+	if (!alist)
+		return Steinberg_kResultFalse;
 
 	const void *data = NULL;
 	unsigned int size = 0;
 	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
+
+	if (!data || size <= 0)
+		return Steinberg_kResultFalse;
 
 	// This is tmp, TODO: fix
 	for (size_t i = 0; i < c->viewsCount; i++) {
@@ -2684,7 +2700,6 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 #ifdef DATA_MESSAGING
 		c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
 		c->connectedPoint = NULL;
-		c->msg = NULL;
 #endif
 		c->refs = 1;
 		c->context = NULL;
