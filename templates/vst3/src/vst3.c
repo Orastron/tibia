@@ -538,7 +538,6 @@ int message_thread_f(void *arg) {
 				// TODO: what to do here?
 				continue;
 			}
-			// TODO: addref?
 
 			msg->lpVtbl->setMessageID(msg, "HelloMessage");
 			Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
@@ -549,7 +548,8 @@ int message_thread_f(void *arg) {
 
 			alist->lpVtbl->setBinary(alist, "yoyoyo", p->message_data, p->message_data_size);
 			ov->notify(p->connectedPoint, msg);
-			// TODO: release?
+
+			msg->lpVtbl->release(msg);
 
 			p->message_flag = 0;
 
@@ -1671,8 +1671,6 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	if (!msg)
 		return 3;
 
-	// TODO: addRef?
-
 	msg->lpVtbl->setMessageID(msg, "HelloMessage");
 	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
 
@@ -1682,7 +1680,7 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
 	ov->notify(v->ctrl->connectedPoint, msg);
 
-	// TODO: release msg?
+	msg->lpVtbl->release(msg);
 
 	return 0;
 }
@@ -2401,11 +2399,12 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	if (strcmp(name, "editor"))
 		return NULL;
 
+	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+
 	plugView *view = malloc(sizeof(plugView));
 	if (view == NULL)
 		return NULL;
 
-	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	size_t i;
 	for (i = 0; i < c->viewsCount; c++)
 		if (c->views[i] == NULL)
@@ -2572,10 +2571,12 @@ static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, s
 	if (!data || size <= 0)
 		return Steinberg_kResultFalse;
 
-	// This is tmp, TODO: fix
 	for (size_t i = 0; i < c->viewsCount; i++) {
+		if (!c->views[i])
+			continue;
 		plugView *v = c->views[i];
 		plugin_ui_receive_from_dsp(v->ui, data, size);
+		break; // Assuming there is only 1 view
 	}
 	
 	return Steinberg_kResultOk;
