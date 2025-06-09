@@ -2400,12 +2400,18 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 		return NULL;
 
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
+	size_t i;
+	for (i = 0; i < c->viewsCount; c++) {
+		if (c->views[i] != NULL) {
+			TRACE("controllerCreateView: trying to create another view - not supported \n");
+			return NULL;
+		}
+	}
 
 	plugView *view = malloc(sizeof(plugView));
 	if (view == NULL)
 		return NULL;
 
-	size_t i;
 	for (i = 0; i < c->viewsCount; c++)
 		if (c->views[i] == NULL)
 			break;
