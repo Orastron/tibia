@@ -86,3 +86,10 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 {{?it.product.state && it.product.state.dspCustom}}
 #define DATA_STATE_DSP_CUSTOM
 {{?}}
+
+{{?it.product.messaging}}
+#define DATA_MESSAGING 1
+#define DATA_MESSAGING_MAX {{=it.product.messaging.maxSize}}
+#define DATA_MESSAGING_PORT_IN  {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.id == 'message_in'))}}
+#define DATA_MESSAGING_PORT_OUT {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.id == 'message_out'))}}
+{{?}}

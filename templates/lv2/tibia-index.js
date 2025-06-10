@@ -37,7 +37,8 @@ module.exports = function (data, api, outputCommon, outputData) {
 				{ id: "state",	uri: "http://lv2plug.in/ns/extensions/state#" },
 				{ id: "ui",	uri: "http://lv2plug.in/ns/extensions/ui#" },
 				{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" },
-				{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" }
+				{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" },
+				{ id: "rsz",    uri: "http://lv2plug.in/ns/ext/resize-port#" }
 			],
 			units: {
 				"bar":			"@units:bar",
@@ -123,6 +124,27 @@ module.exports = function (data, api, outputCommon, outputData) {
 		}
 		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+
+		if (data.product.messaging) {
+			const ps = [
+				{
+					type: "message",
+					direction: "input",
+					control: true,
+					id: "message_in",
+					name: "message_in"
+				},
+				{
+					type: "message",
+					direction: "output",
+					control: true,
+					id: "message_out",
+					name: "message_out",
+					maxSize: data.product.messaging.maxSize
+				}
+			];
+			data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ps);
+		}
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);
