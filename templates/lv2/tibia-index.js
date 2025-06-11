@@ -114,17 +114,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, audioPorts);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 
-		var ports = [];
-		for (var i = 0; i < data.product.parameters.length; i++) {
-			var p = data.product.parameters[i];
-			var e = Object.create(p);
-			e.type = "control";
-			e.paramIndex = i;
-			ports.push(e);
-		}
-		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
-		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
-
 		if (data.product.messaging) {
 			const ps = [
 				{
@@ -145,6 +134,17 @@ module.exports = function (data, api, outputCommon, outputData) {
 			];
 			data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ps);
 		}
+
+		var ports = [];
+		for (var i = 0; i < data.product.parameters.length; i++) {
+			var p = data.product.parameters[i];
+			var e = Object.create(p);
+			e.type = "control";
+			e.paramIndex = i;
+			ports.push(e);
+		}
+		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
+		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);

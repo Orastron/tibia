@@ -89,7 +89,10 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 
 {{?it.product.messaging}}
 #define DATA_MESSAGING 1
+#define DATA_MESSAGING_PORTS_N 2
 #define DATA_MESSAGING_MAX {{=it.product.messaging.maxSize}}
 #define DATA_MESSAGING_PORT_IN  {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.id == 'message_in'))}}
 #define DATA_MESSAGING_PORT_OUT {{=it.tibia.lv2.ports.indexOf(it.tibia.lv2.ports.find(p => p.id == 'message_out'))}}
+{{??}}
+#define DATA_MESSAGING_PORTS_N 0
 {{?}}

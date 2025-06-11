@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define TEMPLATE_SUPPORTS_MESSAGING 1
+
 #include "data.h"
 #include "plugin_api.h"
 #pragma GCC diagnostic push
@@ -74,7 +76,8 @@
 		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
 		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
 		+ DATA_PRODUCT_MIDI_INPUTS_N \
-		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
+		+ DATA_PRODUCT_MIDI_OUTPUTS_N \
+		+ DATA_MESSAGING_PORTS_N )
 #define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -330,18 +333,7 @@ err_instance:
 
 static void connect_port(LV2_Handle instance, uint32_t port, void * data_location) {
 	plugin_instance * i = (plugin_instance *)instance;
-	printf("connect_port %u \n", port);
-#ifdef DATA_MESSAGING
-	// Well, these should stay last...
-	if (port == DATA_MESSAGING_PORT_IN) {
-		i->control = (const LV2_Atom_Sequence*)data_location;
-		return;
-	}
-	if (port == DATA_MESSAGING_PORT_OUT) {
-		i->notify = (LV2_Atom_Sequence*)data_location;
-		return;
-	}
-#endif
+
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	if (port < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N) {
 		i->x[port] = data_location;
@@ -369,6 +361,19 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 		return;
 	}
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
+#endif
+#ifdef DATA_MESSAGING
+	if (port < DATA_MESSAGING_PORTS_N) {
+		if (port == 0) {
+			i->control = (const LV2_Atom_Sequence*)data_location;
+			return;
+		}
+		if (port == 1) {
+			i->notify = (LV2_Atom_Sequence*)data_location;
+			return;
+		}
+	}
+	port -= DATA_MESSAGING_PORTS_N;
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	i->c[port] = data_location;
@@ -398,8 +403,6 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
-	printf("run A \n"); fflush(stdout);
-
 	if (0 && i->control) {
 		const LV2_Atom_Event* ev = lv2_atom_sequence_begin(&(i->control)->body);
 		while (!lv2_atom_sequence_is_end(&i->control->body, i->control->atom.size, ev)) {
@@ -413,7 +416,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 				lv2_atom_object_get(obj, i->c_uris.prop_customMessage, &msg_atom, 0);
 
 				printf("audio - custom msg %d \n", i->c_uris.prop_customMessage);
-				printf("audio - %p \n", msg_atom);
+				printf("audio - %p \n", (void*) msg_atom);
 				printf("audio - %d %d \n", msg_atom->type, i->c_uris.atom_String);
 
 				if (msg_atom && msg_atom->type == i->c_uris.atom_String) {
@@ -808,6 +811,7 @@ static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buf
 	*  - format == 0: Control port event (float)
 	*  - format > 0:  Message (atom)
 	*/
+
 	if (format == instance->c_uris.atom_eventTransfer && lv2_atom_forge_is_object_type(&instance->forge, atom->type)) {
 		const LV2_Atom_Object* obj = (const LV2_Atom_Object*)atom;
 		if (obj->body.otype == instance->c_uris.prop_customMessage) {
