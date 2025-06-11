@@ -38,7 +38,7 @@ typedef struct {
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
-#if TEMPLATE_SUPPORTS_MESSAGING
+#ifdef TEMPLATE_SUPPORTS_MESSAGING
 static void plugin_ui_receive_from_dsp (plugin_ui *instance, const void *data, size_t bytes) {
 	(void) instance;
 	printf("plugin_ui_receive_from_dsp %ld bytes at %p: \n", bytes, data);

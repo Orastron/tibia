@@ -322,7 +322,7 @@ typedef struct pluginInstance {
 	size_t                              message_data_size;
 	char                                message_data_tosend; // This is to tell message_thread to send data
 	thrd_t                              message_thread;
-	int                                 message_flag;
+	int                                 message_cmd;
 	mtx_t                               message_mutex;
 	cnd_t                               message_cond;
 
@@ -463,9 +463,9 @@ static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struc
 
 	const void *data = NULL;
 	unsigned int size = 0;
-	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
+	alist->lpVtbl->getBinary(alist, "message_data", &data, &size);
 
-	if (!data || size <= 0)
+	if (!data || size == 0)
 		return Steinberg_kResultFalse;
 
 	plugin_receive_from_ui(&(p->p), data, size);
@@ -487,7 +487,7 @@ static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
 // Assuming this gets called by audio thread only
 static char send_to_ui (void *handle, const void *data, size_t bytes) {
 	pluginInstance *p = (pluginInstance *)handle;
-	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+	if (!data || bytes == 0 || bytes > DATA_MESSAGING_MAX) {
 		return 1;
 	}
 	memcpy(p->message_data, data, bytes);
@@ -519,11 +519,11 @@ int message_thread_f(void *arg) {
 	while (1) {
 		mtx_lock(&p->message_mutex);
 
-		while (p->message_flag == 0) { // Wait
+		if (p->message_cmd == 0) { // Wait
 			cnd_wait(&p->message_cond, &p->message_mutex);
 		}
 
-		if (p->message_flag == 1) { // do work
+		if (p->message_cmd == 1) { // do work
 			if (!p->connectedPoint || ! p->context) {
 				// TODO: What to do there?
 				continue;
@@ -539,21 +539,24 @@ int message_thread_f(void *arg) {
 				continue;
 			}
 
-			msg->lpVtbl->setMessageID(msg, "HelloMessage");
 			Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
 			if (!alist) {
 				// TODO: what to do here?
 				continue;
 			}
 
-			alist->lpVtbl->setBinary(alist, "yoyoyo", p->message_data, p->message_data_size);
-			ov->notify(p->connectedPoint, msg);
+			alist->lpVtbl->setBinary(alist, "message_data", p->message_data, p->message_data_size);
+			Steinberg_tresult r = ov->notify(p->connectedPoint, msg);
+			if (r == Steinberg_kResultFalse) {
+				// TODO
+				continue;
+			}
 
 			msg->lpVtbl->release(msg);
 
-			p->message_flag = 0;
+			p->message_cmd = 0;
 
-		} else if (p->message_flag == 2) { // exit
+		} else if (p->message_cmd == 2) { // exit
 			mtx_unlock(&p->message_mutex);
 			break;
 		}
@@ -626,7 +629,6 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	mtx_init(&p->message_mutex, mtx_plain);
 	cnd_init(&p->message_cond);
 	if (thrd_create(&p->message_thread, message_thread_f, p) != thrd_success) {
-		fprintf(stderr, "Failed to create message_thread\n");
 		return Steinberg_kResultFalse;
 	}
 #endif
@@ -644,7 +646,7 @@ static Steinberg_tresult pluginTerminate(void *thisInterface) {
 
 #ifdef DATA_MESSAGING
 	mtx_lock(&p->message_mutex);
-	p->message_flag = 2;
+	p->message_cmd = 2;
 	cnd_signal(&p->message_cond);
 	mtx_unlock(&p->message_mutex);
 	thrd_join(p->message_thread, NULL);
@@ -1271,7 +1273,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 #ifdef DATA_MESSAGING
 	if (p->message_data_tosend) { // message_data_tosend is manipulated by audio thread only
 		if (mtx_trylock(&p->message_mutex) == thrd_success) {
-			p->message_flag = 1;
+			p->message_cmd = 1;
 			cnd_signal(&p->message_cond);
 			mtx_unlock(&p->message_mutex);
 			p->message_data_tosend = 0;
@@ -1656,12 +1658,13 @@ static void plugViewSetParameterEndCb(void *handle, size_t index, float value) {
 static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	plugView *v = (plugView *)handle;
 
-	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+	if (!data || bytes == 0 || bytes > DATA_MESSAGING_MAX) {
 		return 1;
 	}
 
-	if (!v->ctrl->connectedPoint || !v->ctrl->context)
-		return 2;
+	if (!v->ctrl->connectedPoint || !v->ctrl->context) {
+		return 1;
+	}
 
 	Steinberg_Vst_IConnectionPointVtbl *ov  = (Steinberg_Vst_IConnectionPointVtbl*) v->ctrl->connectedPoint->lpVtbl;
 	Steinberg_Vst_IHostApplication     *app = (Steinberg_Vst_IHostApplication*) v->ctrl->context;
@@ -1669,19 +1672,23 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	app->lpVtbl->createInstance(app, (char*) Steinberg_Vst_IMessage_iid, (char*) Steinberg_Vst_IMessage_iid, (void**)&(msg));
 
 	if (!msg)
-		return 3;
+		return 1;
 
-	msg->lpVtbl->setMessageID(msg, "HelloMessage");
 	Steinberg_Vst_IAttributeList *alist = msg->lpVtbl->getAttributes(msg);
 
-	if (!alist)
-		return 4;
+	if (!alist) {
+		msg->lpVtbl->release(msg);		
+		return 1;
+	}
 
-	alist->lpVtbl->setBinary(alist, "yoyoyo", data, bytes);
-	ov->notify(v->ctrl->connectedPoint, msg);
+	alist->lpVtbl->setBinary(alist, "message_data", data, bytes);
+	Steinberg_tresult r = ov->notify(v->ctrl->connectedPoint, msg);
+	if (r == Steinberg_kResultFalse) {
+		msg->lpVtbl->release(msg);
+		return 1;
+	}
 
 	msg->lpVtbl->release(msg);
-
 	return 0;
 }
 # endif
@@ -2572,9 +2579,9 @@ static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, s
 
 	const void *data = NULL;
 	unsigned int size = 0;
-	alist->lpVtbl->getBinary(alist, "yoyoyo", &data, &size);
+	alist->lpVtbl->getBinary(alist, "message_data", &data, &size);
 
-	if (!data || size <= 0)
+	if (!data || size == 0)
 		return Steinberg_kResultFalse;
 
 	for (size_t i = 0; i < c->viewsCount; i++) {
