@@ -403,7 +403,7 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
-	if (0 && i->control) {
+	if (i->control) {
 		const LV2_Atom_Event* ev = lv2_atom_sequence_begin(&(i->control)->body);
 		while (!lv2_atom_sequence_is_end(&i->control->body, i->control->atom.size, ev)) {
 			if (lv2_atom_forge_is_object_type(&i->forge, ev->body.type)) {
@@ -632,9 +632,11 @@ typedef struct {
 	LV2UI_Touch		touch;
 # endif
 # ifdef DATA_MESSAGING
-	LV2_URID_Map*      map;
-	LV2_Atom_Forge     forge;
-	communication_URIs c_uris;
+	LV2_URID_Map*        map;
+	LV2_Atom_Forge       forge;
+	LV2_Atom_Forge_Frame frame;
+	communication_URIs   c_uris;
+	uint8_t              obj_buf[DATA_MESSAGING_MAX];
 # endif
 } ui_instance;
 
@@ -682,23 +684,31 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 		return 1;
 	}
 
-	uint8_t obj_buf[256];
-	lv2_atom_forge_set_buffer(&instance->forge, obj_buf, sizeof(obj_buf));
-	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_set_buffer(&instance->forge, instance->obj_buf, sizeof(instance->obj_buf));
+	lv2_atom_forge_sequence_head(&instance->forge, &instance->frame, 0);
 
-	// Start forging an object
-	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&instance->forge, &frame, 0, instance->c_uris.ui_On);
+	lv2_atom_forge_frame_time(&instance->forge, 0);
+	LV2_Atom* msg = (LV2_Atom*) lv2_atom_forge_object(&instance->forge, &instance->frame, 0, instance->c_uris.prop_customMessage);
+
+	lv2_atom_forge_key(&instance->forge, instance->c_uris.length);
+	lv2_atom_forge_int(&instance->forge, (int32_t)bytes);
+
+	lv2_atom_forge_key(&instance->forge, instance->c_uris.prop_customMessage);
+	lv2_atom_forge_write(&instance->forge, data, bytes);
+
+	lv2_atom_forge_pop(&instance->forge, &instance->frame);
+
+
+/*
+	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&instance->forge, &instance->frame, 0, instance->c_uris.ui_On);
 	assert(msg);
 
-	// Add a string property to the object
 	lv2_atom_forge_key(&instance->forge, instance->c_uris.prop_customMessage);
 	lv2_atom_forge_string(&instance->forge, data, bytes);
-
-	// Finish the object
-	lv2_atom_forge_pop(&instance->forge, &frame);
+*/
 
 	// Send the forged atom to the host
-	instance->write(instance->controller, 8, lv2_atom_total_size(msg), instance->c_uris.atom_eventTransfer, msg);
+	instance->write(instance->controller, DATA_MESSAGING_PORT_IN, lv2_atom_total_size(msg), instance->c_uris.atom_eventTransfer, msg);
 
 	return 0;
 }
