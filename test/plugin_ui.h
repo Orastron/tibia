@@ -41,14 +41,14 @@ typedef struct {
 #ifdef TEMPLATE_SUPPORTS_MESSAGING
 static void plugin_ui_receive_from_dsp (plugin_ui *instance, const void *data, size_t bytes) {
 	(void) instance;
-	printf("plugin_ui_receive_from_dsp %ld bytes at %p: \n", bytes, data);
+	printf("plugin_ui_receive_from_dsp %ld bytes at %p: ", bytes, data);
 	for (size_t i = 0; i < bytes; i++) {
-		printf("%d ", ((uint8_t*) data)[i]);
+		printf("%c", ((uint8_t*) data)[i]);
 	}
-	printf("plugin_ui_receive_from_dsp END \n");
+	printf("\nplugin_ui_receive_from_dsp END \n");
 }
-#define RANDOM_DATA_SIZE 11
-const uint8_t random_data[RANDOM_DATA_SIZE] = { 2, 3, 4, 5, 6, 7, 8, 9, 6, 9, 6 };
+#define RANDOM_UI_DATA_SIZE 6
+const uint8_t random_ui_data[RANDOM_UI_DATA_SIZE] = { 'h', 'e', 'l', 'l', 'o', 0 };
 #endif
 
 #define WIDTH		600.0
@@ -126,7 +126,7 @@ static void on_mouse_release (window *win, int32_t x, int32_t y, uint32_t state)
 			pui->cbs.set_parameter(pui->cbs.handle, 3, pui->bypass ? 1.f : 0.f);
 			draw_button(pui, 3, pui->bypass);
 #if TEMPLATE_SUPPORTS_MESSAGING
-			pui->cbs.send_to_dsp(pui->cbs.handle, (const void*) random_data, RANDOM_DATA_SIZE);
+			pui->cbs.send_to_dsp(pui->cbs.handle, (const void*) random_ui_data, RANDOM_UI_DATA_SIZE);
 #endif
 		}
 

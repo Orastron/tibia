@@ -203,10 +203,9 @@ static void state_set_parameter_cb(void *handle, size_t index, float value) {
 
 #ifdef DATA_MESSAGING
 static char send_to_ui (void *handle, const void *data, size_t bytes) {
+	plugin_instance *i = (plugin_instance *) handle;
 
-	plugin_instance * i = (plugin_instance *) handle;
-
-	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+	if (!data || bytes == 0 || bytes > DATA_MESSAGING_MAX) {
 		return 1;
 	}
 
@@ -403,31 +402,31 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
-	if (i->control) {
-		const LV2_Atom_Event* ev = lv2_atom_sequence_begin(&(i->control)->body);
-		while (!lv2_atom_sequence_is_end(&i->control->body, i->control->atom.size, ev)) {
-			if (lv2_atom_forge_is_object_type(&i->forge, ev->body.type)) {
-				const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&ev->body;
+#ifdef DATA_MESSAGING
+	LV2_ATOM_SEQUENCE_FOREACH(i->control, ev) {
+		if (!lv2_atom_forge_is_object_type(&i->forge, ev->body.type)) 
+			continue;
 
-				printf("audio - received object, otype: %d\n", obj->body.otype);
+		const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&ev->body;
 
-				const LV2_Atom* msg_atom = NULL;
+		if (obj->body.otype != i->c_uris.prop_customMessage)
+			continue;
 
-				lv2_atom_object_get(obj, i->c_uris.prop_customMessage, &msg_atom, 0);
+		const LV2_Atom* msg_length = NULL;
+		const LV2_Atom* msg_data   = NULL;
 
-				printf("audio - custom msg %d \n", i->c_uris.prop_customMessage);
-				printf("audio - %p \n", (void*) msg_atom);
-				printf("audio - %d %d \n", msg_atom->type, i->c_uris.atom_String);
+		lv2_atom_object_get(obj, 
+			i->c_uris.length,
+			&msg_length,
+			i->c_uris.prop_customMessage,
+			&msg_data, 0);
 
-				if (msg_atom && msg_atom->type == i->c_uris.atom_String) {
-					const char* msg_str = (const char*)(msg_atom + 1);
-					printf("audio - received string from UI: %s\n", msg_str);
-				}
-			}
-			ev = lv2_atom_sequence_next(ev);
-		}
+		size_t  *length = (size_t*)  LV2_ATOM_BODY(msg_length);
+		uint8_t *data   = (uint8_t*) msg_data; // LV2_ATOM_BODY(msg_data);
+
+		plugin_receive_from_ui(&i->p, data, *length);
 	}
-
+#endif
 
 #if defined(__aarch64__)
 	uint64_t fpcr;
@@ -678,16 +677,12 @@ static void ui_set_parameter_end_cb(void *handle, size_t index, float value) {
 static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 	ui_instance* instance = (ui_instance*) handle;
 
-	printf("send_to_dsp A \n"); fflush(stdout);
-
-	if (!data || bytes <= 0 || bytes > DATA_MESSAGING_MAX) {
+	if (!data || bytes == 0 || bytes > DATA_MESSAGING_MAX) {
 		return 1;
 	}
 
 	lv2_atom_forge_set_buffer(&instance->forge, instance->obj_buf, sizeof(instance->obj_buf));
-	lv2_atom_forge_sequence_head(&instance->forge, &instance->frame, 0);
 
-	lv2_atom_forge_frame_time(&instance->forge, 0);
 	LV2_Atom* msg = (LV2_Atom*) lv2_atom_forge_object(&instance->forge, &instance->frame, 0, instance->c_uris.prop_customMessage);
 
 	lv2_atom_forge_key(&instance->forge, instance->c_uris.length);
@@ -698,16 +693,6 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 
 	lv2_atom_forge_pop(&instance->forge, &instance->frame);
 
-
-/*
-	LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&instance->forge, &instance->frame, 0, instance->c_uris.ui_On);
-	assert(msg);
-
-	lv2_atom_forge_key(&instance->forge, instance->c_uris.prop_customMessage);
-	lv2_atom_forge_string(&instance->forge, data, bytes);
-*/
-
-	// Send the forged atom to the host
 	instance->write(instance->controller, DATA_MESSAGING_PORT_IN, lv2_atom_total_size(msg), instance->c_uris.atom_eventTransfer, msg);
 
 	return 0;
@@ -797,53 +782,43 @@ static void ui_cleanup(LV2UI_Handle handle) {
 	free(instance);
 }
 
-# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0 || defined(DATA_MESSAGING)
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
-	(void)buffer_size;
-
 	ui_instance *instance = (ui_instance *)handle;
+
+	if (format == 0 && buffer_size == sizeof(float)) {
 #  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
-		size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
-		plugin_ui_set_parameter(instance->ui, param_data[index].index, adjust_param(index, *((float *)buffer)));
-	}
+		if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
+			size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
+			plugin_ui_set_parameter(instance->ui, param_data[index].index, adjust_param(index, *((float *)buffer)));
+		}
 #  endif
 #  if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 #   if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	else
+		else
 #   endif
-		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
+			plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 #  endif
-
-	const LV2_Atom* atom = (const LV2_Atom*)buffer;
-
-	/* Check type of data received
-	*  - format == 0: Control port event (float)
-	*  - format > 0:  Message (atom)
-	*/
-
-	if (format == instance->c_uris.atom_eventTransfer && lv2_atom_forge_is_object_type(&instance->forge, atom->type)) {
-		const LV2_Atom_Object* obj = (const LV2_Atom_Object*)atom;
-		if (obj->body.otype == instance->c_uris.prop_customMessage) {
-			printf("received something from audio INCREDIBLE \n");
-			const LV2_Atom* len_a = NULL;
-			const LV2_Atom* data_a = NULL;
-			const int n_props = lv2_atom_object_get(obj, instance->c_uris.length, &len_a, instance->c_uris.prop_customMessage, &data_a, NULL);
-			const int32_t len = ((const LV2_Atom_Int*) len_a)->body;
-			printf("and n_props is %d \n", n_props);
-			printf("and len is %d \n", len);
-			printf("and data_a is %p \n", (void*)data_a);
-			//printf("and data_a type: %u, size: %u \n", data_a->type, data_a->size);
-			const uint8_t* data = (uint8_t*) data_a;
-			printf("data... \n");
-			for (int x = 0; x < len; x++) {
-				printf("%u ", data[x]);
-			}
-			printf("\n");
-		}
 	}
 
+	else if (format == instance->c_uris.atom_eventTransfer) {
 
+		const LV2_Atom* atom = (const LV2_Atom*)buffer;
+
+		if (lv2_atom_forge_is_object_type(&instance->forge, atom->type)) {
+			const LV2_Atom_Object* obj = (const LV2_Atom_Object*)atom;
+			if (obj->body.otype == instance->c_uris.prop_customMessage) {
+				const LV2_Atom* len_a = NULL;
+				const LV2_Atom* data_a = NULL;
+				lv2_atom_object_get(obj, 
+					instance->c_uris.length, &len_a,
+					instance->c_uris.prop_customMessage, &data_a, NULL);
+				const int32_t len = ((const LV2_Atom_Int*) len_a)->body;
+				const uint8_t* data = (uint8_t*) data_a;
+				plugin_ui_receive_from_dsp(instance->ui, data, len);
+			}
+		}
+	}
 }
 # endif
 
@@ -864,7 +839,7 @@ static const LV2UI_Descriptor ui_descriptor = {
 	/* .URI			= */ DATA_LV2_UI_URI,
 	/* .instantiate		= */ ui_instantiate,
 	/* .cleanup		= */ ui_cleanup,
-# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0 || defined(DATA_MESSAGING)
 	/* .port_event		= */ ui_port_event,
 # else
 	/* .port_event		= */ NULL,
