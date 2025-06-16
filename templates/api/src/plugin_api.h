@@ -27,7 +27,9 @@ typedef struct {
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
 {{?it.product.messaging}}
+#ifdef TEMPLATE_SUPPORTS_MESSAGING
 	char (*send_to_ui)(void *handle, const void *data, size_t bytes); 
+#endif
 {{?}}
 } plugin_callbacks;
 
@@ -54,7 +56,9 @@ typedef struct {
 	void (*set_parameter_end)(void *handle, size_t index, float value);
 {{?}}
 {{?it.product.messaging}}
+#ifdef TEMPLATE_SUPPORTS_MESSAGING
 	char (*send_to_dsp)(void *handle, const void *data, size_t bytes); 
+#endif
 {{?}}
 } plugin_ui_callbacks;
 
