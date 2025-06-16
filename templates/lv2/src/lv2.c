@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Tibia.  If not, see <http://www.gnu.org/licenses/>.
  *
- * File author: Stefano D'Angelo
+ * File authors: Stefano D'Angelo, Paolo Marrone
  */
 
 #include <stdlib.h>
@@ -98,21 +98,18 @@ static float adjust_param(size_t index, float value) {
 
 #ifdef DATA_MESSAGING
 typedef struct {
-	LV2_URID prop_customMessage;
-	LV2_URID atom_String;
-	LV2_URID atom_eventTransfer;
-	LV2_URID ui_On;
-	LV2_URID length;
-} communication_URIs;
+	LV2_URID eventTransfer;
+	LV2_URID message;
+	LV2_URID message_length;
+	LV2_URID message_body;
+} messaing_URIs;
 
-static inline void map_comm_uris(LV2_URID_Map* map, communication_URIs* uris) {
-	uris->prop_customMessage = map->map(map->handle, "http://example.org#message");
-	uris->atom_String        = map->map(map->handle, LV2_ATOM__String);
-	uris->atom_eventTransfer = map->map(map->handle, LV2_ATOM__eventTransfer);
-	uris->ui_On              = map->map(map->handle, DATA_LV2_URI "#UIOn");
-	uris->length             = map->map(map->handle, LV2_ATOM__Int);
+static inline void messaing_URIs_map(LV2_URID_Map* map, messaing_URIs* uris) {
+	uris->eventTransfer  = map->map(map->handle, LV2_ATOM__eventTransfer);
+	uris->message        = map->map(map->handle, DATA_LV2_URI"#message");
+	uris->message_length = map->map(map->handle, LV2_ATOM__Int);
+	uris->message_body   = map->map(map->handle, DATA_LV2_URI"#message_body");
 }
-
 #endif
 
 typedef struct {
@@ -156,14 +153,14 @@ typedef struct {
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
 #endif
-
 #ifdef DATA_MESSAGING
-	LV2_Atom_Forge       forge;
-	LV2_Atom_Forge_Frame frame;
-
-	communication_URIs c_uris;
-	const LV2_Atom_Sequence* control;
-	LV2_Atom_Sequence*       notify;
+	struct {
+		messaing_URIs            URIs;
+		const LV2_Atom_Sequence *control;
+		LV2_Atom_Sequence       *notify;
+		LV2_Atom_Forge           forge;
+		LV2_Atom_Forge_Frame     frame;
+	} messaging;
 #endif
 } plugin_instance;
 
@@ -209,22 +206,22 @@ static char send_to_ui (void *handle, const void *data, size_t bytes) {
 		return 1;
 	}
 
-	const uint32_t space = i->notify->atom.size;
-	lv2_atom_forge_set_buffer(&i->forge, (uint8_t*)i->notify, space);
-	lv2_atom_forge_sequence_head(&i->forge, &i->frame, 0);
+	const uint32_t space = i->messaging.notify->atom.size;
+	lv2_atom_forge_set_buffer(&i->messaging.forge, (uint8_t*)i->messaging.notify, space);
+	if (!lv2_atom_forge_sequence_head(&i->messaging.forge, &i->messaging.frame, 0))	return 1;
 
 	LV2_Atom_Forge_Frame frame;
 
-	lv2_atom_forge_frame_time(&i->forge, 0);
-	lv2_atom_forge_object(&i->forge, &frame, 0, i->c_uris.prop_customMessage);
+	if (!lv2_atom_forge_frame_time(&i->messaging.forge, 0)) return 1;
+	if (!lv2_atom_forge_object(&i->messaging.forge, &frame, 0, i->messaging.URIs.message)) return 1;
 
-	lv2_atom_forge_key(&i->forge, i->c_uris.length);
-	lv2_atom_forge_int(&i->forge, (int32_t)bytes);
+	if (!lv2_atom_forge_key(&i->messaging.forge, i->messaging.URIs.message_length)) return 1;
+	if (!lv2_atom_forge_int(&i->messaging.forge, (int32_t)bytes)) return 1;
 
-	lv2_atom_forge_key(&i->forge, i->c_uris.prop_customMessage);
-	lv2_atom_forge_write(&i->forge, data, bytes);
+	if (!lv2_atom_forge_key(&i->messaging.forge, i->messaging.URIs.message_body)) return 1;
+	if (!lv2_atom_forge_write(&i->messaging.forge, data, bytes)) return 1;
 
-	lv2_atom_forge_pop(&i->forge, &frame);
+	lv2_atom_forge_pop(&i->messaging.forge, &frame);
 
 	return 0;
 }
@@ -312,8 +309,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		instance->c[i] = NULL;
 #endif
 #ifdef DATA_MESSAGING
-	lv2_atom_forge_init(&instance->forge, instance->map);
-	map_comm_uris(instance->map, &instance->c_uris);
+	lv2_atom_forge_init(&instance->messaging.forge, instance->map);
+	messaing_URIs_map(instance->map, &instance->messaging.URIs);
 #endif
 
 	return instance;
@@ -364,11 +361,11 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 #ifdef DATA_MESSAGING
 	if (port < DATA_MESSAGING_PORTS_N) {
 		if (port == 0) {
-			i->control = (const LV2_Atom_Sequence*)data_location;
+			i->messaging.control = (const LV2_Atom_Sequence*)data_location;
 			return;
 		}
 		if (port == 1) {
-			i->notify = (LV2_Atom_Sequence*)data_location;
+			i->messaging.notify = (LV2_Atom_Sequence*)data_location;
 			return;
 		}
 	}
@@ -403,26 +400,29 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
 #ifdef DATA_MESSAGING
-	LV2_ATOM_SEQUENCE_FOREACH(i->control, ev) {
-		if (!lv2_atom_forge_is_object_type(&i->forge, ev->body.type)) 
+	LV2_ATOM_SEQUENCE_FOREACH(i->messaging.control, ev) {
+		if (!lv2_atom_forge_is_object_type(&i->messaging.forge, ev->body.type)) 
 			continue;
 
 		const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&ev->body;
 
-		if (obj->body.otype != i->c_uris.prop_customMessage)
+		if (obj->body.otype != i->messaging.URIs.message)
 			continue;
 
 		const LV2_Atom* msg_length = NULL;
 		const LV2_Atom* msg_data   = NULL;
 
 		lv2_atom_object_get(obj, 
-			i->c_uris.length,
+			i->messaging.URIs.message_length,
 			&msg_length,
-			i->c_uris.prop_customMessage,
+			i->messaging.URIs.message_body,
 			&msg_data, 0);
 
-		size_t  *length = (size_t*)  LV2_ATOM_BODY(msg_length);
-		uint8_t *data   = (uint8_t*) msg_data; // LV2_ATOM_BODY(msg_data);
+		if (!msg_length || !msg_data)
+			continue;
+
+		size_t *length = (size_t*) LV2_ATOM_BODY(msg_length);
+		void   *data   = (void*) msg_data; // LV2_ATOM_BODY(msg_data);
 
 		plugin_receive_from_ui(&i->p, data, *length);
 	}
@@ -631,11 +631,13 @@ typedef struct {
 	LV2UI_Touch		touch;
 # endif
 # ifdef DATA_MESSAGING
-	LV2_URID_Map*        map;
-	LV2_Atom_Forge       forge;
-	LV2_Atom_Forge_Frame frame;
-	communication_URIs   c_uris;
-	uint8_t              obj_buf[DATA_MESSAGING_MAX];
+	struct {
+		messaing_URIs         URIs;
+		LV2_URID_Map         *map;
+		LV2_Atom_Forge        forge;
+		LV2_Atom_Forge_Frame  frame;
+		uint8_t               obj_buf[DATA_MESSAGING_MAX];
+	} messaging;
 # endif
 } ui_instance;
 
@@ -681,19 +683,20 @@ static char send_to_dsp (void *handle, const void *data, size_t bytes) {
 		return 1;
 	}
 
-	lv2_atom_forge_set_buffer(&instance->forge, instance->obj_buf, sizeof(instance->obj_buf));
+	lv2_atom_forge_set_buffer(&instance->messaging.forge, instance->messaging.obj_buf, sizeof(instance->messaging.obj_buf));
 
-	LV2_Atom* msg = (LV2_Atom*) lv2_atom_forge_object(&instance->forge, &instance->frame, 0, instance->c_uris.prop_customMessage);
+	LV2_Atom* msg = (LV2_Atom*) lv2_atom_forge_object(&instance->messaging.forge, &instance->messaging.frame, 0, instance->messaging.URIs.message);
+	if (!msg) return 1;
 
-	lv2_atom_forge_key(&instance->forge, instance->c_uris.length);
-	lv2_atom_forge_int(&instance->forge, (int32_t)bytes);
+	if (!lv2_atom_forge_key(&instance->messaging.forge, instance->messaging.URIs.message_length)) return 1;
+	if (!lv2_atom_forge_int(&instance->messaging.forge, (int32_t)bytes)) return 1;
 
-	lv2_atom_forge_key(&instance->forge, instance->c_uris.prop_customMessage);
-	lv2_atom_forge_write(&instance->forge, data, bytes);
+	if (!lv2_atom_forge_key(&instance->messaging.forge, instance->messaging.URIs.message_body)) return 1;
+	if (!lv2_atom_forge_write(&instance->messaging.forge, data, bytes)) return 1;
 
-	lv2_atom_forge_pop(&instance->forge, &instance->frame);
+	lv2_atom_forge_pop(&instance->messaging.forge, &instance->messaging.frame);
 
-	instance->write(instance->controller, DATA_MESSAGING_PORT_IN, lv2_atom_total_size(msg), instance->c_uris.atom_eventTransfer, msg);
+	instance->write(instance->controller, DATA_MESSAGING_PORT_IN, lv2_atom_total_size(msg), instance->messaging.URIs.eventTransfer, msg);
 
 	return 0;
 }
@@ -756,13 +759,15 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 
 	*widget = instance->ui->widget;
 
+# ifdef DATA_MESSAGING
 	for (int i = 0; features[i]; ++i) {
 		if (!strcmp(features[i]->URI, LV2_URID_URI "#map")) {
-			instance->map = (LV2_URID_Map*)features[i]->data;
+			instance->messaging.map = (LV2_URID_Map*)features[i]->data;
 		}
 	}
-	lv2_atom_forge_init(&instance->forge, instance->map);
-	map_comm_uris(instance->map, &instance->c_uris);
+	lv2_atom_forge_init(&instance->messaging.forge, instance->messaging.map);
+	messaing_URIs_map(instance->messaging.map, &instance->messaging.URIs);
+# endif
 
 	return instance;
 
@@ -800,25 +805,28 @@ static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buf
 			plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 #  endif
 	}
-
-	else if (format == instance->c_uris.atom_eventTransfer) {
+#  ifdef DATA_MESSAGING
+	else if (format == instance->messaging.URIs.eventTransfer) {
 
 		const LV2_Atom* atom = (const LV2_Atom*)buffer;
 
-		if (lv2_atom_forge_is_object_type(&instance->forge, atom->type)) {
+		if (lv2_atom_forge_is_object_type(&instance->messaging.forge, atom->type)) {
 			const LV2_Atom_Object* obj = (const LV2_Atom_Object*)atom;
-			if (obj->body.otype == instance->c_uris.prop_customMessage) {
+			if (obj->body.otype == instance->messaging.URIs.message) {
 				const LV2_Atom* len_a = NULL;
 				const LV2_Atom* data_a = NULL;
 				lv2_atom_object_get(obj, 
-					instance->c_uris.length, &len_a,
-					instance->c_uris.prop_customMessage, &data_a, NULL);
+					instance->messaging.URIs.message_length, &len_a,
+					instance->messaging.URIs.message_body,   &data_a, NULL);
+				if (!len_a || !data_a)
+					return;
 				const int32_t len = ((const LV2_Atom_Int*) len_a)->body;
 				const uint8_t* data = (uint8_t*) data_a;
 				plugin_ui_receive_from_dsp(instance->ui, data, len);
 			}
 		}
 	}
+#  endif
 }
 # endif
 
