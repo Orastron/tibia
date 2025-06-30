@@ -2590,6 +2590,7 @@ static Steinberg_tresult controllerIConnectionPointDisconnect(void* thisInterfac
 	return Steinberg_kResultFalse;
 }
 
+// This can get called after plugView creation but before attachment, so that ui is not ready
 static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
 
@@ -2609,9 +2610,9 @@ static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, s
 		return Steinberg_kResultFalse;
 
 	for (size_t i = 0; i < c->viewsCount; i++) {
-		if (!c->views[i])
-			continue;
 		plugView *v = c->views[i];
+		if (!v || !v->ui)
+			continue;
 		plugin_ui_receive_from_dsp(v->ui, data, size);
 		break; // Assuming there is only 1 view
 	}
