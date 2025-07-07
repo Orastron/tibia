@@ -73,4 +73,6 @@ module.exports = function (data, api, outputCommon, outputData) {
 	api.generateFileFromTemplateFile(`data${sep}Info.plist`, `data${sep}Info.plist`, data);
 	api.copyFile(`src${sep}vst3.c`, `src${sep}vst3.c`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
+	api.copyFile(`src${sep}tinycthread.h`, `src${sep}tinycthread.h`);
+	api.copyFile(`src${sep}tinycthread.c`, `src${sep}tinycthread.c`);
 };

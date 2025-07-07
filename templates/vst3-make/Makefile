@@ -97,7 +97,7 @@ endif
 
 DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
 
-C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
+C_SRCS := $(COMMON_DIR)/src/vst3.c $(COMMON_DIR)/src/tinycthread.c $(C_SRCS_EXTRA)
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 
 M_SRCS := $(M_SRCS_EXTRA)

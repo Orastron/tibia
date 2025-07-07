@@ -67,7 +67,7 @@
 #endif
 
 #ifdef DATA_MESSAGING
-# include <threads.h>
+# include <tinycthread.h>
 #endif
 
 // COM in C doc:
