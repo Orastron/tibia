@@ -43,7 +43,7 @@ typedef struct plugin {
 #if TEMPLATE_SUPPORTS_MESSAGING
 #include <stdio.h>
 static void plugin_receive_from_ui (plugin *instance, const void *data, size_t bytes) {
-	printf("plugin_receive_from_ui %ld bytes at %p: ", bytes, data);
+	printf("plugin_receive_from_ui %lld bytes at %p: ", bytes, data);
 	for (size_t i = 0; i < bytes; i++) {
 		printf("%c", ((uint8_t*) data)[i]);
 	}

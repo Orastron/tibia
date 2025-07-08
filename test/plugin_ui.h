@@ -41,7 +41,7 @@ typedef struct {
 #ifdef TEMPLATE_SUPPORTS_MESSAGING
 static void plugin_ui_receive_from_dsp (plugin_ui *instance, const void *data, size_t bytes) {
 	(void) instance;
-	printf("plugin_ui_receive_from_dsp %ld bytes at %p: ", bytes, data);
+	printf("plugin_ui_receive_from_dsp %lld bytes at %p: ", bytes, data);
 	for (size_t i = 0; i < bytes; i++) {
 		printf("%c", ((uint8_t*) data)[i]);
 	}

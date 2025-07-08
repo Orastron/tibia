@@ -74,6 +74,7 @@
 //   https://github.com/rubberduck-vba/Rubberduck/wiki/COM-in-plain-C
 //   https://devblogs.microsoft.com/oldnewthing/20040205-00/?p=40733
 
+//#define TIBIA_TRACE
 #ifdef TIBIA_TRACE
 # define TRACE(...)	printf(__VA_ARGS__); fflush(stdout);
 #else
@@ -391,8 +392,9 @@ static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg
 #endif
 	else {
 		TRACE(" not supported\n");
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++) {
 			TRACE(" %x", iid[i]);
+		}
 		TRACE("\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
@@ -1542,8 +1544,9 @@ static Steinberg_tresult plugViewQueryInterface(void *thisInterface, const Stein
 		offset = offsetof(plugView, vtblIPlugView);
 	else {
 		TRACE(" not supported\n");
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++) {
 			TRACE(" %x", iid[i]);
+		}
 		TRACE("\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
@@ -2024,8 +2027,9 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 #endif
 	else {
 		TRACE(" not supported\n");
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++) {
 			TRACE(" %x", iid[i]);
+		}
 		TRACE("\n");
 		*obj = NULL;
 		return Steinberg_kNoInterface;
@@ -2432,7 +2436,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	size_t i;
-	for (i = 0; i < c->viewsCount; c++) {
+	for (i = 0; i < c->viewsCount; i++) {
 		if (c->views[i] != NULL) {
 			TRACE("controllerCreateView: trying to create another view - not supported \n");
 			return NULL;
@@ -2443,7 +2447,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	if (view == NULL)
 		return NULL;
 
-	for (i = 0; i < c->viewsCount; c++)
+	for (i = 0; i < c->viewsCount; i++)
 		if (c->views[i] == NULL)
 			break;
 	if (i == c->viewsCount) {
