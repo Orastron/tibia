@@ -2177,7 +2177,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 
 	controller *c = (controller *)((char *)thisInterface - offsetof(controller, vtblIEditController));
 	size_t i;
-	for (i = 0; i < c->viewsCount; c++)
+	for (i = 0; i < c->viewsCount; i++)
 		if (c->views[i] == NULL)
 			break;
 	if (i == c->viewsCount) {
