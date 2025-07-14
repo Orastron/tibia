@@ -146,7 +146,6 @@
 {{?}}
 	lv2:requiredFeature ui:idleInterface ;
 	lv2:extensionData ui:idleInterface ;
-{{?}}
 {{?it.product.messaging}}
 	ui:portNotification [
 		ui:ui {{=it.tibia.lv2.ttlURI(it.lv2.uri)}} ;
@@ -155,3 +154,4 @@
 	] 
 {{?}}
 	.
+{{?}}
