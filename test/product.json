@@ -2,7 +2,9 @@
 	"product": {
 		"name":	"Tibia test product",
 		"version": "1.0.0",
-		"buildVersion": "0",
+		"buildVersion": 0,
+		"description": "A toy plugin to test Tibia",
+		"copyright": "Copyright © 2021-2025 Orastron Srl unipersonale", 
 		"bundleName": "tibia-test",
 		"buses": [
 			{
@@ -136,7 +138,8 @@
 		],
 		"ui": {
 			"userResizable": true,
-			"selfResizable": false
+			"selfResizable": false,
+			"highResolution": true
 		},
 		"state": {
 			"dspCustom": true
