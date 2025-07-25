@@ -592,7 +592,7 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	(void)descriptor;
 	(void)plugin_uri;
 
-	// make C++ compilers happy;
+	// make C++ compilers happy
 	char has_parent;
 	void *parent;
 	plugin_ui_callbacks cbs;
