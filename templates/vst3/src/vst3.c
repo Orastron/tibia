@@ -1170,6 +1170,7 @@ typedef struct controller {
 	plugView **					views;
 	size_t						viewsCount;
 #endif
+	char                        hostName[128];
 } controller;
 
 static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
@@ -1474,6 +1475,11 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 }
 # endif
 
+const char* get_hostinfo(void *handle) {
+	plugView *v = (plugView *)handle;
+	return v->ctrl->hostName;
+}
+
 static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Steinberg_FIDString type) {
 	// GUI needs to be created here, see https://forums.steinberg.net/t/vst-and-hidpi/201916/3
 	TRACE("plugView attached %p\n", thisInterface);
@@ -1490,6 +1496,7 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
 		/* .get_datadir		= */ getDatadirCb,
+		/* .get_hostinfo = */ get_hostinfo,
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
 		/* .set_parameter	= */ plugViewSetParameterCb,
@@ -1820,6 +1827,19 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
+
+	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
+	Steinberg_Vst_String128 s;
+	app->lpVtbl->getName(app, s);
+	c->hostName[0] = '\0';
+	// Dumb casting from char16 to char8
+	for (int i = 0; i < 128; i++) {
+		c->hostName[i] = s[i];
+		if (!s[i])
+			break;
+	}
+	TRACE("controller initialize, hostName = %s\n", c->hostName);
+
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
 		c->parametersIn[i] = parameterInData[i].def;
@@ -2535,6 +2555,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 	return Steinberg_kResultOk;
 }
 
+// You need this only if you need the hostname (or create host related objects) at factory stage
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
 	(void)thisInterface;
 	(void)context;
@@ -2542,6 +2563,12 @@ static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Stein
 	TRACE("factory set host context %p %p\n", thisInterface, (void*) context);
 
 	return Steinberg_kNotImplemented;
+
+/*
+	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
+	Steinberg_Vst_String128 s;
+	app->lpVtbl->getName(app, s);
+*/
 }
 
 static Steinberg_IPluginFactory3Vtbl factoryVtbl = {
