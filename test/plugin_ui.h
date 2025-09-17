@@ -178,6 +178,8 @@ static void on_window_resize (window *w, int32_t width, int32_t height) {
 }
 
 static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
+	printf("plugin_ui_create; hostinfo: %s\n", cbs->get_hostinfo(cbs->handle));
+
 	plugin_ui *instance = (plugin_ui *) malloc(sizeof(plugin_ui));
 	if (instance == NULL)
 		return NULL;
