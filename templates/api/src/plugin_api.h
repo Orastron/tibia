@@ -26,6 +26,7 @@ typedef struct {
 	const char *	format;
 	const char * (*get_bindir)(void *handle);
 	const char * (*get_datadir)(void *handle);
+	const char * (*get_hostinfo)(void *handle);
 } plugin_callbacks;
 
 {{?it.product.state && it.product.state.dspCustom}}
