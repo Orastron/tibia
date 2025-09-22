@@ -110,7 +110,7 @@ static float adjust_param(size_t index, float value) {
 static void save_hostname(char dest[128]) {
 	dest[0]   = 0;
 #if defined(__linux__)
-	strncpy(dest, program_invocation_name, 128);
+	strncpy(dest, program_invocation_name, 127);
 #elif defined(__APPLE__)
 	pid_t pid = getpid();
 	if (proc_name(pid, dest, 128) <= 0) {
