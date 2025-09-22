@@ -551,6 +551,9 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 #elif defined(__APPLE__)
 # include <libproc.h>
 # include <unistd.h>
+#else
+# include <windows.h>
+# include <psapi.h>
 #endif
 
 typedef struct {
@@ -581,6 +584,16 @@ static const char * ui_get_hostinfo(void *handle) {
 	if (proc_name(pid, instance->processname, 128) <= 0) {
 		return NULL;
 	}
+	instance->processname[127] = 0;
+	return instance->processname;
+#else
+	ui_instance *instance = (ui_instance *)handle;
+	HANDLE process_handle = GetCurrentProcess();
+	if (GetModuleBaseNameA(process_handle, NULL, instance->processname, 128) == 0) {
+		CloseHandle(process_handle);
+		return NULL;
+	}
+	CloseHandle(process_handle);
 	instance->processname[127] = 0;
 	return instance->processname;
 #endif
