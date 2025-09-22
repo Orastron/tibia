@@ -69,11 +69,6 @@
 # else
 #  include <sched.h>
 #  define yield sched_yield
-#  ifdef __linux__
-#   define _GNU_SOURCE
-#   include <errno.h>
-    extern char *program_invocation_name;
-#  endif
 # endif
 #endif
 
@@ -548,6 +543,16 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 }
 
 #ifdef DATA_UI
+
+#if defined(__linux__)
+# define _GNU_SOURCE
+# include <errno.h>
+  extern char *program_invocation_name;
+#elif defined(__APPLE__)
+# include <libproc.h>
+# include <unistd.h>
+#endif
+
 typedef struct {
 	plugin_ui *		ui;
 	char *			bundle_path;
@@ -557,6 +562,7 @@ typedef struct {
 	char			has_touch;
 	LV2UI_Touch		touch;
 # endif
+	char processname[128];
 } ui_instance;
 
 static const char * ui_get_bundle_path_cb(void *handle) {
@@ -565,9 +571,18 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 }
 
 static const char * ui_get_hostinfo(void *handle) {
+#if defined(__linux__)
 	(void) handle;
-#ifdef __linux__
 	return program_invocation_name;
+#elif defined(__APPLE__)
+	ui_instance *instance = (ui_instance *)handle;
+	pid_t pid = getpid();
+	instance->processname[0]   = 0;
+	if (proc_name(pid, instance->processname, 128) <= 0) {
+		return NULL;
+	}
+	instance->processname[127] = 0;
+	return instance->processname;
 #endif
 }
 
