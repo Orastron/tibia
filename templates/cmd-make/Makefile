@@ -18,6 +18,8 @@
 # File author: Stefano D'Angelo
 #
 
+SHELL := bash -o pipefail
+
 TEMPLATE := cmd
 
 include vars.mk

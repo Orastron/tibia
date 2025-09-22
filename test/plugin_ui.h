@@ -25,8 +25,8 @@
 typedef struct {
 	void   *widget;
 
-	vinci  *vinci;
-	window *window;
+	vinci  *ui;
+	window *w;
 	int     param_down;
 
 	float gain;
@@ -70,16 +70,16 @@ static void draw_rect(window *w, uint32_t x, uint32_t y, uint32_t width, uint32_
 }
 
 static void draw_slider(plugin_ui *pui, int id, float value) {
-	const int w = window_get_width(pui->window);
-	const int h = window_get_height(pui->window);
-	draw_rect(pui->window, 0.1 * w, 0.15 * (id + 1) * h, 0.8 * w * value, 0.1 * h, 0x6789ab);
-	draw_rect(pui->window, 0.1 * w + 0.8 * w * value, 0.15 * (id + 1) * h, 0.8 * w * (1.f - value), 0.1 * h, 0x1223bc);
+	const int w = window_get_width(pui->w);
+	const int h = window_get_height(pui->w);
+	draw_rect(pui->w, 0.1 * w, 0.15 * (id + 1) * h, 0.8 * w * value, 0.1 * h, 0x6789ab);
+	draw_rect(pui->w, 0.1 * w + 0.8 * w * value, 0.15 * (id + 1) * h, 0.8 * w * (1.f - value), 0.1 * h, 0x1223bc);
 }
 
 static void draw_button(plugin_ui *pui, int id, char value) {
-	const int w = window_get_width(pui->window);
-	const int h = window_get_height(pui->window);
-	draw_rect(pui->window, 0.4 * w, 0.15 * (id + 1) * h, 0.2 * w, 0.1 * h, value ? 0x6789ab : 0x1223bc);
+	const int w = window_get_width(pui->w);
+	const int h = window_get_height(pui->w);
+	draw_rect(pui->w, 0.4 * w, 0.15 * (id + 1) * h, 0.2 * w, 0.1 * h, value ? 0x6789ab : 0x1223bc);
 }
 
 static void on_close(window *w) {
@@ -207,11 +207,11 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	wcbs.on_window_resize = on_window_resize;
 
 	instance->param_down = -1;
-	instance->vinci  = vinci_new();
-	instance->window = window_new(instance->vinci, has_parent ? parent : NULL, WIDTH, HEIGHT, &wcbs);
-	instance->widget = window_get_handle(instance->window);
-	window_set_data(instance->window, (void*) instance);
-	window_show(instance->window);
+	instance->ui  = vinci_new();
+	instance->w = window_new(instance->ui, has_parent ? parent : NULL, WIDTH, HEIGHT, &wcbs);
+	instance->widget = window_get_handle(instance->w);
+	window_set_data(instance->w, (void*) instance);
+	window_show(instance->w);
 
 	// just some valid values to allow drawing
 	instance->gain = 0.f;
@@ -220,20 +220,20 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	instance->bypass = 0;
 	instance->y_z1 = 0.f;
 
-	on_window_resize(instance->window, window_get_width(instance->window), window_get_height(instance->window));
+	on_window_resize(instance->w, window_get_width(instance->w), window_get_height(instance->w));
 
 	instance->cbs = *cbs;
 	return instance;
 }
 
 static void plugin_ui_free(plugin_ui *instance) {
-	window_free(instance->window);
-	vinci_destroy(instance->vinci);
+	window_free(instance->w);
+	vinci_destroy(instance->ui);
 	free(instance);
 }
 
 static void plugin_ui_idle(plugin_ui *instance) {
-	vinci_idle(instance->vinci);
+	vinci_idle(instance->ui);
 }
 
 static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float value) {

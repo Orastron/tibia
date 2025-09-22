@@ -18,6 +18,8 @@
 # File author: Stefano D'Angelo
 #
 
+SHELL := bash -o pipefail
+
 TEMPLATE := lv2
 
 include vars.mk
@@ -69,7 +71,7 @@ LDFLAGS :=
 LDFLAGS_ALL := -shared $(shell pkg-config --libs lv2) $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64

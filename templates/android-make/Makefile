@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023, 2024 Orastron Srl unipersonale
+# Copyright (C) 2023-2025 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 #
 # File author: Stefano D'Angelo
 #
+
+SHELL := bash -o pipefail
 
 TEMPLATE := android
 

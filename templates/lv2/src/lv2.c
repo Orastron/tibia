@@ -62,7 +62,11 @@
 #endif
 
 #if (DATA_PRODUCT_CONTROL_INPUTS_N > 0) && defined(DATA_STATE_DSP_CUSTOM)
-# include <stdatomic.h>
+# ifdef __cplusplus
+#  include <atomic>
+# else
+#  include <stdatomic.h>
+# endif
 # if defined(_WIN32) || defined(__CYGWIN__)
 #  include <processthreadsapi.h>
 #  define yield SwitchToThread
@@ -134,7 +138,11 @@ typedef struct {
 	float				params[DATA_PRODUCT_CONTROL_INPUTS_N];
 # ifdef DATA_STATE_DSP_CUSTOM
 	float				params_sync[DATA_PRODUCT_CONTROL_INPUTS_N];
+#  ifdef __cplusplus
+	std::atomic_flag		sync_lock_flag;
+#  else
 	atomic_flag			sync_lock_flag;
+#  endif
 	char				synced;
 	char				loaded;
 # endif
@@ -172,14 +180,22 @@ static const char * get_bundle_path_cb(void *handle) {
 #ifdef DATA_STATE_DSP_CUSTOM
 static void state_lock_cb(void *handle) {
 	plugin_instance * i = (plugin_instance *)handle;
+# ifdef __cplusplus
+	while (i->sync_lock_flag.test_and_set())
+# else
 	while (atomic_flag_test_and_set(&i->sync_lock_flag))
+# endif
 		yield();
 	i->synced = 0;
 }
 
 static void state_unlock_cb(void *handle) {
 	plugin_instance * i = (plugin_instance *)handle;
+# ifdef __cplusplus
+	i->sync_lock_flag.clear();
+# else
 	atomic_flag_clear(&i->sync_lock_flag);
+# endif
 }
 
 static int state_write_cb(void *handle, const char *data, size_t length) {
@@ -231,7 +247,12 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	(void)descriptor;
 	(void)bundle_path;
 
-	plugin_instance *instance = malloc(sizeof(plugin_instance));
+	// make C++ compilers happy
+	const char * missing;
+	plugin_callbacks cbs;
+	size_t req;
+
+	plugin_instance *instance = (plugin_instance *)malloc(sizeof(plugin_instance));
 	if (instance == NULL)
 		goto err_instance;
 
@@ -240,7 +261,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		goto err_bundle_path;
 
 	// from https://lv2plug.in/book
-	const char * missing = lv2_features_query(features,
+	missing = lv2_features_query(features,
 		LV2_LOG__log,	&instance->logger.log,	false,
 		LV2_URID__map,	&instance->map,		true,
 		NULL);
@@ -277,7 +298,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 
 	instance->sample_rate = (float)sample_rate;
 	plugin_set_sample_rate(&instance->p, instance->sample_rate);
-	size_t req = plugin_mem_req(&instance->p);
+	req = plugin_mem_req(&instance->p);
 	if (req != 0) {
 		instance->mem = malloc(req);
 		if (instance->mem == NULL) {
@@ -332,28 +353,28 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	if (port < DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N) {
-		i->x[port] = data_location;
+		i->x[port] = (const float *)data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N;
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
 	if (port < DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N) {
-		i->y[port] = data_location;
+		i->y[port] = (float *)data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N;
 #endif
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0
 	if (port < DATA_PRODUCT_MIDI_INPUTS_N) {
-		i->x_midi[port] = data_location;
+		i->x_midi[port] = (const LV2_Atom_Sequence *)data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_MIDI_INPUTS_N;
 #endif
 #if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	if (port < DATA_PRODUCT_MIDI_OUTPUTS_N) {
-		i->y_midi[port] = data_location;
+		i->y_midi[port] = (LV2_Atom_Sequence *)data_location;
 		return;
 	}
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
@@ -372,7 +393,7 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 	port -= DATA_MESSAGING_PORTS_N;
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
-	i->c[port] = data_location;
+	i->c[port] = (float *)data_location;
 #endif
 }
 
@@ -386,9 +407,13 @@ static void activate(LV2_Handle instance) {
 # ifdef DATA_STATE_DSP_CUSTOM
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_INPUTS_N; j++)
 		i->params_sync[j] = i->params[j];
+#  ifdef __cplusplus
+	i->sync_lock_flag.clear();
+#  else
 	// why is this not correct?
 	// i->sync_lock_flag = ATOMIC_FLAG_INIT;
 	atomic_flag_clear(&i->sync_lock_flag);
+#  endif
 	i->synced = 1;
 	i->loaded = 0;
 # endif
@@ -442,7 +467,11 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 # ifdef DATA_STATE_DSP_CUSTOM
+#  ifdef __cplusplus
+	_Bool locked = !i->sync_lock_flag.test_and_set();
+#  else
 	_Bool locked = !atomic_flag_test_and_set(&i->sync_lock_flag);
+#  endif
 	if (locked) {
 		if (!i->synced) {
 			if (i->loaded) {
@@ -482,7 +511,11 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 # ifdef DATA_STATE_DSP_CUSTOM
 	if (locked)
+#  ifdef __cplusplus
+		i->sync_lock_flag.clear();
+#  else
 		atomic_flag_clear(&i->sync_lock_flag);
+#  endif
 # endif
 #endif
 
@@ -576,7 +609,7 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 	}
 	size_t length;
 	uint32_t type, xflags; // jalv 1.6.6 crashes using NULL as per spec, so we have these two
-	const char * data = retrieve(handle, i->uri_state_data, &length, &type, &xflags);
+	const char * data = (const char *)retrieve(handle, i->uri_state_data, &length, &type, &xflags);
 	if (data == NULL) {
 		lv2_log_error(&i->logger, "Cannot restore state since property <%s> could not be retrieved\n", DATA_LV2_URI "#state_data");
 		return LV2_STATE_ERR_NO_PROPERTY;
@@ -706,7 +739,12 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	(void)descriptor;
 	(void)plugin_uri;
 
-	ui_instance *instance = malloc(sizeof(ui_instance));
+	// make C++ compilers happy
+	char has_parent;
+	void *parent;
+	plugin_ui_callbacks cbs;
+
+	ui_instance *instance = (ui_instance *)malloc(sizeof(ui_instance));
 	if (instance == NULL)
 		goto err_instance;
 
@@ -714,8 +752,8 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
 
-	char has_parent = 0;
-	void *parent = NULL;
+	has_parent = 0;
+	parent = NULL;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	instance->has_touch = 0;
 # endif
@@ -732,18 +770,17 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 # endif
 	}
 
-	plugin_ui_callbacks cbs = {
-		/* .handle		= */ (void *)instance,
-		/* .format		= */ "lv2",
-		/* .get_bindir		= */ ui_get_bundle_path_cb,
-		/* .get_datadir		= */ ui_get_bundle_path_cb,
+	cbs.handle		= (void *)instance;
+	cbs.format		= "lv2";
+	cbs.get_bindir		= ui_get_bundle_path_cb;
+	cbs.get_datadir		= ui_get_bundle_path_cb;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-		/* .set_parameter_begin	= */ ui_set_parameter_begin_cb,
-		/* .set_parameter	= */ ui_set_parameter_cb,
-		/* .set_parameter_end	= */ ui_set_parameter_end_cb,
+	cbs.set_parameter_begin	= ui_set_parameter_begin_cb;
+	cbs.set_parameter	= ui_set_parameter_cb;
+	cbs.set_parameter_end	= ui_set_parameter_end_cb;
 # endif
 # ifdef DATA_MESSAGING
-		/* .send_to_dsp = */ send_to_dsp
+	cbs.send_to_dsp = send_to_dsp;
 # endif
 	};
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0

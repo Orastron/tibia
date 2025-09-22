@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2024 Orastron Srl unipersonale
+# Copyright (C) 2024, 2025 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 #
 # File author: Stefano D'Angelo
 #
+
+SHELL := bash -o pipefail
 
 TEMPLATE := ios
 
@@ -34,7 +36,7 @@ BUILD_DATA_DIR := build/gen/res
 -include $(MKINC_DIR)/vars-pre.mk
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisiblity=hidden $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
