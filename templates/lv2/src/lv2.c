@@ -69,6 +69,11 @@
 # else
 #  include <sched.h>
 #  define yield sched_yield
+#  ifdef __linux__
+#   define _GNU_SOURCE
+#   include <errno.h>
+    extern char *program_invocation_name;
+#  endif
 # endif
 #endif
 
@@ -559,6 +564,13 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 	return instance->bundle_path;
 }
 
+static const char * ui_get_hostinfo(void *handle) {
+	(void) handle;
+#ifdef __linux__
+	return program_invocation_name;
+#endif
+}
+
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void ui_set_parameter_begin_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
@@ -627,6 +639,7 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	cbs.format		= "lv2";
 	cbs.get_bindir		= ui_get_bundle_path_cb;
 	cbs.get_datadir		= ui_get_bundle_path_cb;
+	cbs.get_hostinfo    = ui_get_hostinfo;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	cbs.set_parameter_begin	= ui_set_parameter_begin_cb;
 	cbs.set_parameter	= ui_set_parameter_cb;
