@@ -166,6 +166,20 @@ static const char * getDatadirCb(void *handle) {
 	return datadir;
 }
 
+static void save_host_name(Steinberg_FUnknown *context, char dest[128]) {
+	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
+	Steinberg_Vst_String128 s;
+	app->lpVtbl->getName(app, s);
+	dest[0] = '\0';
+	// Dumb casting from char16 to char8
+	for (int i = 0; i < 128; i++) {
+		dest[i] = s[i];
+		if (!s[i])
+			break;
+	}
+	TRACE("save_host_name, hostName = %s\n", dest);
+}
+
 static double clamp(double x, double m, double M) {
 	return x < m ? m : (x > M ? M : x);
 }
@@ -308,10 +322,16 @@ typedef struct pluginInstance {
 #endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
+	char                        hostName[128];
 } pluginInstance;
 
 static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
 static Steinberg_Vst_IAudioProcessorVtbl pluginVtblIAudioProcessor;
+
+const char* getHostinfoCb(void *handle) {
+	pluginInstance *p = (pluginInstance *)handle;
+	return p->hostName;
+}
 
 static void pluginStateLockCb(void *handle) {
 	pluginInstance *p = (pluginInstance *)handle;
@@ -414,6 +434,9 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	if (p->context != NULL)
 		return Steinberg_kResultFalse;
 	p->context = context;
+
+	save_host_name(context, p->hostName);
+
 	p->lastSampleRate = 0.f;
 	p->curSampleRate = 0.f;
 	p->nextSampleRate = 0.f;
@@ -422,7 +445,8 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		/* .handle		= */ (void *)p,
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
-		/* .get_datadir		= */ getDatadirCb
+		/* .get_datadir		= */ getDatadirCb,
+		/* .get_hostinfo    = */ getHostinfoCb
 	};
 	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
@@ -1475,7 +1499,7 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 }
 # endif
 
-const char* get_hostinfo(void *handle) {
+const char* UIgetHostinfoCb(void *handle) {
 	plugView *v = (plugView *)handle;
 	return v->ctrl->hostName;
 }
@@ -1496,7 +1520,7 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
 		/* .get_datadir		= */ getDatadirCb,
-		/* .get_hostinfo = */ get_hostinfo,
+		/* .get_hostinfo    = */ UIgetHostinfoCb,
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
 		/* .set_parameter	= */ plugViewSetParameterCb,
@@ -1828,17 +1852,7 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 		return Steinberg_kResultFalse;
 	c->context = context;
 
-	Steinberg_Vst_IHostApplication *app = (Steinberg_Vst_IHostApplication*) context;
-	Steinberg_Vst_String128 s;
-	app->lpVtbl->getName(app, s);
-	c->hostName[0] = '\0';
-	// Dumb casting from char16 to char8
-	for (int i = 0; i < 128; i++) {
-		c->hostName[i] = s[i];
-		if (!s[i])
-			break;
-	}
-	TRACE("controller initialize, hostName = %s\n", c->hostName);
+	save_host_name(context, c->hostName);
 
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
@@ -2556,6 +2570,7 @@ static Steinberg_tresult factoryGetClassInfoUnicode(void* thisInterface, Steinbe
 }
 
 // You need this only if you need the hostname (or create host related objects) at factory stage
+// I tried and this does not get called consistently
 static Steinberg_tresult factorySetHostContext(void* thisInterface, struct Steinberg_FUnknown* context) {
 	(void)thisInterface;
 	(void)context;

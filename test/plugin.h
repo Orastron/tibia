@@ -18,6 +18,7 @@
  * File author: Stefano D'Angelo
  */
 
+#include <stdio.h>
 #include <stdint.h>
 
 typedef struct plugin {
@@ -37,6 +38,7 @@ typedef struct plugin {
 } plugin;
 
 static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
+	printf("plugin_init; hostinfo: %s\n", cbs->get_hostinfo(cbs->handle));
 	(void)instance;
 	(void)cbs;
 }
