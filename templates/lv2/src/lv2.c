@@ -285,15 +285,14 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	}
 #endif
 
-	plugin_callbacks cbs = {
-		/* .handle		= */ (void *)instance,
-		/* .format		= */ "lv2",
-		/* .get_bindir		= */ get_bundle_path_cb,
-		/* .get_datadir		= */ get_bundle_path_cb,
+	cbs.handle = (void *)instance;
+	cbs.format = "lv2";
+	cbs.get_bindir = get_bundle_path_cb;
+	cbs.get_datadir = get_bundle_path_cb;
 #ifdef DATA_MESSAGING
-		/* .send_to_ui = */ send_to_ui
+	cbs.send_to_ui = send_to_ui;
 #endif
-	};
+
 	plugin_init(&instance->p, &cbs);
 
 	instance->sample_rate = (float)sample_rate;
@@ -782,7 +781,7 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 # ifdef DATA_MESSAGING
 	cbs.send_to_dsp = send_to_dsp;
 # endif
-	};
+
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	instance->write = write_function;
 	instance->controller = controller;
