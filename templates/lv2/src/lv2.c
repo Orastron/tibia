@@ -72,6 +72,18 @@
 # endif
 #endif
 
+#if defined(__linux__)
+# define _GNU_SOURCE
+# include <errno.h>
+  extern char *program_invocation_name;
+#elif defined(__APPLE__)
+# include <libproc.h>
+# include <unistd.h>
+#else
+# include <windows.h>
+# include <psapi.h>
+#endif
+
 #define CONTROL_INPUT_INDEX_OFFSET ( \
 		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
 		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
@@ -94,6 +106,26 @@ static float adjust_param(size_t index, float value) {
 	return clampf(value, param_data[index].min, param_data[index].max);
 }
 #endif
+
+static void save_hostname(char dest[128]) {
+	dest[0]   = 0;
+#if defined(__linux__)
+	strncpy(dest, program_invocation_name, 128);
+#elif defined(__APPLE__)
+	pid_t pid = getpid();
+	if (proc_name(pid, dest, 128) <= 0) {
+		return;
+	}
+#else
+	HANDLE process_handle = GetCurrentProcess();
+	if (GetModuleBaseNameA(process_handle, NULL, dest, 128) == 0) {
+		CloseHandle(process_handle);
+		return;
+	}
+	CloseHandle(process_handle);
+#endif
+	dest[127] = 0;
+}
 
 typedef struct {
 	plugin				p;
@@ -140,11 +172,17 @@ typedef struct {
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
 #endif
+	char processname[128];
 } plugin_instance;
 
 static const char * get_bundle_path_cb(void *handle) {
 	plugin_instance *instance = (plugin_instance *)handle;
 	return instance->bundle_path;
+}
+
+static const char * get_hostinfo_cb(void *handle) {
+	plugin_instance *instance = (plugin_instance *)handle;
+	return instance->processname;
 }
 
 #ifdef DATA_STATE_DSP_CUSTOM
@@ -207,6 +245,8 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		LV2_URID__map,	&instance->map,		true,
 		NULL);
 
+	save_hostname(instance->processname);
+
 	lv2_log_logger_set_map(&instance->logger, instance->map);
 	if (missing) {
 		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
@@ -230,6 +270,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	cbs.format	= "lv2";
 	cbs.get_bindir	= get_bundle_path_cb;
 	cbs.get_datadir	= get_bundle_path_cb;
+	cbs.get_hostinfo = get_hostinfo_cb;
 	plugin_init(&instance->p, &cbs);
 
 	instance->sample_rate = (float)sample_rate;
@@ -544,18 +585,6 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 
 #ifdef DATA_UI
 
-#if defined(__linux__)
-# define _GNU_SOURCE
-# include <errno.h>
-  extern char *program_invocation_name;
-#elif defined(__APPLE__)
-# include <libproc.h>
-# include <unistd.h>
-#else
-# include <windows.h>
-# include <psapi.h>
-#endif
-
 typedef struct {
 	plugin_ui *		ui;
 	char *			bundle_path;
@@ -573,30 +602,9 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 	return instance->bundle_path;
 }
 
-static const char * ui_get_hostinfo(void *handle) {
-#if defined(__linux__)
-	(void) handle;
-	return program_invocation_name;
-#elif defined(__APPLE__)
+static const char * ui_get_hostinfo_cb(void *handle) {
 	ui_instance *instance = (ui_instance *)handle;
-	pid_t pid = getpid();
-	instance->processname[0]   = 0;
-	if (proc_name(pid, instance->processname, 128) <= 0) {
-		return NULL;
-	}
-	instance->processname[127] = 0;
 	return instance->processname;
-#else
-	ui_instance *instance = (ui_instance *)handle;
-	HANDLE process_handle = GetCurrentProcess();
-	if (GetModuleBaseNameA(process_handle, NULL, instance->processname, 128) == 0) {
-		CloseHandle(process_handle);
-		return NULL;
-	}
-	CloseHandle(process_handle);
-	instance->processname[127] = 0;
-	return instance->processname;
-#endif
 }
 
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -645,6 +653,8 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
 
+	save_hostname(instance->processname);
+
 	has_parent = 0;
 	parent = NULL;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -667,7 +677,7 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	cbs.format		= "lv2";
 	cbs.get_bindir		= ui_get_bundle_path_cb;
 	cbs.get_datadir		= ui_get_bundle_path_cb;
-	cbs.get_hostinfo    = ui_get_hostinfo;
+	cbs.get_hostinfo    = ui_get_hostinfo_cb;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	cbs.set_parameter_begin	= ui_set_parameter_begin_cb;
 	cbs.set_parameter	= ui_set_parameter_cb;
