@@ -54,7 +54,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -static $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include $(CXXFLAGS_EXTRA) $(CXXFLAGS)
@@ -63,6 +63,8 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+else
+	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 PROGRAM := $(BUNDLE_NAME)$(EXE_SUFFIX)

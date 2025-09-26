@@ -68,7 +68,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -static $(shell pkg-config --libs lv2) $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := -shared $(shell pkg-config --libs lv2) $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
@@ -77,6 +77,8 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+else
+	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)

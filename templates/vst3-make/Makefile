@@ -72,7 +72,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -static -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
@@ -84,6 +84,8 @@ ifeq ($(UNAME_S), Darwin)
 	ifeq ($(HAS_UI), yes)
 		LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
 	endif
+else
+	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 ifeq ($(UNAME_S), Linux)
