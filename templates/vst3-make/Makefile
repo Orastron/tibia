@@ -72,7 +72,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := -shared -lm -static-libstdc++ -Wl,--as-needed $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS)
