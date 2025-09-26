@@ -68,7 +68,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -static-libstdc++ -Wl,--as-needed $(shell pkg-config --libs lv2) $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := -shared -static $(shell pkg-config --libs lv2) $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)

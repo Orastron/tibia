@@ -54,7 +54,7 @@ CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS :=
-LDFLAGS_ALL := -static-libstdc++ -Wl,--as-needed $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := -static $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include $(CXXFLAGS_EXTRA) $(CXXFLAGS)
