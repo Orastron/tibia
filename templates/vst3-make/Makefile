@@ -84,6 +84,8 @@ ifeq ($(UNAME_S), Darwin)
 	ifeq ($(HAS_UI), yes)
 		LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
 	endif
+else
+	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 ifeq ($(UNAME_S), Linux)

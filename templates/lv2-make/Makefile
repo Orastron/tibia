@@ -77,6 +77,8 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+else
+	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)
