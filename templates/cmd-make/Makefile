@@ -47,8 +47,17 @@ endif
 TINYWAV_DIR ?= ../tinywav
 MIDI_PARSER_DIR ?= ../midi-parser
 
-CC := gcc
-CXX := g++
+CC := clang
+CXX := clang++
+
+C_SRCS := $(COMMON_DIR)/src/main.c $(C_SRCS_EXTRA)
+ifeq ($(HAS_MIDI_IN), yes)
+	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
+endif
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
+CXX_SRCS := $(CXX_SRCS_EXTRA)
+CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
@@ -63,20 +72,14 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
-else
-	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
+endif
+ifeq ($(OS), Windows_NT)
+ifneq ($(CXX_OBJS),)
+	LDFLAGS_ALL := -static-libstdc++ $(LDFLAGS_ALL)
+endif
 endif
 
 PROGRAM := $(BUNDLE_NAME)$(EXE_SUFFIX)
-
-C_SRCS := $(COMMON_DIR)/src/main.c $(C_SRCS_EXTRA)
-ifeq ($(HAS_MIDI_IN), yes)
-	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
-endif
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
-CXX_SRCS := $(CXX_SRCS_EXTRA)
-CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 DIRS := build build/obj
 

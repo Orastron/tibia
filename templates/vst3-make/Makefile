@@ -34,8 +34,6 @@ ifeq ($(OS), Windows_NT)
 	DLL_SUFFIX := .vst3
 	VST3DIR := $(subst \,/,$(COMMONPROGRAMFILES))/VST3
 	VST3DIR_USER := $(subst \,/,$(LOCALAPPDATA))/Programs/Common/VST3
-	CC := gcc
-	CXX := g++
 	MACHINE := $(shell $(CC) -dumpmachine | sed 's:-.*::g')
 	ifeq ($(MACHINE), x86_64)
 		VST3_PLATFORM := x86_64-win
@@ -49,15 +47,11 @@ else
 		DLL_SUFFIX :=
 		VST3DIR := /Library/Audio/Plug-Ins/VST3
 		VST3DIR_USER := $(HOME)/Library/Audio/Plug-Ins/VST3
-		CC := clang
-		CXX := clang++
 		VST3_PLATFORM := MacOS
 	else
 		DLL_SUFFIX := .so
 		VST3DIR := /usr/local/lib/vst3
 		VST3DIR_USER := $(HOME)/.vst3
-		CC := gcc
-		CXX := g++
 		VST3_PLATFORM := $(shell uname -m)-linux
 	endif
 endif
@@ -67,6 +61,18 @@ BUILD_BIN_DIR := build/$(BUNDLE_DIR)/$(DLL_DIR)
 BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
 
 -include $(MKINC_DIR)/vars-pre.mk
+
+CC := clang
+CXX := clang++
+
+C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
+M_SRCS := $(M_SRCS_EXTRA)
+M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
+
+CXX_SRCS := $(CXX_SRCS_EXTRA)
+CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
@@ -84,8 +90,6 @@ ifeq ($(UNAME_S), Darwin)
 	ifeq ($(HAS_UI), yes)
 		LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
 	endif
-else
-	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
 endif
 
 ifeq ($(UNAME_S), Linux)
@@ -97,16 +101,13 @@ ifeq ($(UNAME_S), Linux)
 	endif
 endif
 
+ifeq ($(OS), Windows_NT)
+ifneq ($(CXX_OBJS),)
+	LDFLAGS_ALL := -static-libstdc++ $(LDFLAGS_ALL)
+endif
+endif
+
 DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
-
-C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
-M_SRCS := $(M_SRCS_EXTRA)
-M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
-
-CXX_SRCS := $(CXX_SRCS_EXTRA)
-CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 DIRS := build build/obj build/$(BUNDLE_DIR) build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/Contents/Resources build/$(BUNDLE_DIR)/$(DLL_DIR)
 

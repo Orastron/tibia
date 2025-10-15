@@ -42,8 +42,6 @@ ifeq ($(OS), Windows_NT)
 	UI_TYPE := WindowsUI
 	LV2DIR := $(subst \,/,$(COMMONPROGRAMFILES))/LV2
 	LV2DIR_USER := $(subst \,/,$(APPDATA))/LV2
-	CC := gcc
-	CXX := g++
 else
 	UNAME_S = $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
@@ -51,18 +49,26 @@ else
 		UI_TYPE := CocoaUI
 		LV2DIR := /Library/Audio/Plug-Ins/LV2
 		LV2DIR_USER := $(HOME)/Library/Audio/Plug-Ins/LV2
-		CC := clang
-		CXX := clang++
 	else
 		DLL_SUFFIX := .so
 		UI_TYPE := X11UI
 		PREFIX := /usr/local
 		LV2DIR := $(PREFIX)/lib/lv2
 		LV2DIR_USER := $(HOME)/.lv2
-		CC := gcc
-		CXX := g++
 	endif
 endif
+
+CC := clang
+CXX := clang++
+
+C_SRCS := $(COMMON_DIR)/src/lv2.c $(C_SRCS_EXTRA)
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+
+M_SRCS := $(M_SRCS_EXTRA)
+M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
+
+CXX_SRCS := $(CXX_SRCS_EXTRA)
+CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
@@ -77,20 +83,14 @@ ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
 	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
-else
-	LDFLAGS_ALL := -static $(LDFLAGS_ALL)
+endif
+ifeq ($(OS), Windows_NT)
+ifneq ($(CXX_OBJS),)
+	LDFLAGS_ALL := -static-libstdc++ $(LDFLAGS_ALL)
+endif
 endif
 
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)
-
-C_SRCS := $(COMMON_DIR)/src/lv2.c $(C_SRCS_EXTRA)
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
-M_SRCS := $(M_SRCS_EXTRA)
-M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
-
-CXX_SRCS := $(CXX_SRCS_EXTRA)
-CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 DIRS := build build/$(BUNDLE_DIR) build/obj
 
