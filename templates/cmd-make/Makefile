@@ -50,13 +50,19 @@ MIDI_PARSER_DIR ?= ../midi-parser
 CC := clang
 CXX := clang++
 
-C_SRCS := $(COMMON_DIR)/src/main.c $(C_SRCS_EXTRA)
+C_SRCS := $(C_SRCS_EXTRA)
 ifeq ($(HAS_MIDI_IN), yes)
 	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
 endif
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
 CXX_SRCS := $(CXX_SRCS_EXTRA)
+ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	C_SRCS := $(COMMON_DIR)/src/main.c $(C_SRCS)
+else
+	CXX_SRCS := build/src/main.cpp $(CXX_SRCS)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
@@ -81,7 +87,7 @@ endif
 
 PROGRAM := $(BUNDLE_NAME)$(EXE_SUFFIX)
 
-DIRS := build build/obj
+DIRS := build build/obj build/src
 
 ALL := build/$(PROGRAM)
 
@@ -96,6 +102,9 @@ endif
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
+
+build/src/main.cpp: $(COMMON_DIR)/src/main.c | build/src
+	cp $^ $@
 
 ifeq ($(CXX_OBJS),)
 build/$(PROGRAM): $(C_OBJS) build/obj/tinywav.o | build

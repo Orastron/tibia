@@ -23,7 +23,11 @@
 
 #include "data.h"
 #include "plugin_api.h"
-#include "plugin.h"
+#ifdef HAS_PLUGIN_CXX_H
+# include "plugin_cxx.h"
+#else
+# include "plugin.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -153,7 +157,7 @@ char * read_file(const char * filename, int32_t * size) {
 		return NULL;
 	}
 	fclose(fp);
-	return mem;
+	return (char *)mem;
 }
 #endif
 
@@ -325,6 +329,10 @@ int main(int argc, char * argv[]) {
 	}
 #endif
 
+	// make C++ compilers happy
+	size_t req;
+	plugin_callbacks cbs;
+
 	int exit_code = EXIT_FAILURE;
 
 #if NUM_CHANNELS_IN > 0
@@ -358,12 +366,10 @@ int main(int argc, char * argv[]) {
 			printf(" %s: %g\n", param_data[i].id, param_values[i]);
 #endif
 
-	plugin_callbacks cbs = {
-		/* .handle		= */ NULL,
-		/* .format		= */ "cmd",
-		/* .get_bindir		= */ NULL,
-		/* .get_datadir		= */ NULL
-	};
+	cbs.handle = NULL;
+	cbs.format = "cmd";
+	cbs.get_bindir = NULL;
+	cbs.get_datadir = NULL;
 	plugin_init(&instance, &cbs);
 
 #if PARAMETERS_N > 0
@@ -373,7 +379,7 @@ int main(int argc, char * argv[]) {
 #endif
 
 	plugin_set_sample_rate(&instance, fs);
-	size_t req = plugin_mem_req(&instance);
+	req = plugin_mem_req(&instance);
 	if (req != 0) {
 		mem = malloc(req);
 		if (mem == NULL) {
@@ -387,7 +393,7 @@ int main(int argc, char * argv[]) {
 	plugin_reset(&instance);
 
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
-	zero = malloc(bufsize * sizeof(float));
+	zero = (float *)malloc(bufsize * sizeof(float));
 	if (zero == NULL) {
 		fprintf(stderr, "Out of memory\n");
 		goto err_zero;
@@ -396,7 +402,7 @@ int main(int argc, char * argv[]) {
 #endif
 
 #if NUM_CHANNELS_IN > 0
-	x_buf = malloc(NUM_CHANNELS_IN * bufsize * sizeof(float));
+	x_buf = (float *)malloc(NUM_CHANNELS_IN * bufsize * sizeof(float));
 	if (x_buf == NULL) {
 		fprintf(stderr, "Out of memory\n");
 		goto err_x_buf;
@@ -425,7 +431,7 @@ int main(int argc, char * argv[]) {
 #endif
 
 #if NUM_NON_OPT_CHANNELS_OUT > 0
-	y_buf = malloc(NUM_NON_OPT_CHANNELS_OUT * bufsize * sizeof(float));
+	y_buf = (float *)malloc(NUM_NON_OPT_CHANNELS_OUT * bufsize * sizeof(float));
 	if (y_buf == NULL) {
 		fprintf(stderr, "Out of memory\n");
 		goto err_y_buf;
@@ -460,7 +466,7 @@ int main(int argc, char * argv[]) {
 
 		midi_parser.state = MIDI_PARSER_INIT;
 		midi_parser.size = midi_data_size;
-		midi_parser.in = midi_data;
+		midi_parser.in = (uint8_t *)midi_data;
 
 		midi_status = midi_parse(&midi_parser);
 		if (midi_status != MIDI_PARSER_HEADER) {
@@ -490,17 +496,21 @@ int main(int argc, char * argv[]) {
 	}
 #endif
 
+	// make C++ compiler happy
+	size_t len;
+	size_t i;
+
 #if NUM_CHANNELS_OUT > 0
 	TinyWav tw_out;
 	if (tinywav_open_write(&tw_out, NUM_CHANNELS_OUT, fs, TW_FLOAT32, TW_SPLIT, outfile) != 0)
 		goto err_outfile;
 #endif
 
-	size_t i = 0;
+	i = 0;
 #if NUM_CHANNELS_IN > 0
-	size_t len = tw_in.numFramesInHeader;
+	len = tw_in.numFramesInHeader;
 #else
-	size_t len = (size_t)(fs * length + 0.5f);
+	len = (size_t)(fs * length + 0.5f);
 #endif
 	while (i < len) {
 		size_t left = len - i;
@@ -518,7 +528,7 @@ int main(int argc, char * argv[]) {
 				if (midi_status == MIDI_PARSER_TRACK_META && midi_parser.meta.type == MIDI_META_SET_TEMPO)
 					midi_tempo = (midi_parser.meta.bytes[0] << 16) | (midi_parser.meta.bytes[1] << 8) | midi_parser.meta.bytes[2];
 				else if (midi_status == MIDI_PARSER_TRACK_MIDI) {
-					uint8_t data[3] = { (midi_parser.midi.status << 4) | midi_parser.midi.channel, midi_parser.midi.param1, midi_parser.midi.param2 };
+					uint8_t data[3] = { (uint8_t)((midi_parser.midi.status << 4) | midi_parser.midi.channel), midi_parser.midi.param1, midi_parser.midi.param2 };
 					plugin_midi_msg_in(&instance, MIDI_BUS_IN, data);
 				}
 				midi_next_read = 1;
