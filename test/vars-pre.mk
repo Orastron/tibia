@@ -18,13 +18,13 @@
 # File author: Stefano D'Angelo
 #
 
-API_DIR := ../api
+API_DIR := ../../api
 
-VINCI_DIR := ../../../vinci
+VINCI_DIR := ../../../../vinci
 
 ifeq ($(TEMPLATE), cmd)
-	TINYWAV_DIR := ../../../tinywav
-	MIDI_PARSER_DIR := ../../../midi-parser
+	TINYWAV_DIR := ../../../../tinywav
+	MIDI_PARSER_DIR := ../../../../midi-parser
 endif
 
 ifeq ($(TEMPLATE), lv2)
@@ -59,16 +59,16 @@ ifeq ($(TEMPLATE), vst3)
 			LDFLAGS_EXTRA := -lxcb
 		endif
 	endif
-	CFLAGS_EXTRA := $(CFLAGS_EXTRA)	-I../../../vst3_c_api
+	CFLAGS_EXTRA := $(CFLAGS_EXTRA)	-I../../../../vst3_c_api
 	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I${VINCI_DIR}
 endif
 
 ifeq ($(TEMPLATE), daisy-seed)
-	LIBDAISY_DIR := ../../../libDaisy
+	LIBDAISY_DIR := ../../../../libDaisy
 endif
 
 ifeq ($(TEMPLATE), android)
-	CXXFLAGS_EXTRA := -I../../../miniaudio
+	CXXFLAGS_EXTRA := -I../../../../miniaudio
 	KEY_STORE := keystore.jks
 	KEY_ALIAS := androidkey
 	STORE_PASS := android
