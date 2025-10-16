@@ -25,9 +25,17 @@
 #include "plugin_api.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#include "plugin.h"
+#ifdef HAS_PLUGIN_CXX_H
+# include "plugin_cxx.h"
+#else
+# include "plugin.h"
+#endif
 #ifdef DATA_UI
-# include "plugin_ui.h"
+# ifdef HAS_PLUGIN_UI_CXX_H
+#  include "plugin_ui_cxx.h"
+# else
+#  include "plugin_ui.h"
+# endif
 #endif
 #pragma GCC diagnostic pop
 

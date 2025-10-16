@@ -61,13 +61,26 @@ endif
 CC := clang
 CXX := clang++
 
-C_SRCS := $(COMMON_DIR)/src/lv2.c $(C_SRCS_EXTRA)
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
+C_SRCS := $(C_SRCS_EXTRA)
 M_SRCS := $(M_SRCS_EXTRA)
-M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
-
 CXX_SRCS := $(CXX_SRCS_EXTRA)
+ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h)$(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
+	C_SRCS := $(COMMON_DIR)/src/lv2.c $(C_SRCS)
+else
+	CXX_SRCS := build/src/lv2.cpp $(CXX_SRCS)
+endif
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_UI_CXX_H $(CXXFLAGS_EXTRA)
+endif
+ifeq ($(HAS_MIDI_IN), yes)
+	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
+endif
+
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
@@ -92,7 +105,7 @@ endif
 
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)
 
-DIRS := build build/$(BUNDLE_DIR) build/obj
+DIRS := build build/$(BUNDLE_DIR) build/obj build/src
 
 ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 
@@ -104,6 +117,9 @@ STRIP_PREREQS := $(STRIP_ALL)
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
+
+build/src/lv2.cpp: $(COMMON_DIR)/src/lv2.c | build/src
+	cp $^ $@
 
 build/$(BUNDLE_DIR)/manifest.ttl: $(DATA_DIR)/data/manifest.ttl.in | build/$(BUNDLE_DIR)
 	cat $^ | sed s/@DLL_SUFFIX@/$(DLL_SUFFIX)/g | sed s/@UI_TYPE@/$(UI_TYPE)/g > $@

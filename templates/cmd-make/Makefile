@@ -51,15 +51,15 @@ CC := clang
 CXX := clang++
 
 C_SRCS := $(C_SRCS_EXTRA)
-ifeq ($(HAS_MIDI_IN), yes)
-	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
-endif
 CXX_SRCS := $(CXX_SRCS_EXTRA)
 ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
 	C_SRCS := $(COMMON_DIR)/src/main.c $(C_SRCS)
 else
 	CXX_SRCS := build/src/main.cpp $(CXX_SRCS)
 	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+ifeq ($(HAS_MIDI_IN), yes)
+	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
 endif
 
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))

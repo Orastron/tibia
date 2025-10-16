@@ -41,7 +41,8 @@ ifeq ($(TEMPLATE), lv2)
 			LDFLAGS_EXTRA := -lxcb
 		endif
 	endif
-	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I${VINCI_DIR}
+	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I$(VINCI_DIR)
+	CXXFLAGS_EXTRA := $(CXXFLAGS_EXTRA) -I$(VINCI_DIR)
 endif
 
 ifeq ($(TEMPLATE), vst3)
