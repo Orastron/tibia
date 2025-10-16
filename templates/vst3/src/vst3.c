@@ -28,9 +28,17 @@
 
 #include "data.h"
 #include "plugin_api.h"
-#include "plugin.h"
+#ifdef HAS_PLUGIN_CXX_H
+# include "plugin_cxx.h"
+#else
+# include "plugin.h"
+#endif
 #ifdef DATA_UI
-# include "plugin_ui.h"
+# ifdef HAS_PLUGIN_UI_CXX_H
+#  include "plugin_ui_cxx.h"
+# else
+#  include "plugin_ui.h"
+# endif
 #endif
 
 #include <stdarg.h>
@@ -54,7 +62,12 @@
 #endif
 
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
-# include <stdatomic.h>
+# ifdef __cplusplus
+#  include <atomic>
+using namespace std;
+# else
+#  include <stdatomic.h>
+# endif
 # if defined(_WIN32) || defined(__CYGWIN__)
 #  include <processthreadsapi.h>
 #  define yield SwitchToThread
@@ -139,13 +152,13 @@ static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366
 #endif
 
 #if defined(__linux__) || defined(__APPLE__)
-static char *x_asprintf(const char * restrict format, ...) {
+static char *x_asprintf(const char * format, ...) {
 	va_list args, tmp;
 	va_start(args, format);
 	va_copy(tmp, args);
 	int len = vsnprintf(NULL, 0, format, tmp);
 	va_end(tmp);
-	char *s = malloc(len + 1);
+	char *s = (char *)malloc(len + 1);
 	if (s != NULL)
 		vsprintf(s, format, args);
 	va_end(args);
@@ -247,7 +260,7 @@ static int stateRead(struct Steinberg_IBStream * state, char ** data, Steinberg_
 		return -1;
 	if (state->lpVtbl->seek(state, 0, Steinberg_IBStream_IStreamSeekMode_kIBSeekSet, NULL) != Steinberg_kResultOk)
 		return -1;
-	*data = *length > 0 ? malloc(*length) : NULL;
+	*data = *length > 0 ? (char *)malloc(*length) : NULL;
 	if (*length > 0 && *data == NULL)
 		return -1;
 	Steinberg_int64 read = 0;
@@ -309,9 +322,6 @@ typedef struct pluginInstance {
 	void *						mem;
 	struct Steinberg_IBStream *			state;
 } pluginInstance;
-
-static Steinberg_Vst_IComponentVtbl pluginVtblIComponent;
-static Steinberg_Vst_IAudioProcessorVtbl pluginVtblIAudioProcessor;
 
 static void pluginStateLockCb(void *handle) {
 	pluginInstance *p = (pluginInstance *)handle;
@@ -737,7 +747,7 @@ static Steinberg_tresult pluginGetState(void* thisInterface, struct Steinberg_IB
 	int err = 0;
 # if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	size_t length = DATA_PRODUCT_PARAMETERS_IN_N * 4;
-	char *data = malloc(length);
+	char *data = (char *)malloc(length);
 	if (data == NULL)
 		return Steinberg_kResultFalse;
 	pluginStateLockCb(p);
@@ -877,7 +887,7 @@ static Steinberg_tresult pluginSetProcessing(void* thisInterface, Steinberg_TBoo
 
 static void processParams(pluginInstance *p, struct Steinberg_Vst_ProcessData *data, char before) {
 #if DATA_PRODUCT_PARAMETERS_IN_N + DATA_PRODUCT_BUSES_MIDI_INPUT_N > 0
-	_Bool locked = !atomic_flag_test_and_set(&p->syncLockFlag);
+	char locked = !atomic_flag_test_and_set(&p->syncLockFlag);
 	if (locked) {
 		if (!p->synced) {
 			if (p->loaded) {
@@ -1001,19 +1011,19 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 			switch (ev.type) {
 			case Steinberg_Vst_Event_EventTypes_kNoteOnEvent:
 			{
-				const uint8_t data[3] = { 0x90 | ev.Steinberg_Vst_Event_noteOn.channel, ev.Steinberg_Vst_Event_noteOn.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOn.velocity) };
+				const uint8_t data[3] = { (uint8_t)(0x90 | ev.Steinberg_Vst_Event_noteOn.channel), (uint8_t)ev.Steinberg_Vst_Event_noteOn.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOn.velocity) };
 				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
 			}
 				break;
 			case Steinberg_Vst_Event_EventTypes_kNoteOffEvent:
 			{
-				const uint8_t data[3] = { 0x80 | ev.Steinberg_Vst_Event_noteOff.channel, ev.Steinberg_Vst_Event_noteOff.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOff.velocity) };
+				const uint8_t data[3] = { (uint8_t)(0x80 | ev.Steinberg_Vst_Event_noteOff.channel), (uint8_t)ev.Steinberg_Vst_Event_noteOff.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_noteOff.velocity) };
 				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
 			}
 				break;
 			case Steinberg_Vst_Event_EventTypes_kPolyPressureEvent:
 			{
-				const uint8_t data[3] = { 0xa0 | ev.Steinberg_Vst_Event_polyPressure.channel, ev.Steinberg_Vst_Event_polyPressure.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_polyPressure.pressure) };
+				const uint8_t data[3] = { (uint8_t)(0xa0 | ev.Steinberg_Vst_Event_polyPressure.channel), (uint8_t)ev.Steinberg_Vst_Event_polyPressure.pitch, (uint8_t)(127.f * ev.Steinberg_Vst_Event_polyPressure.pressure) };
 				plugin_midi_msg_in(&p->p, midiInIndex[ev.busIndex], data);
 			}
 				break;
@@ -1171,8 +1181,6 @@ typedef struct controller {
 	size_t						viewsCount;
 #endif
 } controller;
-
-static Steinberg_Vst_IEditControllerVtbl controllerVtblIEditController;
 
 #if DATA_PRODUCT_PARAMETERS_N > 0
 static void controllerGetParamDataValuePtrs(controller *ctrl, size_t index, ParameterData **p, double **pv) {
@@ -1745,11 +1753,6 @@ static Steinberg_IPlugViewVtbl plugViewVtblIPlugView = {
 };
 #endif
 
-static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping;
-#ifdef DATA_UI
-//static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint;
-#endif
-
 static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg_TUID iid, void ** obj) {
 	// Same as above (pluginQueryInterface)
 	size_t offset;
@@ -2171,7 +2174,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 	if (strcmp(name, "editor"))
 		return NULL;
 
-	plugView *view = malloc(sizeof(plugView));
+	plugView *view = (plugView *)malloc(sizeof(plugView));
 	if (view == NULL)
 		return NULL;
 
@@ -2182,7 +2185,7 @@ static struct Steinberg_IPlugView* controllerCreateView(void* thisInterface, Ste
 			break;
 	if (i == c->viewsCount) {
 		size_t cnt = i + 1;
-		plugView **views = realloc(c->views, cnt * sizeof(plugView **));
+		plugView **views = (plugView **)realloc(c->views, cnt * sizeof(plugView **));
 		if (views == NULL) {
 			free(view);
 			return NULL;
@@ -2423,7 +2426,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		    && memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID))
 		    && memcmp(iid, Steinberg_Vst_IComponent_iid, sizeof(Steinberg_TUID)))
 			return Steinberg_kNoInterface;
-		pluginInstance *p = malloc(sizeof(pluginInstance));
+		pluginInstance *p = (pluginInstance *)malloc(sizeof(pluginInstance));
 		if (p == NULL)
 			return Steinberg_kOutOfMemory;
 		p->vtblIComponent = &pluginVtblIComponent;
@@ -2439,7 +2442,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		    && memcmp(iid, Steinberg_IPluginBase_iid, sizeof(Steinberg_TUID))
 		    && memcmp(iid, Steinberg_Vst_IEditController_iid, sizeof(Steinberg_TUID)))
 			return Steinberg_kNoInterface;
-		controller *c = malloc(sizeof(controller));
+		controller *c = (controller *)malloc(sizeof(controller));
 		if (c == NULL)
 			return Steinberg_kOutOfMemory;
 		c->vtblIEditController = &controllerVtblIEditController;
@@ -2569,6 +2572,10 @@ static Steinberg_IPluginFactory3 factory = { &factoryVtbl };
 # define EXPORT __declspec(dllexport)
 #else
 # define EXPORT __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 EXPORT
@@ -2724,4 +2731,8 @@ char ModuleExit(void) {
 	return vstExit();
 }
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif

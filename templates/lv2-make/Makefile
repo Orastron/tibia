@@ -75,9 +75,6 @@ endif
 ifneq ($(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
 	CXXFLAGS_EXTRA := -DHAS_PLUGIN_UI_CXX_H $(CXXFLAGS_EXTRA)
 endif
-ifeq ($(HAS_MIDI_IN), yes)
-	C_SRCS := $(C_SRCS) $(MIDI_PARSER_DIR)/src/midi-parser.c
-endif
 
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))

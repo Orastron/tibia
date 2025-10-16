@@ -65,13 +65,23 @@ BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
 CC := clang
 CXX := clang++
 
-C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS_EXTRA)
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
+C_SRCS := $(C_SRCS_EXTRA)
 M_SRCS := $(M_SRCS_EXTRA)
-M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
-
 CXX_SRCS := $(CXX_SRCS_EXTRA)
+ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h)$(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
+	C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS)
+else
+	CXX_SRCS := build/src/vst3.cpp $(CXX_SRCS)
+endif
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_UI_CXX_H $(CXXFLAGS_EXTRA)
+endif
+
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
@@ -109,7 +119,7 @@ endif
 
 DLL_FILE := $(DLL_DIR)/$(BUNDLE_NAME)$(DLL_SUFFIX)
 
-DIRS := build build/obj build/$(BUNDLE_DIR) build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/Contents/Resources build/$(BUNDLE_DIR)/$(DLL_DIR)
+DIRS := build build/obj build/$(BUNDLE_DIR) build/$(BUNDLE_DIR)/Contents build/$(BUNDLE_DIR)/Contents/Resources build/$(BUNDLE_DIR)/$(DLL_DIR) build/src
 
 ALL := build/$(BUNDLE_DIR)/$(DLL_FILE)
 ifeq ($(UNAME_S), Darwin)
@@ -124,6 +134,9 @@ PHONY := all clean strip install install-user
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
+
+build/src/vst3.cpp: $(COMMON_DIR)/src/vst3.c | build/src
+	cp $^ $@
 
 ifeq ($(CXX_OBJS),)
 build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
