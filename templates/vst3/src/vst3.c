@@ -158,9 +158,10 @@ static char *x_asprintf(const char * format, ...) {
 	va_copy(tmp, args);
 	int len = vsnprintf(NULL, 0, format, tmp);
 	va_end(tmp);
-	char *s = (char *)malloc(len + 1);
+	size_t size = len + 1;
+	char *s = (char *)malloc(size);
 	if (s != NULL)
-		vsprintf(s, format, args);
+		vsnprintf(s, size, format, args);
 	va_end(args);
 	return s;
 }
@@ -1645,7 +1646,7 @@ static Steinberg_tresult plugViewOnSize(void* thisInterface, struct Steinberg_Vi
 	TRACE(" window %u\n", (Window)(*((char **)v->ui)));
 	XResizeWindow(v->display, (Window)(*((char **)v->ui)), newSize->right - newSize->left, newSize->bottom - newSize->top);
 # elif defined(__APPLE__)
-	CGSize size = { newSize->right - newSize->left, newSize->bottom - newSize->top };
+	CGSize size = { (CGFloat)(newSize->right - newSize->left), (CGFloat)(newSize->bottom - newSize->top) };
 	void (*f)(id, SEL, CGSize) = (void (*)(id, SEL, CGSize))objc_msgSend;
 	f((id)(*((char **)v->ui)), sel_getUid("setFrameSize:"), size);
 # elif defined(_WIN32) || defined(__CYGWIN__)
