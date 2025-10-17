@@ -35,15 +35,6 @@ BUILD_DATA_DIR := build/gen/res
 
 -include $(MKINC_DIR)/vars-pre.mk
 
-CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
-
-CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
-
-LDFLAGS :=
-LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
-
 SOURCES := \
 	$(C_SRCS_EXTRA) \
 	$(M_SRCS_EXTRA) \
@@ -53,9 +44,23 @@ SOURCES := \
 	$(COMMON_DIR)/src/app.swift \
 	$(COMMON_DIR)/src/native.mm \
 	$(COMMON_DIR)/src/app-Bridging-Header.h \
-	$(PLUGIN_DIR)/plugin.h \
 	$(API_DIR)/plugin_api.h
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	SOURCES := $(SOURCES) $(PLUGIN_DIR)/plugin_cxx.h
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+else
+	SOURCES := $(SOURCES) $(PLUGIN_DIR)/plugin.h
+endif
 SOURCES_OUT := $(addprefix build/gen/src/, $(notdir $(SOURCES)))
+
+CFLAGS := -O3 -Wall -Wpedantic -Wextra
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
+
+CXXFLAGS := $(CFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+
+LDFLAGS :=
+LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 RESOURCES     := $(PLUGIN_DIR)/index.html
 RESOURCES_OUT := $(addprefix build/gen/res/, $(notdir $(RESOURCES)))
