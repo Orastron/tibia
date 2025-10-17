@@ -19,26 +19,123 @@
  */
 
 #include <stdint.h>
+#include <new>
+
+class Plugin {
+public:
+	Plugin() {}
+
+	void setSampleRate(float value) {
+		mSampleRate = value;
+		//safe approx delay_line_length = ceilf(sample_rate) + 1;
+		mDelayLineLength = (size_t)(mSampleRate + 1.f) + 1;
+	}
+
+	size_t memReq() {
+		return mDelayLineLength * sizeof(float);
+	}
+
+	void memSet(void * mem) {
+		mDelayLine = (float *)mem;
+	}
+
+	void reset() {
+		for (size_t i = 0; i < mDelayLineLength; i++)
+			mDelayLine[i] = 0.f;
+		mDelayLineCur = 0;
+		mZ1 = 0.f;
+		mCutoffK = 1.f;
+		mYZ1 = 0.f;
+	}
+
+	void setGain(float value) {
+		mGain = value;
+	}
+
+	void setDelay(float value) {
+		mDelay = value;
+	}
+
+	void setCutoff(float value) {
+		mCutoff = value;
+	}
+
+	void setBypass(bool value) {
+		mBypass = value;
+	}
+
+	float getGain() {
+		return mGain;
+	}
+
+	float getDelay() {
+		return mDelay;
+	}
+
+	float getCutoff() {
+		return mCutoff;
+	}
+
+	bool getBypass() {
+		return mBypass;
+	}
+
+	float getYZ1() {
+		return mYZ1;
+	}
+
+	void process(const float * in, float * out, size_t nSamples) {
+		//approx const float gain = powf(10.f, 0.05f * mGain);
+		const float gain = ((2.6039890429412597e-4f * mGain + 0.032131027163547855f) * mGain + 1.f) / ((0.0012705124328080768f * mGain - 0.0666763481312185f) * mGain + 1.f);
+		//approx const size_t delay = roundf(mSampleRate * 0.001f * mDelay);
+		const size_t delay = (size_t)(mSampleRate * 0.001f * mDelay + 0.5f);
+		const float mA1 = mSampleRate / (mSampleRate + 6.283185307179586f * mCutoff * mCutoffK);
+		for (size_t i = 0; i < nSamples; i++) {
+			mDelayLine[mDelayLineCur] = in[i];
+			const float x = mDelayLine[calcIndex(mDelayLineCur, delay, mDelayLineLength)];
+			mDelayLineCur++;
+			if (mDelayLineCur == mDelayLineLength)
+				mDelayLineCur = 0;
+			const float y = x + mA1 * (mZ1 - x);
+			mZ1 = y;
+			out[i] = mBypass ? in[i] : gain * y;
+			mYZ1 = out[i];
+		}
+	}
+
+	void midiMsgIn(const uint8_t * data) {
+		if (((data[0] & 0xf0) == 0x90) && (data[2] != 0))
+			//approx mCutoffK = powf(2.f, (1.f / 12.f) * (note - 60));
+			mCutoffK = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
+	}
+
+private:
+	size_t calcIndex(size_t cur, size_t delay, size_t len) {
+		return (cur < delay ? cur + len : cur) - delay;
+	}
+
+	float	mSampleRate;
+	size_t	mDelayLineLength;
+
+	float	mGain;
+	float	mDelay;
+	float	mCutoff;
+	bool	mBypass;
+
+	float *	mDelayLine;
+	size_t	mDelayLineCur;
+	float	mZ1;
+	float	mCutoffK;
+	float	mYZ1;
+};
 
 typedef struct {
-	float	sample_rate;
-	size_t	delay_line_length;
-
-	float	gain;
-	float	delay;
-	float	cutoff;
-	char	bypass;
-
-	float *	delay_line;
-	size_t	delay_line_cur;
-	float	z1;
-	float	cutoff_k;
-	float	yz1;
+	Plugin	p;
 } plugin;
 
 static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
-	(void)instance;
 	(void)cbs;
+	new(&instance->p) Plugin();
 }
 
 static void plugin_fini(plugin *instance) {
@@ -46,78 +143,50 @@ static void plugin_fini(plugin *instance) {
 }
 
 static void plugin_set_sample_rate(plugin *instance, float sample_rate) {
-	instance->sample_rate = sample_rate;
-	//safe approx instance->delay_line_length = ceilf(sample_rate) + 1;
-	instance->delay_line_length = (size_t)(sample_rate + 1.f) + 1;
+	instance->p.setSampleRate(sample_rate);
 }
 
 static size_t plugin_mem_req(plugin *instance) {
-	return instance->delay_line_length * sizeof(float);
+	return instance->p.memReq();
 }
 
 static void plugin_mem_set(plugin *instance, void *mem) {
-	instance->delay_line = (float *)mem;
+	instance->p.memSet(mem);
 }
 
 static void plugin_reset(plugin *instance) {
-	for (size_t i = 0; i < instance->delay_line_length; i++)
-		instance->delay_line[i] = 0.f;
-	instance->delay_line_cur = 0;
-	instance->z1 = 0.f;
-	instance->cutoff_k = 1.f;
-	instance->yz1 = 0.f;
+	instance->p.reset();
 }
 
 static void plugin_set_parameter(plugin *instance, size_t index, float value) {
 	switch (index) {
 	case plugin_parameter_gain:
-		instance->gain = value;
+		instance->p.setGain(value);
 		break;
 	case plugin_parameter_delay:
-		instance->delay = value;
+		instance->p.setDelay(value);
 		break;
 	case plugin_parameter_cutoff:
-		instance->cutoff = value;
+		instance->p.setCutoff(value);
 		break;
 	case plugin_parameter_bypass:
-		instance->bypass = value >= 0.5f;
+		instance->p.setBypass(value >= 0.5f);
 		break;
 	}
 }
 
 static float plugin_get_parameter(plugin *instance, size_t index) {
 	(void)index;
-	return instance->yz1;
-}
-
-static size_t calc_index(size_t cur, size_t delay, size_t len) {
-	return (cur < delay ? cur + len : cur) - delay;
+	return instance->p.getYZ1();
 }
 
 static void plugin_process(plugin *instance, const float **inputs, float **outputs, size_t n_samples) {
-	//approx const float gain = powf(10.f, 0.05f * instance->gain);
-	const float gain = ((2.6039890429412597e-4f * instance->gain + 0.032131027163547855f) * instance->gain + 1.f) / ((0.0012705124328080768f * instance->gain - 0.0666763481312185f) * instance->gain + 1.f);
-	//approx const size_t delay = roundf(instance->sample_rate * 0.001f * instance->delay);
-	const size_t delay = (size_t)(instance->sample_rate * 0.001f * instance->delay + 0.5f);
-	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff * instance->cutoff_k);
-	for (size_t i = 0; i < n_samples; i++) {
-		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
-		const float x = instance->delay_line[calc_index(instance->delay_line_cur, delay, instance->delay_line_length)];
-		instance->delay_line_cur++;
-		if (instance->delay_line_cur == instance->delay_line_length)
-			instance->delay_line_cur = 0;
-		const float y = x + mA1 * (instance->z1 - x);
-		instance->z1 = y;
-		outputs[0][i] = instance->bypass ? inputs[0][i] : gain * y;
-		instance->yz1 = outputs[0][i];
-	}
+	instance->p.process(inputs[0], outputs[0], n_samples);
 }
 
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
 	(void)index;
-	if (((data[0] & 0xf0) == 0x90) && (data[2] != 0))
-		//approx instance->cutoff_k = powf(2.f, (1.f / 12.f) * (note - 60));
-		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
+	instance->p.midiMsgIn(data);
 }
 
 static void serialize_float(uint8_t *dest, float f) {
@@ -142,10 +211,10 @@ static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs
 	(void)last_sample_rate;
 	uint8_t data[13];
 	cbs->lock(cbs->handle);
-	const float gain = instance->gain;
-	const float delay = instance->delay;
-	const float cutoff = instance->cutoff;
-	const char bypass = instance->bypass;
+	const float gain = instance->p.getGain();
+	const float delay = instance->p.getDelay();
+	const float cutoff = instance->p.getCutoff();
+	const bool bypass = instance->p.getBypass();
 	cbs->unlock(cbs->handle);
 	serialize_float(data, gain);
 	serialize_float(data + 4, delay);
