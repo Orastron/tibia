@@ -23,7 +23,11 @@
 
 #include "data.h"
 #include "plugin_api.h"
-#include "plugin.h"
+#ifdef HAS_PLUGIN_CXX_H
+# include "plugin_cxx.h"
+#else
+# include "plugin.h"
+#endif
 
 #include "string.h"
 #include "walloc.h"
@@ -45,13 +49,17 @@ typedef struct {
 #endif
 } instance;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 instance * processor_new(float sample_rate) {
 #ifdef DATA_STATE_DSP_CUSTOM
 	(void)plugin_state_load;
 	(void)plugin_state_save;
 #endif
 
-	instance * i = malloc(sizeof(instance));
+	instance * i = (instance *)malloc(sizeof(instance));
 	if (i == NULL)
 		return NULL;
 
@@ -176,5 +184,9 @@ void processor_process(instance *i, int32_t n_samples) {
 void processor_midi_msg_in(instance *i, int32_t index, uint8_t data0, uint8_t data1, uint8_t data2) {
 	uint8_t data[3] = { data0, data1, data2 };
 	plugin_midi_msg_in(&i->p, index, data);
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif

@@ -38,6 +38,21 @@ BUILD_DATA_DIR := build/web
 CC := clang
 CXX := clang++
 
+C_SRCS := $(COMMON_DIR)/src/walloc.c $(COMMON_DIR)/src/string.c $(C_SRCS_EXTRA)
+CXX_SRCS := $(CXX_SRCS_EXTRA)
+ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	C_SRCS := $(COMMON_DIR)/src/processor.c $(C_SRCS)
+else
+	CXX_SRCS := build/src/processor.cpp $(CXX_SRCS)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+ifneq ($(CXX_SRCS),)
+	CXX_SRCS := $(COMMON_DIR)/src/new.cpp $(CXX_SRCS)
+endif
+
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
+
 CFLAGS := -Ofast -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -72,18 +87,7 @@ LDFLAGS_ALL := $(LDFLAGS_ALL) $(LDFLAGS_EXTRA) $(LDFLAGS)
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
 
-C_SRCS := $(COMMON_DIR)/src/processor.c $(COMMON_DIR)/src/walloc.c $(COMMON_DIR)/src/string.c
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
-ifeq ($(CXX_SRCS_EXTRA),)
-	CXX_SRCS :=
-	CXX_OBJS :=
-else
-	CXX_SRCS := $(COMMON_DIR)/src/new.cpp $(CXX_SRCS_EXTRA)
-	CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
-endif
-
-DIRS := build build/obj build/web build/web/$(BUNDLE_NAME)
+DIRS := build build/obj build/web build/web/$(BUNDLE_NAME) build/src
 
 ALL := build/web/$(BUNDLE_NAME)/module.wasm build/web/$(BUNDLE_NAME)/processor.js build/web/$(BUNDLE_NAME)/module.js
 
@@ -95,6 +99,9 @@ PHONY := all clean strip
 -include $(MKINC_DIR)/vars-extra.mk
 
 all: $(ALL)
+
+build/src/processor.cpp: $(COMMON_DIR)/src/processor.c | build/src
+	cp $^ $@
 
 ifeq ($(CXX_OBJS),)
 build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) | build/web/$(BUNDLE_NAME)
