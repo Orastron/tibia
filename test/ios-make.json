@@ -1,6 +1,6 @@
 {
 	"ios_make": {
-		"headerSearchPaths": [ "../../../../../miniaudio" ],
+		"headerSearchPaths": [ "../../../../../../miniaudio" ],
 		"deploymentTarget": "16.6"
 	}
 }
