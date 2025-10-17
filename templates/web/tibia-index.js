@@ -26,6 +26,7 @@ module.exports = function (data, api) {
 	api.copyFile(`src${sep}string.c`, `src${sep}string.c`);
 	api.copyFile(`src${sep}walloc.h`, `src${sep}walloc.h`);
 	api.copyFile(`src${sep}walloc.c`, `src${sep}walloc.c`);
+	api.copyFile(`src${sep}new`, `src${sep}new`);
 	api.copyFile(`src${sep}new.cpp`, `src${sep}new.cpp`);
 	api.copyFile(`src${sep}processor.c`, `src${sep}processor.c`);
 	api.generateFileFromTemplateFile(`src${sep}data.h`, `src${sep}data.h`, data);
