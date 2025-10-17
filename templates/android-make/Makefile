@@ -91,6 +91,15 @@ ifeq ($(HAS_MIDI_IN), yes)
 	CLASSES += MainActivity$$WebAppInterface$$MidiDeviceCallback MainActivity$$WebAppInterface$$1
 endif
 
+C_SRCS := $(C_SRCS_EXTRA)
+CXX_SRCS := $(COMMON_DIR)/src/jni.cpp $(CXX_SRCS_EXTRA)
+ifneq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
+	CXXFLAGS_EXTRA := -DHAS_PLUGIN_CXX_H $(CXXFLAGS_EXTRA)
+endif
+
+C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
+CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
+
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -106,12 +115,6 @@ LDFLAGS_ALL += $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 JFLAGS :=
 JFLAGS_ALL := $(JFLAGS_EXTRA) $(JFLAGS)
-
-C_SRCS := $(C_SRCS_EXTRA)
-C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
-
-CXX_SRCS := $(COMMON_DIR)/src/jni.cpp $(CXX_SRCS_EXTRA)
-CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 DIRS := build build/gen build/apk build/obj build/apk/lib build/apk/lib/armeabi-v7a build/assets
 

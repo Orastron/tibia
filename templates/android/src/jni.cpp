@@ -23,7 +23,11 @@
 
 #include "data.h"
 #include "plugin_api.h"
-#include "plugin.h"
+#ifdef HAS_PLUGIN_CXX_H
+# include "plugin_cxx.h"
+#else
+# include "plugin.h"
+#endif
 
 #include <string.h>
 #include <jni.h>
