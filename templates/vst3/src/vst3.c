@@ -661,7 +661,15 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 }
 
 // https://stackoverflow.com/questions/2100331/macro-definition-to-determine-big-endian-or-little-endian-machine
-#define IS_BIG_ENDIAN (!(union { uint16_t u16; unsigned char c; }){ .u16 = 1 }.c)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+static const uint32_t endianness = 0xdeadbeef;
+#pragma GCC diagnostic pop
+#define IS_BIG_ENDIAN \
+	_Pragma("GCC diagnostic push") \
+	_Pragma("GCC diagnostic ignored \"-Wtautological-constant-out-of-range-compare\"") \
+	(*(const char *)&endianness == 0xde) \
+	_Pragma("GCC diagnostic pop")
 // https://stackoverflow.com/questions/2182002/how-to-convert-big-endian-to-little-endian-in-c-without-using-library-functions
 #define SWAP_UINT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
 
