@@ -36,6 +36,10 @@ API_DIR := {{=it.lv2_make?.apiDir ?? (it.make?.apiDir ?? "")}}
 MKINC_DIR := {{=it.lv2_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
 
+{{?it.tibia.lv2Make.noInstall}}
+NO_INSTALL := yes
+{{?}}
+
 {{?it.make?.extra}}
 {{=it.make.extra}}
 {{?}}

@@ -60,6 +60,7 @@ endif
 
 CC := clang
 CXX := clang++
+STRIP := strip
 
 C_SRCS := $(C_SRCS_EXTRA)
 M_SRCS := $(M_SRCS_EXTRA)
@@ -100,6 +101,8 @@ ifneq ($(CXX_OBJS),)
 endif
 endif
 
+MANIFEST_EXTRA :=
+
 DLL_FILE := $(BUNDLE_NAME)$(DLL_SUFFIX)
 
 DIRS := build build/$(BUNDLE_DIR) build/obj build/src
@@ -109,7 +112,10 @@ ALL := build/$(BUNDLE_DIR)/manifest.ttl build/$(BUNDLE_DIR)/$(DLL_FILE)
 STRIP_ALL := build/$(BUNDLE_DIR)/$(DLL_FILE) build/$(BUNDLE_DIR)/manifest.ttl
 STRIP_PREREQS := $(STRIP_ALL)
 
-.PHONY: all clean strip install install-user
+PHONY := all clean strip
+ifneq ($(NO_INSTALL), yes)
+	PHONY := $(PHONY) install install-user
+endif
 
 -include $(MKINC_DIR)/vars-extra.mk
 
@@ -118,7 +124,7 @@ all: $(ALL)
 build/src/lv2.cpp: $(COMMON_DIR)/src/lv2.c | build/src
 	cp $^ $@
 
-build/$(BUNDLE_DIR)/manifest.ttl: $(DATA_DIR)/data/manifest.ttl.in | build/$(BUNDLE_DIR)
+build/$(BUNDLE_DIR)/manifest.ttl: $(DATA_DIR)/data/manifest.ttl.in $(MANIFEST_EXTRA) | build/$(BUNDLE_DIR)
 	cat $^ | sed s/@DLL_SUFFIX@/$(DLL_SUFFIX)/g | sed s/@UI_TYPE@/$(UI_TYPE)/g > $@
 
 ifeq ($(CXX_OBJS),)
@@ -136,7 +142,7 @@ clean:
 	rm -fr build
 
 strip: $(STRIP_PREREQS)
-	strip -Sx build/$(BUNDLE_DIR)/$(DLL_FILE)
+	$(STRIP) -Sx build/$(BUNDLE_DIR)/$(DLL_FILE)
 	#Reaper can't handle this
 	#rdfproc lv2_store parse build/$(BUNDLE_DIR)/manifest.ttl turtle || (rm lv2_store* && exit 1)
 	#rdfproc lv2_store serialize ntriples > build/$(BUNDLE_DIR)/manifest.ttl || (rm lv2_store* && exit 1)
@@ -147,6 +153,7 @@ strip: $(STRIP_PREREQS)
 	cp $(TMP) build/$(BUNDLE_DIR)/manifest.ttl || (rm $(TMP) && exit 1)
 	rm $(TMP)
 
+ifneq ($(NO_INSTALL), yes)
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \
 		d=`echo $$d | sed 's:^build/::'` ; \
@@ -174,6 +181,7 @@ install-user: all
 		echo install -m $$m $$f "$(LV2DIR_USER)/$$d"; \
 		install -m $$m $$f "$(LV2DIR_USER)/$$d" || exit 1; \
 	done
+endif
 
 -include $(MKINC_DIR)/rules-extra.mk
 

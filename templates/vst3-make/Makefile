@@ -64,6 +64,7 @@ BUILD_DATA_DIR :=  build/$(BUNDLE_DIR)/Contents/Resources
 
 CC := clang
 CXX := clang++
+STRIP := strip
 
 C_SRCS := $(C_SRCS_EXTRA)
 M_SRCS := $(M_SRCS_EXTRA)
@@ -161,7 +162,7 @@ clean:
 	rm -fr build
 
 strip: $(STRIP_PREREQS)
-	strip -Sx build/$(BUNDLE_DIR)/$(DLL_FILE)
+	$(STRIP) -Sx build/$(BUNDLE_DIR)/$(DLL_FILE)
 
 install: all
 	@for d in `find build/$(BUNDLE_DIR) -type d`; do \

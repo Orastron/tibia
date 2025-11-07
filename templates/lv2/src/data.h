@@ -69,7 +69,7 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 };
 #endif
 
-{{?it.product.ui}}
+{{?(it.product.ui && !it.tibia.lv2.noUi)}}
 #define DATA_UI
 #define DATA_LV2_UI_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.ui.uri))}}"
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
@@ -85,4 +85,8 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 
 {{?it.product.state && it.product.state.dspCustom}}
 #define DATA_STATE_DSP_CUSTOM
+{{?}}
+
+{{?it.tibia.lv2.dontSetGlobalRegs}}
+#define DATA_DONT_SET_GLOBAL_REGS
 {{?}}

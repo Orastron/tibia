@@ -21,7 +21,7 @@
 var path = require("path");
 var sep = path.sep;
 
-module.exports = function (data, api, outputCommon, outputData) {
+module.exports = function (data, api, outputCommon, outputData, options) {
 	if (outputData) {
 		data.tibia.lv2 = {
 			prefixes: [
@@ -85,6 +85,9 @@ module.exports = function (data, api, outputCommon, outputData) {
 			}
 		};
 
+		if (options && options.extraPrefixes)
+			data.tibia.lv2.prefixes = data.tibia.lv2.prefixes.concat(options.extraPrefixes);
+
 		for (var id in data.lv2.prefixes)
 			data.tibia.lv2.prefixes.push({ id: id, uri: data.lv2.prefixes[id] });
 
@@ -123,6 +126,11 @@ module.exports = function (data, api, outputCommon, outputData) {
 		}
 		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+
+		if (options && options.noUi)
+			data.tibia.lv2.noUi = true;
+		if (options && options.dontSetGlobalRegs)
+			data.tibia.lv2.dontSetGlobalRegs = true;
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);

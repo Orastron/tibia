@@ -49,6 +49,7 @@ MIDI_PARSER_DIR ?= ../midi-parser
 
 CC := clang
 CXX := clang++
+STRIP := strip
 
 C_SRCS := $(C_SRCS_EXTRA)
 CXX_SRCS := $(CXX_SRCS_EXTRA)
@@ -121,7 +122,7 @@ clean:
 	rm -fr build
 
 strip: $(STRIP_PREREQS)
-	strip build/$(PROGRAM)
+	$(STRIP) build/$(PROGRAM)
 
 ifneq ($(OS), Windows_NT)
 install: all

@@ -20,11 +20,14 @@
  * File author: Stefano D'Angelo
  */
 
+var fs = require("fs");
+var path = require("path");
+
 function usage() {
 	console.log("Usage:");
-	console.log("  tibia file1.json,file2.json,...filen.json template outDirectory [override1=value1] [override2=value2] ...");
-	console.log("  tibia --common template outDirectory [override1=value1] [override2=value2] ...");
-	console.log("  tibia --data file1.json,file2.json,...filen.json template outDirectory [override1=value1] [override2=value2] ...");
+	console.log("  tibia file1.json,file2.json,...filen.json template[:subtemplate1,subtemplate2,...subtemplaten] outDirectory [override1=value1] [override2=value2] ...");
+	console.log("  tibia --common template[:sutemplate1,subtemplate2,...subtemplaten] outDirectory [override1=value1] [override2=value2] ...");
+	console.log("  tibia --data file1.json,file2.json,...filen.json template[:subtemplate1,subtemplate2,...subtemplaten] outDirectory [override1=value1] [override2=value2] ...");
 	process.exit(1);
 }
 
@@ -58,6 +61,11 @@ if (process.argv[2] == "--common") {
 	i = 5;
 }
 
+var subtemplates = template.split(":")[1];
+if (subtemplates)
+	subtemplates = subtemplates.split(",").filter(x => x).reduce((a, x) => (a[path.basename(x)] = x, a), {});
+template = template.split(":")[0];
+
 var overrides = [];
 for (; i < process.argv.length; i++) {
 	var o = process.argv[i];
@@ -73,9 +81,6 @@ for (; i < process.argv.length; i++) {
 	}
 	overrides.push({ property: p, value: v });
 }
-
-var fs = require("fs");
-var path = require("path");
 
 /*
 var ajvValidate;
@@ -114,13 +119,14 @@ if (outputData) {
 var doT = require("dot");
 doT.templateSettings.strip = false;
 
+var templateStack = [ template ];
 var api = {
 	generateFileFromTemplateFile: function (templateFile, outFile, data, mode) {
 		if (!outputData)
 			return;
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
-		var t = doT.template(fs.readFileSync(template + path.sep + templateFile, { encoding: "utf-8" }));
+		var t = doT.template(fs.readFileSync(`${api.templateDir}${path.sep}${templateFile}`, { encoding: "utf-8" }));
 		var outputFile = outputDir + path.sep + outFile;
 		fs.writeFileSync(outputFile, t(data), { encoding: "utf-8" });
 		if (mode !== undefined)
@@ -133,9 +139,18 @@ var api = {
 		var dir = outputDir + path.sep + path.dirname(outFile);
 		fs.mkdirSync(dir, { recursive: true });
 		var outputFile = outputDir + path.sep + outFile;
-		fs.copyFileSync(template + path.sep + inFile, outputFile);
+		fs.copyFileSync(`${api.templateDir}${path.sep}${inFile}`, outputFile);
 		if (mode !== undefined)
 			fs.chmodSync(outputFile, mode);
+	},
+
+	callSubtemplate: function (subtemplate, options) {
+		var s = subtemplates[subtemplate];
+		templateStack.push(s);
+		api.templateDir = s;
+		require(path.resolve(process.cwd(), `${s}${path.sep}tibia-index.js`))(data, api, outputCommon, outputData, options);
+		templateStack.pop(s);
+		api.templateDir = templateStack[templateStack.length - 1];
 	},
 
 	templateDir: template
@@ -192,4 +207,4 @@ data.tibia = {
 	}
 };
 
-require(path.resolve(template + path.sep + "tibia-index.js"))(data, api, outputCommon, outputData);
+require(path.resolve(`${template}${path.sep}tibia-index.js`))(data, api, outputCommon, outputData, {});

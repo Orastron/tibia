@@ -60,9 +60,11 @@
 
 #include <string.h>
 
-#if defined(__i386__) || defined(__x86_64__)
-# include <xmmintrin.h>
-# include <pmmintrin.h>
+#ifndef DATA_DONT_SET_GLOBAL_REGS
+# if defined(__i386__) || defined(__x86_64__)
+#  include <xmmintrin.h>
+#  include <pmmintrin.h>
+# endif
 #endif
 
 #if (DATA_PRODUCT_CONTROL_INPUTS_N > 0) && defined(DATA_STATE_DSP_CUSTOM)
@@ -350,16 +352,18 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
-#if defined(__aarch64__)
+#ifndef DATA_DONT_SET_GLOBAL_REGS
+# if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
 	__asm__ __volatile__ ("msr fpcr, %0" :: "r"(fpcr | 0x1000000)); // enable FZ
-#elif defined(__i386__) || defined(__x86_64__)
+# elif defined(__i386__) || defined(__x86_64__)
 	const unsigned int flush_zero_mode = _MM_GET_FLUSH_ZERO_MODE();
 	const unsigned int denormals_zero_mode = _MM_GET_DENORMALS_ZERO_MODE();
 
 	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+# endif
 #endif
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -454,11 +458,13 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	(void)plugin_get_parameter;
 #endif
 
-#if defined(__aarch64__)
+#ifndef DATA_DONT_SET_GLOBAL_REGS
+# if defined(__aarch64__)
 	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
-#elif defined(__i386__) || defined(__x86_64__)
+# elif defined(__i386__) || defined(__x86_64__)
 	_MM_SET_FLUSH_ZERO_MODE(flush_zero_mode);
 	_MM_SET_DENORMALS_ZERO_MODE(denormals_zero_mode);
+# endif
 #endif
 }
 

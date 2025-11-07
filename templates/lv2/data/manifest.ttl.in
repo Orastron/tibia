@@ -129,7 +129,7 @@
 {{?}}
 {{~}}
 
-{{?it.product.ui}}
+{{?(it.product.ui && !it.tibia.lv2.noUi)}}
 {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}}
 	a ui:@UI_TYPE@ ;
 	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;

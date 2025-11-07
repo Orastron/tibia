@@ -37,6 +37,8 @@ BUILD_DATA_DIR := build/web
 
 CC := clang
 CXX := clang++
+#already stripeped
+#STRIP := strip
 
 C_SRCS := $(COMMON_DIR)/src/walloc.c $(COMMON_DIR)/src/string.c $(C_SRCS_EXTRA)
 CXX_SRCS := $(CXX_SRCS_EXTRA)

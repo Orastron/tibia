@@ -18,7 +18,11 @@
  * File author: Stefano D'Angelo
  */
 
-module.exports = function (data, api) {
+module.exports = function (data, api, outputCommon, outputData, options) {
+	data.tibia.lv2Make = {};
+	if (options && options.noInstall)
+		data.tibia.lv2Make.noInstall = true;
+
 	api.copyFile(`Makefile`, `Makefile`);
 	api.generateFileFromTemplateFile(`vars.mk`, `vars.mk`, data);
 };
