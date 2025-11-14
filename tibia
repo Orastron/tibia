@@ -144,7 +144,7 @@ var api = {
 			fs.chmodSync(outputFile, mode);
 	},
 
-	callSubtemplate: function (subtemplate, options) {
+	callSubtemplate: function (subtemplate, data, api, outputCommon, outputData, options) {
 		var s = subtemplates[subtemplate];
 		templateStack.push(s);
 		api.templateDir = s;

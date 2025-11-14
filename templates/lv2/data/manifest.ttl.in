@@ -102,6 +102,10 @@
 {{?p.map == "logarithmic"}}
 		lv2:portProperty pprops:logarithmic ;
 {{?}}
+{{?p.id == it.lv2.kxReset}}
+		lv2:designation kx:Reset ;
+		lv2:portProperty pprops:trigger ;
+{{?}}
 {{?p.scalePoints}}
 		lv2:scalePoint [
 {{~Object.entries(p.scalePoints) :sp:j}}

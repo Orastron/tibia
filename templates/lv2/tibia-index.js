@@ -28,6 +28,7 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 				{ id: "atom",	uri: "http://lv2plug.in/ns/ext/atom#" },
 				{ id: "doap",	uri: "http://usefulinc.com/ns/doap#" },
 				{ id: "foaf",	uri: "http://xmlns.com/foaf/0.1/" },
+				{ id: "kx",	uri: "http://kxstudio.sf.net/ns/lv2ext/props#" },
 				{ id: "log",	uri: "http://lv2plug.in/ns/ext/log#" },
 				{ id: "lv2",	uri: "http://lv2plug.in/ns/lv2core#" },
 				{ id: "midi",	uri: "http://lv2plug.in/ns/ext/midi#" },
@@ -117,15 +118,26 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 
 		var ports = [];
-		for (var i = 0; i < data.product.parameters.length; i++) {
+		for (var i = 0, j = 0; i < data.product.parameters.length; i++) {
 			var p = data.product.parameters[i];
+			if (p.id == data.lv2.kxReset)
+				continue;
 			var e = Object.create(p);
 			e.type = "control";
-			e.paramIndex = i;
+			e.paramIndex = j;
 			ports.push(e);
+			j++;
 		}
 		ports.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, ports);
+
+		if (data.lv2.kxReset) {
+			var p = data.product.parameters.find(x => x.id == data.lv2.kxReset);
+			var e = Object.create(p);
+			e.type = "kxReset";
+			e.paramIndex = j;
+			data.tibia.lv2.ports.push(e);
+		}
 
 		if (options && options.noUi)
 			data.tibia.lv2.noUi = true;

@@ -136,6 +136,9 @@ typedef struct {
 	char				loaded;
 # endif
 #endif
+#ifdef DATA_KXRESET_INDEX
+	float *				kx_reset;
+#endif
 	void *				mem;
 	char *				bundle_path;
 	LV2_Log_Logger			logger;
@@ -275,6 +278,9 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
 		instance->c[i] = NULL;
 #endif
+#ifdef DATA_KXRESET_INDEX
+	instance->kx_reset = NULL;
+#endif
 
 	return instance;
 
@@ -321,7 +327,13 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
-	i->c[port] = (float *)data_location;
+	if (port < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) {
+		i->c[port] = (float *)data_location;
+		return;
+	}
+#endif
+#ifdef DATA_KXRESET_INDEX
+	i->kx_reset = (float *)data_location;
 #endif
 }
 
@@ -418,6 +430,11 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		atomic_flag_clear(&i->sync_lock_flag);
 #  endif
 # endif
+#endif
+
+#ifdef DATA_KXRESET_INDEX
+	if (i->kx_reset != NULL && *(i->kx_reset) >= 0.5f)
+		plugin_reset(&i->p);
 #endif
 
 #if DATA_PRODUCT_MIDI_INPUTS_N > 0

@@ -24,7 +24,7 @@
 #define DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "output").reduce((s, x) => s += x.channels == "mono" ? 1 : 2, 0)}}
 #define DATA_PRODUCT_MIDI_INPUTS_N		{{=it.product.buses.filter(x => x.type == "midi" && x.direction == "input").length}}
 #define DATA_PRODUCT_MIDI_OUTPUTS_N		{{=it.product.buses.filter(x => x.type == "midi" && x.direction == "output").length}}
-#define DATA_PRODUCT_CONTROL_INPUTS_N		{{=it.product.parameters.filter(x => x.direction == "input").length}}
+#define DATA_PRODUCT_CONTROL_INPUTS_N		{{=it.product.parameters.filter(x => x.direction == "input" && x.id != it.lv2.kxReset).length}}
 #define DATA_PRODUCT_CONTROL_OUTPUTS_N		{{=it.product.parameters.filter(x => x.direction == "output").length}}
 
 {{?it.product.buses.find(x => x.type == "midi" && !x.optional)}}
@@ -68,6 +68,10 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control" && x.direction == "output") :p}}{{=p.paramIndex}}, {{~}}
 };
 #endif
+
+{{?it.tibia.lv2.ports.find(x => x.type == "kxReset")}}
+#define DATA_KXRESET_INDEX	{{=it.tibia.lv2.ports.find(x => x.type == "kxReset").paramIndex}}
+{{?}}
 
 {{?(it.product.ui && !it.tibia.lv2.noUi)}}
 #define DATA_UI
