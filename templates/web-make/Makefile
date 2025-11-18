@@ -55,6 +55,8 @@ endif
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+LIBS := $(LIBS_EXTRA)
+
 CFLAGS := -Ofast -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -106,10 +108,10 @@ build/src/processor.cpp: $(COMMON_DIR)/src/processor.c | build/src
 	cp $^ $@
 
 ifeq ($(CXX_OBJS),)
-build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) | build/web/$(BUNDLE_NAME)
+build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) $(LIBS) | build/web/$(BUNDLE_NAME)
 	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
 else
-build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) $(CXX_OBJS) | build/web/$(BUNDLE_NAME)
+build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) $(CXX_OBJS) $(LIBS) | build/web/$(BUNDLE_NAME)
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 

@@ -100,6 +100,8 @@ endif
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+LIBS := $(LIBS_EXTRA)
+
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -145,7 +147,7 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 build/obj/$(CLASSES_PATH)/MainActivity.class: $(DATA_DIR)/src/MainActivity.java | build/obj
 	$(JC) $(JFLAGS_ALL) -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
-build/apk/lib/armeabi-v7a/lib$(BUNDLE_NAME).so: $(C_OBJS) $(CXX_OBJS) | build/apk/lib/armeabi-v7a
+build/apk/lib/armeabi-v7a/lib$(BUNDLE_NAME).so: $(C_OBJS) $(CXX_OBJS) $(LIBS) | build/apk/lib/armeabi-v7a
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 
 build/assets/index.html: $(DATA_DIR)/src/index.html | build/assets

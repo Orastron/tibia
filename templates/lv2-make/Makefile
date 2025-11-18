@@ -81,6 +81,8 @@ C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+LIBS := $(LIBS_EXTRA)
+
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(shell pkg-config --cflags lv2) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -128,10 +130,10 @@ build/$(BUNDLE_DIR)/manifest.ttl: $(DATA_DIR)/data/manifest.ttl.in $(MANIFEST_EX
 	cat $^ | sed s/@DLL_SUFFIX@/$(DLL_SUFFIX)/g | sed s/@UI_TYPE@/$(UI_TYPE)/g > $@
 
 ifeq ($(CXX_OBJS),)
-build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) | build/$(BUNDLE_DIR)
+build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(LIBS) | build/$(BUNDLE_DIR)
 	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
 else
-build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) | build/$(BUNDLE_DIR)
+build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) $(LIBS) | build/$(BUNDLE_DIR)
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 

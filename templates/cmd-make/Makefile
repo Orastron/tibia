@@ -66,6 +66,8 @@ endif
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
+LIBS := $(LIBS_EXTRA)
+
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
@@ -108,10 +110,10 @@ build/src/main.cpp: $(COMMON_DIR)/src/main.c | build/src
 	cp $^ $@
 
 ifeq ($(CXX_OBJS),)
-build/$(PROGRAM): $(C_OBJS) build/obj/tinywav.o | build
+build/$(PROGRAM): $(C_OBJS) build/obj/tinywav.o $(LIBS) | build
 	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
 else
-build/$(PROGRAM): $(C_OBJS) $(CXX_OBJS) build/obj/tinywav.o | build
+build/$(PROGRAM): $(C_OBJS) $(CXX_OBJS) build/obj/tinywav.o $(LIBS) | build
 	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
 endif
 
