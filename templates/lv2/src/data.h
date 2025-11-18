@@ -91,6 +91,6 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 #define DATA_STATE_DSP_CUSTOM
 {{?}}
 
-{{?it.tibia.lv2.dontSetGlobalRegs}}
-#define DATA_DONT_SET_GLOBAL_REGS
-{{?}}
+{{~it.tibia.lv2.extraIncludes :p}}
+#include "{{=p}}"
+{{~}}

@@ -60,7 +60,7 @@
 
 #include <string.h>
 
-#ifndef DATA_DONT_SET_GLOBAL_REGS
+#ifndef LV2_DONT_SET_GLOBAL_REGS
 # if defined(__i386__) || defined(__x86_64__)
 #  include <xmmintrin.h>
 #  include <pmmintrin.h>
@@ -152,6 +152,9 @@ typedef struct {
 	plugin_state_callbacks		state_cbs;
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
+#endif
+#ifdef LV2_PLUGIN_EXTRA
+	LV2_PLUGIN_EXTRA
 #endif
 } plugin_instance;
 
@@ -282,8 +285,18 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	instance->kx_reset = NULL;
 #endif
 
+#ifdef LV2_INSTANTIATE_EXTRA
+	if (LV2_INSTANTIATE_EXTRA(instance, description, sample_rate, bundle_path, features) == 0)
+		goto err_extra;
+#endif
+
 	return instance;
 
+#ifdef LV2_INSTANTIATE_EXTRA
+err_extra:
+	if (instance->mem != NULL)
+		free(instance->mem);
+#endif
 err_mem:
 	plugin_fini(&instance->p);
 #ifdef DATA_PRODUCT_MIDI_REQUIRED
@@ -364,7 +377,7 @@ static void activate(LV2_Handle instance) {
 static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_instance * i = (plugin_instance *)instance;
 
-#ifndef DATA_DONT_SET_GLOBAL_REGS
+#ifndef LV2_DONT_SET_GLOBAL_REGS
 # if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -453,17 +466,25 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		}
 #endif
 
+#ifdef LV2_PROCESS_PRE_EXTRA
+	LV2_PROCESS_PRE_EXTRA(i, sample_count);
+#endif
+
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	const float ** x = i->x;
 #else
 	const float ** x = NULL;
 #endif
 #if DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N > 0
-	float ** y = i-> y;
+	float ** y = i->y;
 #else
 	float ** y = NULL;
 #endif
 	plugin_process(&i->p, x, y, sample_count);
+
+#ifdef LV2_PROCESS_POST_EXTRA
+	LV2_PROCESS_POST_EXTRA(i, sample_count);
+#endif
 
 #if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
 	for (uint32_t j = 0; j < DATA_PRODUCT_CONTROL_OUTPUTS_N; j++) {
@@ -475,7 +496,7 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	(void)plugin_get_parameter;
 #endif
 
-#ifndef DATA_DONT_SET_GLOBAL_REGS
+#ifndef LV2_DONT_SET_GLOBAL_REGS
 # if defined(__aarch64__)
 	__asm__ __volatile__ ("msr fpcr, %0" : : "r"(fpcr));
 # elif defined(__i386__) || defined(__x86_64__)
@@ -487,9 +508,9 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 static void cleanup(LV2_Handle instance) {
 	plugin_instance * i = (plugin_instance *)instance;
-	plugin_fini(&i->p);
 	if (i->mem)
 		free(i->mem);
+	plugin_fini(&i->p);
 	free(i->bundle_path);
 	free(instance);
 }
@@ -545,11 +566,18 @@ static LV2_State_Status state_restore(LV2_Handle instance, LV2_State_Retrieve_Fu
 	};
 	return plugin_state_load(&cbs, i->sample_rate, data, length) == 0 ? LV2_STATE_SUCCESS : LV2_STATE_ERR_UNKNOWN;
 }
+#endif
 
+#if defined(DATA_STATE_DSP_CUSTOM) || defined(LV2_EXTENSION_DATA_EXTRA)
 static const void * extension_data(const char * uri) {
+# ifdef DATA_STATE_DSP_CUSTOM
 	static const LV2_State_Interface state = { state_save, state_restore };
 	if (!strcmp(uri, LV2_STATE__interface))
 		return &state;
+# endif
+# ifdef LV2_EXTENSION_DATA_EXTRA
+	LV2_EXTENSION_DATA_EXTRA(uri);
+# endif
 	return NULL;
 }
 #endif
@@ -562,7 +590,7 @@ static const LV2_Descriptor descriptor = {
 	/* .run			= */ run,
 	/* .deactivate		= */ NULL,
 	/* .cleanup		= */ cleanup,
-#ifdef DATA_STATE_DSP_CUSTOM
+#if defined(DATA_STATE_DSP_CUSTOM) || defined(LV2_EXTENSION_DATA_EXTRA)
 	/* .extension_data	= */ extension_data
 #else
 	/* .extension_data	= */ NULL

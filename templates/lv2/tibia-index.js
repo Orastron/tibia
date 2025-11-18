@@ -141,8 +141,8 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 
 		if (options && options.noUi)
 			data.tibia.lv2.noUi = true;
-		if (options && options.dontSetGlobalRegs)
-			data.tibia.lv2.dontSetGlobalRegs = true;
+		if (options && options.extraIncludes)
+			data.tibia.lv2.extraIncludes = options.extraIncludes;
 	}
 
 	api.generateFileFromTemplateFile(`data${sep}manifest.ttl.in`, `data${sep}manifest.ttl.in`, data);
