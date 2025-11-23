@@ -28,8 +28,8 @@
 static Steinberg_char16 dataProductNameW[64] = { {{~Array.from(it.product.name).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 static Steinberg_char16 dataProductVersionW[64] = { {{~Array.from(it.product.version + "." + it.product.buildVersion).slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
-#define DATA_VST3_SDK_VERSION			"VST 3.7.13"
-static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.7.13") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
+#define DATA_VST3_SDK_VERSION			"VST 3.8.0"
+static Steinberg_char16 dataVST3SDKVersionW[64] = { {{~Array.from("VST 3.8.0") :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 
 static Steinberg_char16 dataVST3ControllerNameW[64] = { {{~Array.from(it.product.name + " Controller").slice(0, 63) :c}}0x{{=c.charCodeAt(0).toString(16)}}, {{~}}0 };
 

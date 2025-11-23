@@ -87,70 +87,6 @@ using namespace std;
 # define TRACE(...)	/* do nothing */
 #endif
 
-#ifdef DATA_UI
-# ifdef __linux__
-// Why generate the C interface when you can just not give a fuck? Thank you Steinberg!
-
-typedef struct Steinberg_ITimerHandlerVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_ITimerHandler": */
-	void (SMTG_STDMETHODCALLTYPE* onTimer) (void* thisInterface);
-} Steinberg_ITimerHandlerVtbl;
-
-typedef struct Steinberg_ITimerHandler
-{
-    struct Steinberg_ITimerHandlerVtbl* lpVtbl;
-} Steinberg_ITimerHandler;
-
-static const Steinberg_TUID Steinberg_ITimerHandler_iid = SMTG_INLINE_UID (0x10BDD94F, 0x41424774, 0x821FAD8F, 0xECA72CA9);
-
-typedef struct Steinberg_IEventHandlerVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_IEventHandler": */
-	void (SMTG_STDMETHODCALLTYPE* onFDIsSet) (void* thisInterface, int fd);
-} Steinberg_IEventHandlerVtbl;
-
-typedef struct Steinberg_IEventHandler
-{
-    struct Steinberg_IEventHandlerVtbl* lpVtbl;
-} Steinberg_IEventHandler;
-
-// not used
-//static const Steinberg_TUID Steinberg_IEventHandler_iid = SMTG_INLINE_UID (0x561E65C9, 0x13A0496F, 0x813A2C35, 0x654D7983);
-
-typedef struct Steinberg_IRunLoopVtbl
-{
-	/* methods derived from "Steinberg_FUnknown": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* queryInterface) (void* thisInterface, const Steinberg_TUID iid, void** obj);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* addRef) (void* thisInterface);
-	Steinberg_uint32 (SMTG_STDMETHODCALLTYPE* release) (void* thisInterface);
-
-	/* methods derived from "Steinberg_IRunLoop": */
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler, int fd);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterEventHandler) (void* thisInterface, struct Steinberg_IEventHandler* handler);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* registerTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler, uint64_t milliseconds);
-	Steinberg_tresult (SMTG_STDMETHODCALLTYPE* unregisterTimer) (void* thisInterface, struct Steinberg_ITimerHandler* handler);
-} Steinberg_IRunLoopVtbl;
-
-typedef struct Steinberg_IRunLoop
-{
-    struct Steinberg_IRunLoopVtbl* lpVtbl;
-} Steinberg_IRunLoop;
-
-static const Steinberg_TUID Steinberg_IRunLoop_iid = SMTG_INLINE_UID (0x18C35366, 0x97764F1A, 0x9C5B8385, 0x7A871389);
-# endif
-#endif
-
 #if defined(__linux__) || defined(__APPLE__)
 static char *x_asprintf(const char * format, ...) {
 	va_list args, tmp;
@@ -1241,10 +1177,10 @@ static void controllerStateSetParameterCb(void *handle, size_t index, float valu
 #  include <X11/Xlib.h>
 
 typedef struct {
-	Steinberg_ITimerHandlerVtbl *	vtblITimerHandler;
-	Steinberg_uint32		refs;
-	void *				data;
-	void				(*cb)(void *data);
+	Steinberg_Linux_ITimerHandlerVtbl *	vtblITimerHandler;
+	Steinberg_uint32			refs;
+	void *					data;
+	void					(*cb)(void *data);
 } timerHandler;
 
 static Steinberg_tresult timerHandlerQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -1252,7 +1188,7 @@ static Steinberg_tresult timerHandlerQueryInterface(void *thisInterface, const S
 	// Same as above (pluginQueryInterface)
 	size_t offset;
 	if (memcmp(iid, Steinberg_FUnknown_iid, sizeof(Steinberg_TUID)) == 0
-	    || memcmp(iid, Steinberg_ITimerHandler_iid, sizeof(Steinberg_TUID)) == 0)
+	    || memcmp(iid, Steinberg_Linux_ITimerHandler_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(timerHandler, vtblITimerHandler);
 	else {
 		TRACE(" not supported\n");
@@ -1293,7 +1229,7 @@ static void timerHandlerOnTimer(void* thisInterface) {
 	t->cb(t->data);
 }
 
-static Steinberg_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
+static Steinberg_Linux_ITimerHandlerVtbl timerHandlerVtblITimerHandler = {
 	/* FUnknown */
 	/* .queryInterface	= */ timerHandlerQueryInterface,
 	/* .addRef		= */ timerHandlerAddRef,
@@ -1318,7 +1254,7 @@ typedef struct plugView {
 	plugin_ui *			ui;
 	controller *			ctrl;
 # ifdef __linux__
-	Steinberg_IRunLoop *		runLoop;
+	Steinberg_Linux_IRunLoop *	runLoop;
 	timerHandler			timer;
 	Display *			display;
 # elif defined(__APPLE__)
@@ -1524,7 +1460,7 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		v->ui = NULL;
 		return Steinberg_kResultFalse;
 	}
-	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
+	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_Linux_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
 		XCloseDisplay(v->display);
 		plugin_ui_free(v->ui);
 		v->ui = NULL;
@@ -1558,7 +1494,7 @@ static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 	TRACE("plugView removed %p\n", thisInterface);
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 # ifdef __linux__
-	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_ITimerHandler *)&v->timer);
+	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_Linux_ITimerHandler *)&v->timer);
 	XCloseDisplay(v->display);
 # elif defined(__APPLE__)
 	CFRunLoopTimerInvalidate(v->timer);
@@ -1678,7 +1614,7 @@ static Steinberg_tresult plugViewSetFrame(void* thisInterface, struct Steinberg_
 	v->frame = frame;
 # ifdef __linux__
 	if (v->frame) {
-		if (v->frame->lpVtbl->queryInterface(v->frame, Steinberg_IRunLoop_iid, (void **)&v->runLoop) != Steinberg_kResultOk)
+		if (v->frame->lpVtbl->queryInterface(v->frame, Steinberg_Linux_IRunLoop_iid, (void **)&v->runLoop) != Steinberg_kResultOk)
 			return Steinberg_kResultFalse;
 		v->frame->lpVtbl->release(v->frame);
 	}
