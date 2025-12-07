@@ -57,7 +57,7 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 
 LIBS := $(LIBS_EXTRA)
 
-CFLAGS := -Ofast -Wall -Wpedantic -Wextra
+CFLAGS := -O3 -ffast-math -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
 
 LDFLAGS_ALL := \
