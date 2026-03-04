@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023-2025 Orastron Srl unipersonale
+# Copyright (C) 2023-2026 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ BUILD_DATA_DIR := build/web
 
 CC := clang
 CXX := clang++
-#already stripeped
+#already stripped
 #STRIP := strip
 
 C_SRCS := $(COMMON_DIR)/src/walloc.c $(COMMON_DIR)/src/string.c $(C_SRCS_EXTRA)
