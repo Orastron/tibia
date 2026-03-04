@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023-2025 Orastron Srl unipersonale
+# Copyright (C) 2023-2026 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,12 +44,12 @@ include $(SYSTEM_FILES_DIR)/Makefile
 
 C_SOURCES += $(C_SRCS_EXTRA)
 
-CFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CFLAGS_EXTRA)
-LDFLAGS += $(LDFLAGS_EXTRA)
-CPPFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CXXFLAGS_EXTRA)
-
+CFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) $(CFLAGS_EXTRA) $(CFLAGS_POST)
+LDFLAGS += $(LDFLAGS_EXTRA) $(LDFLAGS_POST)
+CPPFLAGS += -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR)
 ifneq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h),)
 	CPPFLAGS += -DHAS_PLUGIN_CXX_H
 endif
+CPPFLAGS += $(CXXFLAGS_EXTRA) $(CXXFLAGS_POST)
 
 -include $(COMMON_DIR)/extra.mk

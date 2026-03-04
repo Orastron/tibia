@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023-2025 Orastron Srl unipersonale
+# Copyright (C) 2023-2026 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -103,20 +103,20 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 LIBS := $(LIBS_EXTRA)
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS) $(CFLAGS_POST)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden -std=c++11 $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden -std=c++11 $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
 
 LDFLAGS :=
 LDFLAGS_ALL := -shared -static-libstdc++ -landroid
 ifeq ($(HAS_MIDI_IN), yes)
 	LDFLAGS += -lamidi
 endif
-LDFLAGS_ALL += $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL += $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
 
 JFLAGS :=
-JFLAGS_ALL := $(JFLAGS_EXTRA) $(JFLAGS)
+JFLAGS_ALL := $(JFLAGS_EXTRA) $(JFLAGS) $(JFLAGS_POST)
 
 DIRS := build build/gen build/apk build/obj build/apk/lib build/apk/lib/armeabi-v7a build/assets
 

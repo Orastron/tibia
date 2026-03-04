@@ -58,7 +58,7 @@ CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
 LIBS := $(LIBS_EXTRA)
 
 CFLAGS := -O3 -ffast-math -Wall -Wpedantic -Wextra
-CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS)
+CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS) $(CFLAGS_POST)
 
 LDFLAGS_ALL := \
 	-Wl,--allow-undefined \
@@ -86,10 +86,10 @@ LDFLAGS_ALL := \
 ifeq ($(HAS_MIDI_IN), yes)
 LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,--export=processor_midi_msg_in
 endif
-LDFLAGS_ALL := $(LDFLAGS_ALL) $(LDFLAGS_EXTRA) $(LDFLAGS)
+LDFLAGS_ALL := $(LDFLAGS_ALL) $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
 
 CXXFLAGS := $(CFLAGS)
-CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS)
+CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
 
 DIRS := build build/obj build/web build/web/$(BUNDLE_NAME) build/src
 
