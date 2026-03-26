@@ -128,6 +128,9 @@
 		units:unit	{{=it.tibia.lv2.ttlURI(it.tibia.lv2.units[p.unit])}} ;
 {{?}}
 {{?}}
+{{?p.extraDesignations}}
+		lv2:designation {{=p.extraDesignations.join(" , ")}} ;
+{{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
 	] , [
