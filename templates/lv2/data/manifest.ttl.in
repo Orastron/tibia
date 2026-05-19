@@ -129,7 +129,7 @@
 {{?}}
 {{?}}
 {{?p.extraDesignations}}
-		lv2:designation {{=p.extraDesignations.join(" , ")}} ;
+		lv2:designation {{=p.extraDesignations.map(x => it.tibia.lv2.ttlURI(x)).join(" , ")}} ;
 {{?}}
 		lv2:index {{=i}}
 {{?i < it.tibia.lv2.ports.length - 1}}
