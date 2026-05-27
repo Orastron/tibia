@@ -621,12 +621,11 @@ static const char * ui_get_bundle_path_cb(void *handle) {
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static void ui_set_parameter_begin_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
-	if (instance->has_touch) {
-		index = index_to_param[index];
+	index = index_to_param[index];
+	value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
+	if (instance->has_touch)
 		instance->touch.touch(instance->touch.handle, index, true);
-		value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
-		instance->write(instance->controller, index, sizeof(float), 0, &value);
-	}
+	instance->write(instance->controller, index, sizeof(float), 0, &value);
 }
 
 static void ui_set_parameter_cb(void *handle, size_t index, float value) {
@@ -638,12 +637,11 @@ static void ui_set_parameter_cb(void *handle, size_t index, float value) {
 
 static void ui_set_parameter_end_cb(void *handle, size_t index, float value) {
 	ui_instance *instance = (ui_instance *)handle;
-	if (instance->has_touch) {
-		index = index_to_param[index];
-		value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
-		instance->write(instance->controller, index, sizeof(float), 0, &value);
+	index = index_to_param[index];
+	value = adjust_param(index - CONTROL_INPUT_INDEX_OFFSET, value);
+	instance->write(instance->controller, index, sizeof(float), 0, &value);
+	if (instance->has_touch)
 		instance->touch.touch(instance->touch.handle, index, false);
-	}
 }
 # endif
 
