@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2022-2025 Orastron Srl unipersonale
+ * Copyright (C) 2022-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 
 #include "data.h"
 #include "plugin_api.h"
+#undef PLUGIN_HAS_STATE
 #ifdef HAS_PLUGIN_CXX_H
 # include "plugin_cxx.h"
 #else
@@ -54,11 +55,6 @@ extern "C" {
 #endif
 
 instance * processor_new(float sample_rate) {
-#ifdef DATA_STATE_DSP_CUSTOM
-	(void)plugin_state_load;
-	(void)plugin_state_save;
-#endif
-
 	instance * i = (instance *)malloc(sizeof(instance));
 	if (i == NULL)
 		return NULL;

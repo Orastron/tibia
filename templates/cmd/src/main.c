@@ -23,6 +23,7 @@
 
 #include "data.h"
 #include "plugin_api.h"
+#undef PLUGIN_HAS_STATE
 #ifdef HAS_PLUGIN_CXX_H
 # include "plugin_cxx.h"
 #else
@@ -166,11 +167,6 @@ float clampf(float x, float m, float M) {
 }
 
 int main(int argc, char * argv[]) {
-#ifdef STATE_DSP_CUSTOM
-	(void)plugin_state_load;
-	(void)plugin_state_save;
-#endif
-
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++)
 		param_values[i] = param_data[i].def;

@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024, 2025 Orastron Srl unipersonale
+ * Copyright (C) 2024-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,6 +59,10 @@ enum {
 	{{~}}
 	plugin_parameter__count
 };
+{{?}}
+
+{{?it.product.state}}
+#define PLUGIN_HAS_STATE	1
 {{?}}
 
 #endif

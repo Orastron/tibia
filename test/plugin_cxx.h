@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023-2025 Orastron Srl unipersonale
+ * Copyright (C) 2023-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -189,6 +189,8 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 	instance->p.midiMsgIn(data);
 }
 
+#ifdef PLUGIN_HAS_STATE
+
 static void serialize_float(uint8_t *dest, float f) {
 	union { float f; uint32_t u; } v;
 	v.f = f;
@@ -248,3 +250,5 @@ static int plugin_state_load(const plugin_state_callbacks *cbs, float cur_sample
 	cbs->unlock(cbs->handle);
 	return 0;
 }
+
+#endif
