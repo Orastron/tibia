@@ -79,7 +79,11 @@ static uint32_t param_out_index[DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 #define DATA_UI_USER_RESIZABLE			{{=it.product.ui.userResizable ? 1 : 0}}
 {{?}}
 
-{{?((it.product.ui && !it.tibia.lv2.noUi) || (it.product.state && it.product.state.dspCustom))}}
+{{?it.tibia.lv2.noState}}
+#define DATA_NO_STATE
+{{?}}
+
+{{?((it.product.ui && !it.tibia.lv2.noUi) || (it.product.state && !it.tibia.lv2.noState && it.product.state.dspCustom))}}
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N] = {
 	{{~it.tibia.lv2.ports.filter(x => x.type == "control").map((e, i) => ({ i: i, pi: e.paramIndex })).sort((a, b) => a.pi - b.pi) :p}}{{=p.i + it.tibia.lv2.ports.filter(x => x.type != "control").length}}, {{~}}
@@ -87,7 +91,7 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 #endif
 {{?}}
 
-{{?it.product.state && it.product.state.dspCustom}}
+{{?it.product.state && !it.tibia.lv2.noState && it.product.state.dspCustom}}
 #define DATA_STATE_DSP_CUSTOM
 {{?}}
 

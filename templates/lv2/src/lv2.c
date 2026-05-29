@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024, 2025 Orastron Srl unipersonale
+ * Copyright (C) 2024-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,9 @@
 
 #include "data.h"
 #include "plugin_api.h"
+#ifdef DATA_NO_STATE
+# undef PLUGIN_HAS_STATE
+#endif
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #ifdef HAS_PLUGIN_CXX_H
