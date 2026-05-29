@@ -27,13 +27,13 @@
 {{?}}
 	lv2:optionalFeature log:log ;
 	lv2:optionalFeature lv2:hardRTCapable ;
-{{?(it.product.state && it.product.state.dspCustom)}}
+{{?(it.product.state && !it.tibia.lv2.noState && it.product.state.dspCustom)}}
 	lv2:optionalFeature state:threadSafeRestore ;
 {{?}}
-{{?it.product.ui}}
+{{?(it.product.ui && !it.tibia.lv2.noUi)}}
 	ui:ui {{=it.tibia.lv2.ttlURI(it.lv2.ui.uri)}} ;
 {{?}}
-{{?(it.product.state && it.product.state.dspCustom)}}
+{{?(it.product.state && !it.tibia.lv2.noState && it.product.state.dspCustom)}}
 	lv2:extensionData state:interface ;
 {{?}}
 	lv2:port [
