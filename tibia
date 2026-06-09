@@ -3,7 +3,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2023-2025 Orastron Srl unipersonale
+ * Copyright (C) 2023-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,10 +61,10 @@ if (process.argv[2] == "--common") {
 	i = 5;
 }
 
-var subtemplates = template.split(":")[1];
+var subtemplates = template.split(/[:;]/)[1];
 if (subtemplates)
 	subtemplates = subtemplates.split(",").filter(x => x).reduce((a, x) => (a[path.basename(x)] = x, a), {});
-template = template.split(":")[0];
+template = template.split(/[:;]/)[0];
 
 var overrides = [];
 for (; i < process.argv.length; i++) {
