@@ -204,7 +204,7 @@ static int stateRead(struct Steinberg_IBStream * state, char ** data, Steinberg_
 	while (read < *length) {
 		Steinberg_int32 r = (*length - read) <= 0x7fffffff ? *length - read : 0x7fffffff;
 		Steinberg_int32 n;
-		state->lpVtbl->read(state, *data + read, *length, &n);
+		state->lpVtbl->read(state, *data + read, r, &n);
 		if (n != r) {
 			free(*data);
 			return -1;
@@ -278,7 +278,7 @@ static int pluginStateWriteCb(void *handle, const char *data, size_t length) {
 	while (written < length) {
 		Steinberg_int32 w = (length - written) <= 0x7fffffff ? length - written : 0x7fffffff;
 		Steinberg_int32 n;
-		p->state->lpVtbl->write(p->state, (void *)data, length, &n);
+		p->state->lpVtbl->write(p->state, (void *)data, w, &n);
 		if (n != w)
 			return -1;
 		written += n;
@@ -1896,6 +1896,8 @@ static Steinberg_tresult controllerGetParameterInfo(void* thisInterface, Steinbe
 }
 
 static void dToStr(double v, Steinberg_Vst_String128 s, int precision) {
+	// FIXME: with huge values this could lead to buffer overflows
+
 	int i = 0;
 
 	if (v < 0.0) {
@@ -1956,31 +1958,32 @@ static Steinberg_tresult controllerGetParamStringByValue(void* thisInterface, St
 }
 
 void TCharToD(Steinberg_Vst_TChar* s, double *v) {
-	int i = 0;
 	*v = 0.0;
 
-	if (s[0] == '-') {
-		*v = -0.0;
-		i++;
+	char neg = 0;
+	if (*s == '-') {
+		neg = 1;
+		s++;
 	}
 
-	while (s[i] >= '0' && s[i] <= '9') {
-		char d = s[i] - '0';
-		i++;
-		*v = 10.0 * *v + d;
+	while (*s >= '0' && *s <= '9') {
+		*v = 10.0 * *v + (*s - '0');
+		s++;
 	}
 
-	if (s[i] != '.')
-		return;
-	i++;
+	if (*s != '.')
+		goto end;
 
-	double x = 1.0;
-	while (s[i] >= '0' && s[i] <= '9') {
-		char d = s[i] - '0';
-		i++;
+	double x = 0.1;
+	while (*s >= '0' && *s <= '9') {
+		*v = *v + x * (*s - '0');
 		x *= 0.1;
-		*v = *v + d * x;
+		s++;
 	}
+
+end:
+	if (neg)
+		*v = -v;
 }
 
 static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_TChar* string, Steinberg_Vst_ParamValue* valueNormalized) {
