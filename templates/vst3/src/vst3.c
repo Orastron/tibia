@@ -1983,7 +1983,7 @@ void TCharToD(Steinberg_Vst_TChar* s, double *v) {
 
 end:
 	if (neg)
-		*v = -v;
+		*v = -*v;
 }
 
 static Steinberg_tresult controllerGetParamValueByString(void* thisInterface, Steinberg_Vst_ParamID id, Steinberg_Vst_TChar* string, Steinberg_Vst_ParamValue* valueNormalized) {
