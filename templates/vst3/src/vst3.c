@@ -2429,7 +2429,7 @@ static Steinberg_tresult factoryGetClassInfo2(void* thisInterface, Steinberg_int
 		strcpy(info->subCategories, DATA_VST3_SUBCATEGORY);
 		*info->vendor = '\0';
 		strcpy(info->version, DATA_PRODUCT_VERSION);
-		strcpy(info->sdkVersion, "VST " DATA_VST3_SDK_VERSION " | Tibia");
+		strcpy(info->sdkVersion, DATA_VST3_SDK_VERSION " | Tibia");
 		break;
 	case 1:
 		TRACE(" class 1\n");
