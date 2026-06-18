@@ -218,6 +218,9 @@ typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent; // must stay first
 	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
 	Steinberg_Vst_IProcessContextRequirementsVtbl *	vtblIProcessContextRequirements;
+#ifdef DATA_UI
+	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // stub, but Cakewalk Sonar wants it anyway
+#endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
 	plugin						p;
@@ -311,6 +314,10 @@ static Steinberg_tresult pluginQueryInterface(pluginInstance *p, const Steinberg
 		offset = offsetof(pluginInstance, vtblIAudioProcessor);
 	else if (memcmp(iid, Steinberg_Vst_IProcessContextRequirements_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(pluginInstance, vtblIProcessContextRequirements);
+#ifdef DATA_UI
+	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
+		offset = offsetof(pluginInstance, vtblIConnectionPoint);
+#endif
 	else {
 		TRACE(" not supported\n");
 		for (int i = 0; i < 16; i++)
@@ -1107,7 +1114,7 @@ typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController; // must stay first
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
 #ifdef DATA_UI
-	//Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint;
+	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // stub, but Cakewalk Sonar wants it anyway
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -1708,8 +1715,8 @@ static Steinberg_tresult controllerQueryInterface(controller *c, const Steinberg
 	else if (memcmp(iid, Steinberg_Vst_IMidiMapping_iid, sizeof(Steinberg_TUID)) == 0)
 		offset = offsetof(controller, vtblIMidiMapping);
 #ifdef DATA_UI
-	/*else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
-		offset = offsetof(controller, vtblIConnectionPoint);*/
+	else if (memcmp(iid, Steinberg_Vst_IConnectionPoint_iid, sizeof(Steinberg_TUID)) == 0)
+		offset = offsetof(controller, vtblIConnectionPoint);
 #endif
 	else {
 		TRACE(" not supported\n");
@@ -1974,11 +1981,13 @@ void TCharToD(Steinberg_Vst_TChar* s, double *v) {
 	if (*s != '.')
 		goto end;
 
-	double x = 0.1;
-	while (*s >= '0' && *s <= '9') {
-		*v = *v + x * (*s - '0');
-		x *= 0.1;
-		s++;
+	{
+		double x = 0.1;
+		while (*s >= '0' && *s <= '9') {
+			*v = *v + x * (*s - '0');
+			x *= 0.1;
+			s++;
+		}
 	}
 
 end:
@@ -2242,7 +2251,6 @@ static Steinberg_Vst_IMidiMappingVtbl controllerVtblIMidiMapping = {
 };
 
 #ifdef DATA_UI
-# if 0
 static Steinberg_tresult controllerIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
 	TRACE("controller IConnectionPoint queryInterface %p\n", thisInterface);
 	return controllerQueryInterface((controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint)), iid, obj);
@@ -2289,7 +2297,53 @@ static Steinberg_Vst_IConnectionPointVtbl controllerVtblIConnectionPoint = {
 	/* .disconnect			= */ controllerIConnectionPointDisconnect,
 	/* .notify			= */ controllerIConnectionPointNotify
 };
-# endif
+
+static Steinberg_tresult pluginIConnectionPointQueryInterface(void* thisInterface, const Steinberg_TUID iid, void** obj) {
+	TRACE("plugin IConnectionPoint queryInterface %p\n", thisInterface);
+	return pluginQueryInterface((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)), iid, obj);
+}
+
+static Steinberg_uint32 pluginIConnectionPointAddRef(void* thisInterface) {
+	TRACE("plugin IConnectionPoint addRef %p\n", thisInterface);
+	return pluginAddRef((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)));
+}
+
+static Steinberg_uint32 pluginIConnectionPointRelease(void* thisInterface) {
+	TRACE("plugin IConnectionPoint release %p\n", thisInterface);
+	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint)));
+}
+
+static Steinberg_tresult pluginIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	(void)thisInterface;
+
+	return other ? Steinberg_kResultOk : Steinberg_kInvalidArgument;
+}
+
+static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	(void)thisInterface;
+	(void)other;
+
+	return Steinberg_kResultOk;
+}
+
+static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
+	(void)thisInterface;
+	(void)message;
+
+	return Steinberg_kResultOk;
+}
+
+static Steinberg_Vst_IConnectionPointVtbl pluginVtblIConnectionPoint = {
+	/* FUnknown */
+	/* .queryInterface		= */ pluginIConnectionPointQueryInterface,
+	/* .addRef			= */ pluginIConnectionPointAddRef,
+	/* .release			= */ pluginIConnectionPointRelease,
+
+	/* IConnectionPoint */
+	/* .connect			= */ pluginIConnectionPointConnect,
+	/* .disconnect			= */ pluginIConnectionPointDisconnect,
+	/* .notify			= */ pluginIConnectionPointNotify
+};
 #endif
 
 static Steinberg_tresult factoryQueryInterface(void *thisInterface, const Steinberg_TUID iid, void ** obj) {
@@ -2380,6 +2434,9 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		p->vtblIComponent = &pluginVtblIComponent;
 		p->vtblIAudioProcessor = &pluginVtblIAudioProcessor;
 		p->vtblIProcessContextRequirements = &pluginVtblIProcessContextRequirements;
+#ifdef DATA_UI
+		p->vtblIConnectionPoint = &pluginVtblIConnectionPoint;
+#endif
 		p->refs = 1;
 		p->context = NULL;
 		*obj = p;
@@ -2396,7 +2453,7 @@ static Steinberg_tresult factoryCreateInstance(void *thisInterface, Steinberg_FI
 		c->vtblIEditController = &controllerVtblIEditController;
 		c->vtblIMidiMapping = &controllerVtblIMidiMapping;
 #ifdef DATA_UI
-		//c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
+		c->vtblIConnectionPoint = &controllerVtblIConnectionPoint;
 #endif
 		c->refs = 1;
 		c->context = NULL;
