@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2024, 2025 Orastron Srl unipersonale
+ * Copyright (C) 2024-2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,10 +192,9 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 
 	instance->param_down = -1;
 	instance->ui  = vinci_new();
-	instance->w = window_new(instance->ui, has_parent ? parent : NULL, WIDTH, HEIGHT, &wcbs);
+	instance->w = window_new(instance->ui, has_parent ? parent : NULL, WIDTH, HEIGHT, 1, &wcbs);
 	instance->widget = window_get_handle(instance->w);
 	window_set_data(instance->w, (void*) instance);
-	window_show(instance->w);
 
 	// just some valid values to allow drawing
 	instance->gain = 0.f;
