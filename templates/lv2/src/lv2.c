@@ -47,11 +47,13 @@
 #include <lv2/log/log.h>
 #include <lv2/log/logger.h>
 #include <lv2/urid/urid.h>
-#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM)
+#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM) || defined(DATA_TRANSPORT_SYNC)
 # include <lv2/atom/atom.h>
-# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+# if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_TRANSPORT_SYNC)
 #  include <lv2/atom/util.h>
-#  include <lv2/midi/midi.h>
+#  if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
+#   include <lv2/midi/midi.h>
+#  endif
 # endif
 #endif
 #ifdef DATA_UI
