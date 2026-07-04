@@ -68,11 +68,15 @@ enum {
 {{?(it.product.transport && it.product.transport.sync)}}
 #include <stdint.h>
 
-#define PLUGIN_TRANSPORT_BPM	((uint32_t)1)
+#define PLUGIN_TRANSPORT_PLAYING	((uint32_t)1)
+#define PLUGIN_TRANSPORT_SPEED		((uint32_t)(1 << 1))
+#define PLUGIN_TRANSPORT_BPM		((uint32_t)(1 << 2))
 
 typedef struct {
 	uint32_t	changed;
 	uint32_t	valid;
+	char		playing;
+	float		speed;
 	float		bpm;
 } plugin_transport;
 {{?}}

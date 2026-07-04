@@ -262,6 +262,8 @@ typedef struct pluginInstance {
 #ifdef DATA_TRANSPORT_SYNC
 	char						firstRun;
 	uint32_t					transportValid;
+	char						transportPlaying;
+	float						transportSpeed;
 	float						transportBpm;
 #endif
 	void *						mem;
@@ -998,7 +1000,21 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	struct Steinberg_Vst_ProcessContext *ctx = data->processContext;
 	plugin_transport t;
 	t.changed = 0;
-	char ctx_bpm = (ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTempoValid) ? 1 : 0;
+	p->transportValid |= PLUGIN_TRANSPORT_PLAYING;
+	char ctx_playing = ctx ? 1 : 0;
+	char ctx_playing_value = ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kPlaying ? 1 : 0;
+	char transport_playing = (p->transportValid & PLUGIN_TRANSPORT_PLAYING) ? 1 : 0;
+	if (ctx_playing != transport_playing || (ctx_playing && ctx_playing_value != p->transportPlaying)) {
+		if (ctx_playing) {
+			p->transportValid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+			p->transportPlaying = ctx_playing_value;
+			t.playing = ctx_playing_value;
+			t.speed = ctx_playing_value ? 1.f : 0.f;
+		} else
+			p->transportValid &= ~(PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED);
+		t.changed |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+	}
+	char ctx_bpm = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTempoValid) ? 1 : 0;
 	char transport_bpm = (p->transportValid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
 	if (ctx_bpm != transport_bpm || (ctx_bpm && ctx->tempo != p->transportBpm)) {
 		if (ctx_bpm) {

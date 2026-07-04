@@ -172,11 +172,13 @@ typedef struct {
 #ifdef DATA_TRANSPORT_SYNC
 	char				first_run;
 	uint32_t			transport_valid;
+	float				transport_speed;
 	float				transport_bpm;
 	LV2_URID			uri_atom_Blank;
 	LV2_URID			uri_atom_Object;
 	LV2_URID			uri_atom_Float;
 	LV2_URID			uri_time_Position;
+	LV2_URID			uri_time_speed;
 	LV2_URID			uri_time_beatsPerMinute;
 #endif
 #ifdef LV2_PLUGIN_EXTRA
@@ -273,6 +275,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		instance->uri_atom_Object         = instance->map->map(instance->map->handle, LV2_ATOM__Object);
 		instance->uri_atom_Float          = instance->map->map(instance->map->handle, LV2_ATOM__Float);
 		instance->uri_time_Position       = instance->map->map(instance->map->handle, LV2_TIME__Position);
+		instance->uri_time_speed          = instance->map->map(instance->map->handle, LV2_TIME__speed);
 		instance->uri_time_beatsPerMinute = instance->map->map(instance->map->handle, LV2_TIME__beatsPerMinute);
 	}
 #endif
@@ -516,18 +519,26 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #endif
 
 #ifdef DATA_TRANSPORT_SYNC
-	char has_bpm = 0;
-	float bpm;
+	char has_bpm = 0, has_speed = 0;
+	float bpm, speed;
 	if (i->map && i->x_transport != NULL) {
 		LV2_ATOM_SEQUENCE_FOREACH(i->x_transport, ev) {
 			if (ev->body.type == i->uri_atom_Object || ev->body.type == i->uri_atom_Blank) {
 				const LV2_Atom_Object * obj = (const LV2_Atom_Object *)&ev->body;
 				if (obj->body.otype == i->uri_time_Position) {
-					 LV2_Atom * atom_bpm = NULL;
-					 lv2_atom_object_get(obj, i->uri_time_beatsPerMinute, &atom_bpm, NULL);
-					 if (atom_bpm) {
-						 has_bpm = 1;
-						 bpm = ((LV2_Atom_Float*)atom_bpm)->body;
+					LV2_Atom * atom_speed = NULL;
+					LV2_Atom * atom_bpm = NULL;
+					lv2_atom_object_get(obj,
+						i->uri_time_speed, &atom_speed,
+						i->uri_time_beatsPerMinute, &atom_bpm,
+						NULL);
+					if (atom_speed) {
+						has_speed = 1;
+						speed = ((LV2_Atom_Float*)atom_speed)->body;
+					}
+					if (atom_bpm) {
+						has_bpm = 1;
+						bpm = ((LV2_Atom_Float*)atom_bpm)->body;
 					}
 				}
 			}
@@ -536,6 +547,16 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 
 	plugin_transport t;
 	t.changed = 0;
+	char transport_speed = (i->transport_valid & PLUGIN_TRANSPORT_SPEED) ? 1 : 0;
+	if (has_speed != transport_speed || (has_speed && speed != i->transport_speed)) {
+		if (has_speed) {
+			i->transport_valid |= PLUGIN_TRANSPORT_SPEED;
+			i->transport_speed = speed;
+			t.speed = speed;
+		} else
+			i->transport_valid &= ~PLUGIN_TRANSPORT_SPEED;
+		t.changed |= PLUGIN_TRANSPORT_SPEED;
+	}
 	char transport_bpm = (i->transport_valid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
 	if (has_bpm != transport_bpm || (has_bpm && bpm != i->transport_bpm)) {
 		if (has_bpm) {
