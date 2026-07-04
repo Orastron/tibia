@@ -174,12 +174,15 @@ typedef struct {
 	uint32_t			transport_valid;
 	float				transport_speed;
 	float				transport_bpm;
+	double				transport_beat;
+	uint32_t			transport_time_sig_denom;
 	LV2_URID			uri_atom_Blank;
 	LV2_URID			uri_atom_Object;
-	LV2_URID			uri_atom_Float;
 	LV2_URID			uri_time_Position;
 	LV2_URID			uri_time_speed;
 	LV2_URID			uri_time_beatsPerMinute;
+	LV2_URID			uri_time_beat;
+	LV2_URID			uri_time_beatUnit;
 #endif
 #ifdef LV2_PLUGIN_EXTRA
 	LV2_PLUGIN_EXTRA
@@ -273,10 +276,11 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	if (instance->map) {
 		instance->uri_atom_Blank          = instance->map->map(instance->map->handle, LV2_ATOM__Blank);
 		instance->uri_atom_Object         = instance->map->map(instance->map->handle, LV2_ATOM__Object);
-		instance->uri_atom_Float          = instance->map->map(instance->map->handle, LV2_ATOM__Float);
 		instance->uri_time_Position       = instance->map->map(instance->map->handle, LV2_TIME__Position);
 		instance->uri_time_speed          = instance->map->map(instance->map->handle, LV2_TIME__speed);
 		instance->uri_time_beatsPerMinute = instance->map->map(instance->map->handle, LV2_TIME__beatsPerMinute);
+		instance->uri_time_beat           = instance->map->map(instance->map->handle, LV2_TIME__beat);
+		instance->uri_time_beatUnit       = instance->map->map(instance->map->handle, LV2_TIME__beatUnit);
 	}
 #endif
 
@@ -519,8 +523,10 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #endif
 
 #ifdef DATA_TRANSPORT_SYNC
-	char has_bpm = 0, has_speed = 0;
+	char has_bpm = 0, has_speed = 0, has_beat = 0, has_beat_unit = 0;
 	float bpm, speed;
+	double beat;
+	uint32_t beat_unit;
 	if (i->map && i->x_transport != NULL) {
 		LV2_ATOM_SEQUENCE_FOREACH(i->x_transport, ev) {
 			if (ev->body.type == i->uri_atom_Object || ev->body.type == i->uri_atom_Blank) {
@@ -528,44 +534,61 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 				if (obj->body.otype == i->uri_time_Position) {
 					LV2_Atom * atom_speed = NULL;
 					LV2_Atom * atom_bpm = NULL;
+					LV2_Atom * atom_beat = NULL;
+					LV2_Atom * atom_beat_unit = NULL;
 					lv2_atom_object_get(obj,
 						i->uri_time_speed, &atom_speed,
 						i->uri_time_beatsPerMinute, &atom_bpm,
+						i->uri_time_beat, &atom_beat,
+						i->uri_time_beatUnit, &atom_beat_unit,
 						NULL);
 					if (atom_speed) {
 						has_speed = 1;
-						speed = ((LV2_Atom_Float*)atom_speed)->body;
+						speed = ((LV2_Atom_Float *)atom_speed)->body;
 					}
 					if (atom_bpm) {
 						has_bpm = 1;
-						bpm = ((LV2_Atom_Float*)atom_bpm)->body;
+						bpm = ((LV2_Atom_Float *)atom_bpm)->body;
+					}
+					if (atom_beat) {
+						has_beat = 1;
+						beat = ((LV2_Atom_Double *)atom_beat)->body;
+					}
+					if (atom_beat_unit) {
+						has_beat_unit = 1;
+						beat_unit = ((LV2_Atom_Int *)atom_beat_unit)->body;
 					}
 				}
 			}
 		}
 	}
 
+	// should we take into account that the transport port might have been disconnected and thus invalidate values???
 	plugin_transport t;
 	t.changed = 0;
-	char transport_speed = (i->transport_valid & PLUGIN_TRANSPORT_SPEED) ? 1 : 0;
-	if (has_speed != transport_speed || (has_speed && speed != i->transport_speed)) {
-		if (has_speed) {
-			i->transport_valid |= PLUGIN_TRANSPORT_SPEED;
-			i->transport_speed = speed;
-			t.speed = speed;
-		} else
-			i->transport_valid &= ~PLUGIN_TRANSPORT_SPEED;
+	if (has_speed && (!(i->transport_valid & PLUGIN_TRANSPORT_SPEED) || speed != i->transport_speed)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_SPEED;
+		i->transport_speed = speed;
+		t.speed = speed;
 		t.changed |= PLUGIN_TRANSPORT_SPEED;
 	}
-	char transport_bpm = (i->transport_valid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
-	if (has_bpm != transport_bpm || (has_bpm && bpm != i->transport_bpm)) {
-		if (has_bpm) {
-			i->transport_valid |= PLUGIN_TRANSPORT_BPM;
-			i->transport_bpm = bpm;
-			t.bpm = bpm;
-		} else
-			i->transport_valid &= ~PLUGIN_TRANSPORT_BPM;
+	if (has_bpm && (!(i->transport_valid & PLUGIN_TRANSPORT_BPM) || bpm != i->transport_bpm)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_BPM;
+		i->transport_bpm = bpm;
+		t.bpm = bpm;
 		t.changed |= PLUGIN_TRANSPORT_BPM;
+	}
+	if (has_beat && (!(i->transport_valid & PLUGIN_TRANSPORT_BEAT) || beat != i->transport_beat)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_BEAT;
+		i->transport_beat = beat;
+		t.beat = beat;
+		t.changed |= PLUGIN_TRANSPORT_BEAT;
+	}
+	if (has_beat_unit && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat != i->transport_time_sig_denom)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+		i->transport_time_sig_denom = beat_unit;
+		t.time_sig_denom = beat_unit;
+		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
 	}
 	if (t.changed || i->first_run) {
 		t.valid = i->transport_valid;

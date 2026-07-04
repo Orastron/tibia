@@ -71,6 +71,10 @@ enum {
 #define PLUGIN_TRANSPORT_PLAYING	((uint32_t)1)
 #define PLUGIN_TRANSPORT_SPEED		((uint32_t)(1 << 1))
 #define PLUGIN_TRANSPORT_BPM		((uint32_t)(1 << 2))
+#define PLUGIN_TRANSPORT_QUARTER	((uint32_t)(1 << 3))
+#define PLUGIN_TRANSPORT_BEAT		((uint32_t)(1 << 4))
+#define PLUGIN_TRANSPORT_TIME_SIG_NUM	((uint32_t)(1 << 5))
+#define PLUGIN_TRANSPORT_TIME_SIG_DENOM	((uint32_t)(1 << 6))
 
 typedef struct {
 	uint32_t	changed;
@@ -78,6 +82,10 @@ typedef struct {
 	char		playing;
 	float		speed;
 	float		bpm;
+	double		quarter;
+	double		beat;
+	uint32_t	time_sig_num;
+	uint32_t	time_sig_denom;
 } plugin_transport;
 {{?}}
 

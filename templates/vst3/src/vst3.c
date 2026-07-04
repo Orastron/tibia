@@ -265,6 +265,9 @@ typedef struct pluginInstance {
 	char						transportPlaying;
 	float						transportSpeed;
 	float						transportBpm;
+	double						transportQuarter;
+	uint32_t					transportTimeSigNum;
+	uint32_t					transportTimeSigDenom;
 #endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
@@ -1016,7 +1019,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	}
 	char ctx_bpm = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTempoValid) ? 1 : 0;
 	char transport_bpm = (p->transportValid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
-	if (ctx_bpm != transport_bpm || (ctx_bpm && ctx->tempo != p->transportBpm)) {
+	if (ctx_bpm != transport_bpm || (ctx_bpm && (float)ctx->tempo != p->transportBpm)) {
 		if (ctx_bpm) {
 			p->transportValid |= PLUGIN_TRANSPORT_BPM;
 			p->transportBpm = (float)ctx->tempo;
@@ -1024,6 +1027,37 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 		} else
 			p->transportValid &= ~PLUGIN_TRANSPORT_BPM;
 		t.changed |= PLUGIN_TRANSPORT_BPM;
+	}
+	char ctx_quarter = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kProjectTimeMusicValid) ? 1 : 0;
+	char transport_quarter = (p->transportValid & PLUGIN_TRANSPORT_QUARTER) ? 1 : 0;
+	if (ctx_quarter != transport_quarter || (ctx_quarter && ctx->projectTimeMusic != p->transportQuarter)) {
+		if (ctx_quarter) {
+			p->transportValid |= PLUGIN_TRANSPORT_QUARTER;
+			p->transportQuarter = ctx->projectTimeMusic;
+			t.quarter = ctx->projectTimeMusic;
+		} else
+			p->transportValid &= ~PLUGIN_TRANSPORT_QUARTER;
+		t.changed |= PLUGIN_TRANSPORT_QUARTER;
+	}
+	char ctx_time_sig = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTimeSigValid) ? 1 : 0;
+	char transport_time_sig = (p->transportValid & PLUGIN_TRANSPORT_TIME_SIG_NUM) ? 1 : 0;
+	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigNumerator != p->transportTimeSigNum)) {
+		if (ctx_time_sig) {
+			p->transportValid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+			p->transportTimeSigNum = (uint32_t)ctx->timeSigNumerator;
+			t.time_sig_num = (uint32_t)ctx->timeSigNumerator;
+		} else
+			p->transportValid &= ~PLUGIN_TRANSPORT_TIME_SIG_NUM;
+		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+	}
+	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigDenominator != p->transportTimeSigDenom)) {
+		if (ctx_time_sig) {
+			p->transportValid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+			p->transportTimeSigDenom = (uint32_t)ctx->timeSigDenominator;
+			t.time_sig_denom = (uint32_t)ctx->timeSigDenominator;
+		} else
+			p->transportValid &= ~PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
 	}
 	if (t.changed || p->firstRun) {
 		t.valid = p->transportValid;
