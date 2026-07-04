@@ -578,17 +578,20 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 		t.bpm = bpm;
 		t.changed |= PLUGIN_TRANSPORT_BPM;
 	}
+	if (has_beat_unit && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat_unit != i->transport_time_sig_denom)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+		i->transport_time_sig_denom = beat_unit;
+		t.time_sig_denom = beat_unit;
+		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+	}
 	if (has_beat && (!(i->transport_valid & PLUGIN_TRANSPORT_BEAT) || beat != i->transport_beat)) {
 		i->transport_valid |= PLUGIN_TRANSPORT_BEAT;
 		i->transport_beat = beat;
 		t.beat = beat;
 		t.changed |= PLUGIN_TRANSPORT_BEAT;
-	}
-	if (has_beat_unit && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat != i->transport_time_sig_denom)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
-		i->transport_time_sig_denom = beat_unit;
-		t.time_sig_denom = beat_unit;
-		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+	} else if (i->transport_valid & PLUGIN_TRANSPORT_BEAT && !has_beat) {
+		i->transport_valid &= ~PLUGIN_TRANSPORT_BEAT;
+		t.changed |= PLUGIN_TRANSPORT_BEAT;
 	}
 	if (t.changed || i->first_run) {
 		t.valid = i->transport_valid;

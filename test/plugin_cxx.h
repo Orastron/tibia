@@ -135,6 +135,10 @@ public:
 		mBPM = value;
 	}
 
+	void setPhase(float value) {
+		mPhase = value;
+	}
+
 private:
 	size_t calcIndex(size_t cur, size_t delay, size_t len) {
 		return (cur < delay ? cur + len : cur) - delay;
@@ -220,10 +224,17 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
-	if ((transport->changed & PLUGIN_TRANSPORT_SPEED) && (transport->valid & PLUGIN_TRANSPORT_SPEED))
+	if (transport->changed & PLUGIN_TRANSPORT_SPEED && transport->valid & PLUGIN_TRANSPORT_SPEED)
 		instance->p.setSpeed(transport->speed);
-	if ((transport->changed & PLUGIN_TRANSPORT_BPM) && (transport->valid & PLUGIN_TRANSPORT_BPM))
+	if (transport->changed & PLUGIN_TRANSPORT_BPM && transport->valid & PLUGIN_TRANSPORT_BPM)
 		instance->p.setBPM(transport->bpm);
+	if (transport->valid & PLUGIN_TRANSPORT_QUARTER)
+		instance->p.setPhase(transport->quarter - (uint32_t)transport->quarter);
+	else if (transport->valid & PLUGIN_TRANSPORT_BEAT && transport->valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) {
+		// incorrect in case of time signature changes but LV2 only supports this
+		double q = transport->beat * (4.0 / transport->time_sig_denom);
+		instance->p.setPhase(q - (uint32_t)q);
+	}
 }
 
 #ifdef PLUGIN_HAS_STATE
