@@ -1045,7 +1045,7 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 		if (ctx_time_sig) {
 			p->transportValid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
 			p->transportTimeSigNum = (uint32_t)ctx->timeSigNumerator;
-			t.time_sig_num = (uint32_t)ctx->timeSigNumerator;
+			t.time_sig_num = (float)ctx->timeSigNumerator; // yes, float
 		} else
 			p->transportValid &= ~PLUGIN_TRANSPORT_TIME_SIG_NUM;
 		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;

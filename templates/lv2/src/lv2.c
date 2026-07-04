@@ -175,14 +175,20 @@ typedef struct {
 	float				transport_speed;
 	float				transport_bpm;
 	double				transport_beat;
+	float				transport_time_sig_num;
 	uint32_t			transport_time_sig_denom;
+	uint64_t			transport_bar;
+	float				transport_bar_beat;
 	LV2_URID			uri_atom_Blank;
 	LV2_URID			uri_atom_Object;
 	LV2_URID			uri_time_Position;
 	LV2_URID			uri_time_speed;
 	LV2_URID			uri_time_beatsPerMinute;
 	LV2_URID			uri_time_beat;
+	LV2_URID			uri_time_beatsPerBar;
 	LV2_URID			uri_time_beatUnit;
+	LV2_URID			uri_time_bar;
+	LV2_URID			uri_time_barBeat;
 #endif
 #ifdef LV2_PLUGIN_EXTRA
 	LV2_PLUGIN_EXTRA
@@ -280,7 +286,10 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		instance->uri_time_speed          = instance->map->map(instance->map->handle, LV2_TIME__speed);
 		instance->uri_time_beatsPerMinute = instance->map->map(instance->map->handle, LV2_TIME__beatsPerMinute);
 		instance->uri_time_beat           = instance->map->map(instance->map->handle, LV2_TIME__beat);
+		instance->uri_time_beatsPerBar    = instance->map->map(instance->map->handle, LV2_TIME__beatsPerBar);
 		instance->uri_time_beatUnit       = instance->map->map(instance->map->handle, LV2_TIME__beatUnit);
+		instance->uri_time_bar            = instance->map->map(instance->map->handle, LV2_TIME__bar);
+		instance->uri_time_barBeat        = instance->map->map(instance->map->handle, LV2_TIME__barBeat);
 	}
 #endif
 
@@ -523,10 +532,11 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 #endif
 
 #ifdef DATA_TRANSPORT_SYNC
-	char has_bpm = 0, has_speed = 0, has_beat = 0, has_beat_unit = 0;
-	float bpm, speed;
+	char has_bpm = 0, has_speed = 0, has_beat = 0, has_bpb = 0, has_beat_unit = 0, has_bar = 0, has_bar_beat = 0;
+	float bpm, speed, bpb, bar_beat;
 	double beat;
 	uint32_t beat_unit;
+	uint64_t bar;
 	if (i->map && i->x_transport != NULL) {
 		LV2_ATOM_SEQUENCE_FOREACH(i->x_transport, ev) {
 			if (ev->body.type == i->uri_atom_Object || ev->body.type == i->uri_atom_Blank) {
@@ -535,12 +545,18 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 					LV2_Atom * atom_speed = NULL;
 					LV2_Atom * atom_bpm = NULL;
 					LV2_Atom * atom_beat = NULL;
+					LV2_Atom * atom_bpb = NULL;
 					LV2_Atom * atom_beat_unit = NULL;
+					LV2_Atom * atom_bar = NULL;
+					LV2_Atom * atom_bar_beat = NULL;
 					lv2_atom_object_get(obj,
 						i->uri_time_speed, &atom_speed,
 						i->uri_time_beatsPerMinute, &atom_bpm,
 						i->uri_time_beat, &atom_beat,
+						i->uri_time_beatsPerBar, &atom_bpb,
 						i->uri_time_beatUnit, &atom_beat_unit,
+						i->uri_time_bar, &atom_bar,
+						i->uri_time_barBeat, &atom_bar_beat,
 						NULL);
 					if (atom_speed) {
 						has_speed = 1;
@@ -554,9 +570,21 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 						has_beat = 1;
 						beat = ((LV2_Atom_Double *)atom_beat)->body;
 					}
+					if (atom_bpb) {
+						has_bpb = 1;
+						bpb = ((LV2_Atom_Float *)atom_bpb)->body;
+					}
 					if (atom_beat_unit) {
 						has_beat_unit = 1;
 						beat_unit = ((LV2_Atom_Int *)atom_beat_unit)->body;
+					}
+					if (atom_bar) {
+						has_bar = 1;
+						bar = ((LV2_Atom_Long *)atom_bar)->body;
+					}
+					if (atom_bar_beat) {
+						has_bar_beat = 1;
+						bar_beat = ((LV2_Atom_Float *)atom_bar_beat)->body;
 					}
 				}
 			}
@@ -567,16 +595,27 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	plugin_transport t;
 	t.changed = 0;
 	if (has_speed && (!(i->transport_valid & PLUGIN_TRANSPORT_SPEED) || speed != i->transport_speed)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_SPEED;
+		// LV2 hosts (Ardour, REAPER) set speed = 0 to inidicate transport stop, which IMO is bad but what can I do
+		char playing_changed =
+			!(i->transport_valid & PLUGIN_TRANSPORT_SPEED)
+			|| (speed != i->transport_speed && speed * i->transport_speed == 0.f);
+		i->transport_valid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
 		i->transport_speed = speed;
+		t.playing = speed != 0.f ? 1 : 0;
 		t.speed = speed;
-		t.changed |= PLUGIN_TRANSPORT_SPEED;
+		t.changed |= (playing_changed ? PLUGIN_TRANSPORT_PLAYING : 0) | PLUGIN_TRANSPORT_SPEED;
 	}
 	if (has_bpm && (!(i->transport_valid & PLUGIN_TRANSPORT_BPM) || bpm != i->transport_bpm)) {
 		i->transport_valid |= PLUGIN_TRANSPORT_BPM;
 		i->transport_bpm = bpm;
 		t.bpm = bpm;
 		t.changed |= PLUGIN_TRANSPORT_BPM;
+	}
+	if (has_bpb && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_NUM) || bpb != i->transport_time_sig_num)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+		i->transport_time_sig_num = bpb;
+		t.time_sig_num = bpb;
+		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
 	}
 	if (has_beat_unit && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat_unit != i->transport_time_sig_denom)) {
 		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
@@ -592,6 +631,24 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	} else if (i->transport_valid & PLUGIN_TRANSPORT_BEAT && !has_beat) {
 		i->transport_valid &= ~PLUGIN_TRANSPORT_BEAT;
 		t.changed |= PLUGIN_TRANSPORT_BEAT;
+	}
+	if (has_bar && (!(i->transport_valid & PLUGIN_TRANSPORT_BAR) || bar != i->transport_bar)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_BAR;
+		i->transport_bar = bar;
+		t.bar = bar;
+		t.changed |= PLUGIN_TRANSPORT_BAR;
+	} else if (i->transport_valid & PLUGIN_TRANSPORT_BAR && !has_bar) {
+		i->transport_valid &= ~PLUGIN_TRANSPORT_BAR;
+		t.changed |= PLUGIN_TRANSPORT_BAR;
+	}
+	if (has_bar_beat && (!(i->transport_valid & PLUGIN_TRANSPORT_BAR_BEAT) || bar != i->transport_bar_beat)) {
+		i->transport_valid |= PLUGIN_TRANSPORT_BAR_BEAT;
+		i->transport_bar_beat = bar_beat;
+		t.bar_beat = bar_beat;
+		t.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
+	} else if (i->transport_valid & PLUGIN_TRANSPORT_BAR_BEAT && !has_bar_beat) {
+		i->transport_valid &= ~PLUGIN_TRANSPORT_BAR_BEAT;
+		t.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
 	}
 	if (t.changed || i->first_run) {
 		t.valid = i->transport_valid;
