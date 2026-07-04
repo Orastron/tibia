@@ -97,6 +97,9 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 
 {{?(it.product.transport && it.product.transport.sync)}}
 #define DATA_TRANSPORT_SYNC
+{{?(!it.product.transport.syncOptional)}}
+#define DATA_TRANSPORT_SYNC_REQUIRED
+{{?}}
 {{?}}
 
 {{~it.tibia.lv2.extraIncludes :p}}

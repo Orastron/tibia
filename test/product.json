@@ -162,7 +162,8 @@
 			"dspCustom": true
 		},
 		"transport": {
-			"sync": true
+			"sync": true,
+			"syncOptional": true
 		}
 	}
 }

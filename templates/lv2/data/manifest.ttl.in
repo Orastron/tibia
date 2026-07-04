@@ -20,7 +20,7 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
-{{?(it.tibia.lv2.ports.find(p => p.type == "midi" && !p.optional))}}
+{{?(it.tibia.lv2.ports.find(p => p.type == "midi" && !p.optional) || (it.product.transport && it.product.transport.sync && !it.product.transport.syncOptional))}}
 	lv2:requiredFeature urid:map ;
 {{??}}
 	lv2:optionalFeature urid:map ;
@@ -38,7 +38,17 @@
 {{?}}
 	lv2:port [
 {{~it.tibia.lv2.ports :p:i}}
-{{?p.isBypass}}
+{{?p.type == "transport"}}
+		a atom:AtomPort ,
+			lv2:InputPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports time:Position ;
+		lv2:symbol "transport" ;
+		lv2:name "Transport" ;
+{{?it.product.transport.syncOptional}}
+		lv2:portProperty lv2:connectionOptional ;
+{{?}}
+{{??p.isBypass}}
 		a lv2:ControlPort ,
 			lv2:InputPort ;
 		lv2:designation lv2:enabled ;

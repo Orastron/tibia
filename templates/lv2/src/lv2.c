@@ -60,6 +60,9 @@
 #ifdef DATA_STATE_DSP_CUSTOM
 # include <lv2/state/state.h>
 #endif
+#ifdef DATA_TRANSPORT_SYNC
+# include <lv2/time/time.h>
+#endif
 
 #include <string.h>
 
@@ -85,11 +88,18 @@
 # endif
 #endif
 
+#ifdef DATA_TRANSPORT_SYNC
+# define CONTROL_INPUT_INDEX_OFFSET_TRANSPORT 1
+#else
+# define CONTROL_INPUT_INDEX_OFFSET_TRANSPORT 0
+#endif
+
 #define CONTROL_INPUT_INDEX_OFFSET ( \
 		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
 		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
 		+ DATA_PRODUCT_MIDI_INPUTS_N \
-		+ DATA_PRODUCT_MIDI_OUTPUTS_N )
+		+ DATA_PRODUCT_MIDI_OUTPUTS_N \
+		+ CONTROL_INPUT_INDEX_OFFSET_TRANSPORT )
 #define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -123,6 +133,9 @@ typedef struct {
 #if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	LV2_Atom_Sequence *		y_midi[DATA_PRODUCT_MIDI_OUTPUTS_N];
 #endif
+#ifdef DATA_TRANSPORT_SYNC
+	LV2_Atom_Sequence *		x_transport;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	float *				c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
 #endif
@@ -155,6 +168,16 @@ typedef struct {
 	plugin_state_callbacks		state_cbs;
 	LV2_State_Store_Function	state_store;
 	LV2_State_Handle		state_handle;
+#endif
+#ifdef DATA_TRANSPORT_SYNC
+	char				first_run;
+	uint32_t			transport_valid;
+	float				transport_bpm;
+	LV2_URID			uri_atom_Blank;
+	LV2_URID			uri_atom_Object;
+	LV2_URID			uri_atom_Float;
+	LV2_URID			uri_time_Position;
+	LV2_URID			uri_time_beatsPerMinute;
 #endif
 #ifdef LV2_PLUGIN_EXTRA
 	LV2_PLUGIN_EXTRA
@@ -229,7 +252,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	lv2_log_logger_set_map(&instance->logger, instance->map);
 	if (missing) {
 		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
-#ifdef DATA_PRODUCT_MIDI_REQUIRED
+#if (defined(DATA_PRODUCT_MIDI_REQUIRED) || defined(DATA_TRANSPORT_SYNC_REQUIRED))
 		goto err_urid;
 #endif
 	}
@@ -242,6 +265,15 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	if (instance->map) {
 		instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
 		instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
+	}
+#endif
+#ifdef DATA_TRANSPORT_SYNC
+	if (instance->map) {
+		instance->uri_atom_Blank          = instance->map->map(instance->map->handle, LV2_ATOM__Blank);
+		instance->uri_atom_Object         = instance->map->map(instance->map->handle, LV2_ATOM__Object);
+		instance->uri_atom_Float          = instance->map->map(instance->map->handle, LV2_ATOM__Float);
+		instance->uri_time_Position       = instance->map->map(instance->map->handle, LV2_TIME__Position);
+		instance->uri_time_beatsPerMinute = instance->map->map(instance->map->handle, LV2_TIME__beatsPerMinute);
 	}
 #endif
 
@@ -279,6 +311,9 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #if DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_MIDI_OUTPUTS_N; i++)
 		instance->y_midi[i] = NULL;
+#endif
+#ifdef DATA_TRANSPORT_SYNC
+	instance->x_transport = NULL;
 #endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
@@ -342,6 +377,13 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 	}
 	port -= DATA_PRODUCT_MIDI_OUTPUTS_N;
 #endif
+#ifdef DATA_TRANSPORT_SYNC
+	if (port == 0) {
+		i->x_transport = (LV2_Atom_Sequence *)data_location;
+		return;
+	}
+	port--;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	if (port < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) {
 		i->c[port] = (float *)data_location;
@@ -375,12 +417,9 @@ static void activate(LV2_Handle instance) {
 # endif
 #endif
 	plugin_reset(&i->p);
-
 #ifdef DATA_TRANSPORT_SYNC
-	plugin_transport t;
-	t.changed = 0xffffffff;
-	t.valid = 0;
-	plugin_set_transport(&i->p, &t);
+	i->first_run = 1;
+	i->transport_valid = 0;
 #endif
 }
 
@@ -474,6 +513,44 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 				}
 			}
 		}
+#endif
+
+#ifdef DATA_TRANSPORT_SYNC
+	char has_bpm = 0;
+	float bpm;
+	if (i->map && i->x_transport != NULL) {
+		LV2_ATOM_SEQUENCE_FOREACH(i->x_transport, ev) {
+			if (ev->body.type == i->uri_atom_Object || ev->body.type == i->uri_atom_Blank) {
+				const LV2_Atom_Object * obj = (const LV2_Atom_Object *)&ev->body;
+				if (obj->body.otype == i->uri_time_Position) {
+					 LV2_Atom * atom_bpm = NULL;
+					 lv2_atom_object_get(obj, i->uri_time_beatsPerMinute, &atom_bpm, NULL);
+					 if (atom_bpm) {
+						 has_bpm = 1;
+						 bpm = ((LV2_Atom_Float*)atom_bpm)->body;
+					}
+				}
+			}
+		}
+	}
+
+	plugin_transport t;
+	t.changed = 0;
+	char transport_bpm = (i->transport_valid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
+	if (has_bpm != transport_bpm || (has_bpm && bpm != i->transport_bpm)) {
+		if (has_bpm) {
+			i->transport_valid |= PLUGIN_TRANSPORT_BPM;
+			i->transport_bpm = bpm;
+			t.bpm = bpm;
+		} else
+			i->transport_valid &= ~PLUGIN_TRANSPORT_BPM;
+		t.changed |= PLUGIN_TRANSPORT_BPM;
+	}
+	if (t.changed || i->first_run) {
+		t.valid = i->transport_valid;
+		plugin_set_transport(&i->p, &t);
+		i->first_run = 0;
+	}
 #endif
 
 #ifdef LV2_PROCESS_PRE_EXTRA

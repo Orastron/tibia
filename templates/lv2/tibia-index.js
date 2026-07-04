@@ -36,6 +36,7 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 				{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 				{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
 				{ id: "state",	uri: "http://lv2plug.in/ns/extensions/state#" },
+				{ id: "time",	uri: "http://lv2plug.in/ns/ext/time#" },
 				{ id: "ui",	uri: "http://lv2plug.in/ns/extensions/ui#" },
 				{ id: "units",	uri: "http://lv2plug.in/ns/extensions/units#" },
 				{ id: "urid",	uri: "http://lv2plug.in/ns/ext/urid#" }
@@ -116,6 +117,8 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 		midiPorts.sort((a, b) => a.direction != b.direction ? (a.direction == "input" ? -1 : 1) : 0);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, audioPorts);
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
+		if (data.product.transport && data.product.transport.sync)
+			data.tibia.lv2.ports.push({ type: "transport" });
 
 		var ports = [];
 		for (var i = 0, j = 0; i < data.product.parameters.length; i++) {
