@@ -34,6 +34,7 @@ typedef struct {
 	size_t	delay_line_cur;
 	float	z1;
 	float	cutoff_k;
+	float	speed;
 	float	bpm;
 	float	phase;
 	float	yz1;
@@ -68,6 +69,7 @@ static void plugin_reset(plugin *instance) {
 	instance->delay_line_cur = 0;
 	instance->z1 = 0.f;
 	instance->cutoff_k = 1.f;
+	instance->speed = 1.f;
 	instance->bpm = 120.f;
 	instance->phase = 0.f;
 	instance->yz1 = 0.f;
@@ -108,7 +110,7 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 	//approx const size_t delay = roundf(instance->sample_rate * 0.001f * instance->delay);
 	const size_t delay = (size_t)(instance->sample_rate * 0.001f * instance->delay + 0.5f);
 	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff * instance->cutoff_k);
-	const float phase_inc = (1.f / 60.f) * instance->bpm / instance->sample_rate;
+	const float phase_inc = (1.f / 60.f) * (instance->speed * instance->bpm) / instance->sample_rate;
 	const float kt = 0.01f * instance->tremolo;
 	for (size_t i = 0; i < n_samples; i++) {
 		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
@@ -136,6 +138,8 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
+	if ((transport->changed & PLUGIN_TRANSPORT_SPEED) && (transport->valid & PLUGIN_TRANSPORT_SPEED))
+		instance->speed = transport->speed;
 	if ((transport->changed & PLUGIN_TRANSPORT_BPM) && (transport->valid & PLUGIN_TRANSPORT_BPM))
 		instance->bpm = transport->bpm;
 }
