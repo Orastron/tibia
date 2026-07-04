@@ -65,4 +65,16 @@ enum {
 #define PLUGIN_HAS_STATE	1
 {{?}}
 
+{{?(it.product.transport && it.product.transport.sync)}}
+#include <stdint.h>
+
+#define PLUGIN_TRANSPORT_BPM	1
+
+typedef struct {
+	uint32_t	changed;
+	uint32_t	valid;
+	float		bpm;
+} plugin_transport;
+{{?}}
+
 #endif

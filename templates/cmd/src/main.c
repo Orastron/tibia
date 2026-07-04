@@ -52,6 +52,9 @@ void *			mem;
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 float *			zero;
 #endif
+#ifdef TRANSPORT_SYNC
+plugin_transport	t;
+#endif
 #if NUM_CHANNELS_IN > 0
 float *			x_buf;
 float *			x_in[NUM_CHANNELS_IN];
@@ -387,6 +390,12 @@ int main(int argc, char * argv[]) {
 	       mem = NULL;	
 
 	plugin_reset(&instance);
+
+#ifdef TRANSPORT_SYNC
+	t.changed = 0xffffffff;
+	t.valid = 0;
+	plugin_set_transport(&instance, &t);
+#endif
 
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 	zero = (float *)malloc(bufsize * sizeof(float));

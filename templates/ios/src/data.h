@@ -81,3 +81,7 @@ static struct {
 {{~}}
 };
 #endif
+
+{{?(it.product.transport && it.product.transport.sync)}}
+#define TRANSPORT_SYNC
+{{?}}

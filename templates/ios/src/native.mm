@@ -49,6 +49,9 @@ static void *		mem;
 #if NUM_NON_OPT_CHANNELS_IN > NUM_CHANNELS_IN
 float			zero[BLOCK_SIZE];
 #endif
+#ifdef TRANSPORT_SYNC
+plugin_transport	t;
+#endif
 #if NUM_CHANNELS_IN > 0
 float			x_buf[NUM_CHANNELS_IN * BLOCK_SIZE];
 float *			x_in[NUM_CHANNELS_IN];
@@ -290,6 +293,12 @@ char audioStart() {
 		mem = NULL;
 
 	plugin_reset(&instance);
+
+#ifdef TRANSPORT_SYNC
+	t.changed = 0xffffffff;
+	t.valid = 0;
+	plugin_set_transport(&instance, &t);
+#endif
 
 #if NUM_ALL_CHANNELS_IN > 0
 	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {

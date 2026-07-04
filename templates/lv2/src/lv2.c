@@ -375,6 +375,13 @@ static void activate(LV2_Handle instance) {
 # endif
 #endif
 	plugin_reset(&i->p);
+
+#ifdef DATA_TRANSPORT_SYNC
+	plugin_transport t;
+	t.changed = 0xffffffff;
+	t.valid = 0;
+	plugin_set_transport(&i->p, &t);
+#endif
 }
 
 static void run(LV2_Handle instance, uint32_t sample_count) {

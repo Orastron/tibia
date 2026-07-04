@@ -82,4 +82,8 @@ static struct {
 };
 #endif
 
+{{?(it.product.transport && it.product.transport.sync)}}
+#define TRANSPORT_SYNC
+{{?}}
+
 #define JNI_FUNC(x) Java_{{=it.android.javaPackageName.replaceAll("_", "_1").replaceAll(".", "_")}}_MainActivity_##x

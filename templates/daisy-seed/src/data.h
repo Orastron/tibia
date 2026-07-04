@@ -98,3 +98,7 @@ static int midi_cc_maps[NUM_PARAMETERS] = { {{~it.daisy_seed.midiCCMaps :p}}{{=p
 # endif
 
 #endif
+
+{{?(it.product.transport && it.product.transport.sync)}}
+#define TRANSPORT_SYNC
+{{?}}

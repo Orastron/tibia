@@ -598,6 +598,13 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 		p->curSampleRate = p->nextSampleRate;
 		p->lastSampleRate = p->nextSampleRate;
 		plugin_reset(&p->p);
+
+#ifdef DATA_TRANSPORT_SYNC
+		plugin_transport t;
+		t.changed = 0xffffffff;
+		t.valid = 0;
+		plugin_set_transport(&p->p, &t);
+#endif
 	} else
 		p->curSampleRate = 0.f;
 	return Steinberg_kResultOk;

@@ -204,6 +204,13 @@ int main() {
 #endif
 	plugin_reset(&instance);
 
+#ifdef TRANSPORT_SYNC
+	plugin_transport t;
+	t.changed = 0xffffffff;
+	t.valid = 0;
+	plugin_set_transport(&instance, &t);
+#endif
+
 #if NUM_ALL_CHANNELS_IN > 0
 	for (size_t i = 0, j = 0, k = 0; i < NUM_AUDIO_BUSES_IN + NUM_AUDIO_BUSES_OUT; i++) {
 		if (audio_bus_data[i].out)

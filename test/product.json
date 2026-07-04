@@ -4,7 +4,7 @@
 		"version": "1.0.0",
 		"buildVersion": 0,
 		"description": "A toy plugin to test Tibia",
-		"copyright": "Copyright © 2021-2025 Orastron Srl unipersonale", 
+		"copyright": "Copyright © 2021-2026 Orastron Srl unipersonale",
 		"bundleName": "tibia-test",
 		"buses": [
 			{
@@ -98,6 +98,23 @@
 				"map": "logarithmic"
 			},
 			{
+				"name": "Tremolo",
+				"shortName": "Tremolo",
+				"id": "tremolo",
+				"direction": "input",
+				"isBypass": false,
+				"isLatency": false,
+				"defaultValue": 0,
+				"minimum": 0,
+				"maximum": 100,
+				"toggled": false,
+				"optional": false,
+				"integer": false,
+				"list": false,
+				"unit": "pc",
+				"map": "linear"
+			},
+			{
 				"name": "Bypass",
 				"shortName": "Bypass",
 				"id": "bypass",
@@ -143,6 +160,9 @@
 		},
 		"state": {
 			"dspCustom": true
+		},
+		"transport": {
+			"sync": true
 		}
 	}
 }

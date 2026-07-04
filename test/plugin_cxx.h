@@ -45,6 +45,8 @@ public:
 		mDelayLineCur = 0;
 		mZ1 = 0.f;
 		mCutoffK = 1.f;
+		mBPM = 120.f;
+		mPhase = 0.f;
 		mYZ1 = 0.f;
 	}
 
@@ -58,6 +60,10 @@ public:
 
 	void setCutoff(float value) {
 		mCutoff = value;
+	}
+
+	void setTremolo(float value) {
+		mTremolo = value;
 	}
 
 	void setBypass(bool value) {
@@ -76,6 +82,10 @@ public:
 		return mCutoff;
 	}
 
+	float getTremolo() {
+		return mTremolo;
+	}
+
 	bool getBypass() {
 		return mBypass;
 	}
@@ -90,14 +100,21 @@ public:
 		//approx const size_t delay = roundf(mSampleRate * 0.001f * mDelay);
 		const size_t delay = (size_t)(mSampleRate * 0.001f * mDelay + 0.5f);
 		const float mA1 = mSampleRate / (mSampleRate + 6.283185307179586f * mCutoff * mCutoffK);
+		const float phaseInc = (1.f / 60.f) * mBPM / mSampleRate;
+		const float kt = 0.01f * mTremolo;
 		for (size_t i = 0; i < nSamples; i++) {
 			mDelayLine[mDelayLineCur] = in[i];
 			const float x = mDelayLine[calcIndex(mDelayLineCur, delay, mDelayLineLength)];
 			mDelayLineCur++;
 			if (mDelayLineCur == mDelayLineLength)
 				mDelayLineCur = 0;
-			const float y = x + mA1 * (mZ1 - x);
+			float y = x + mA1 * (mZ1 - x);
 			mZ1 = y;
+			mPhase += phaseInc;
+			if (mPhase > 1.f)
+				mPhase -= 1.f;
+			const float lfo = mPhase + mPhase - 1.f;
+			y *= 1.f + kt * lfo;
 			out[i] = mBypass ? in[i] : gain * y;
 			mYZ1 = out[i];
 		}
@@ -107,6 +124,10 @@ public:
 		if (((data[0] & 0xf0) == 0x90) && (data[2] != 0))
 			//approx mCutoffK = powf(2.f, (1.f / 12.f) * (note - 60));
 			mCutoffK = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
+	}
+
+	void setBPM(float value) {
+		mBPM = value;
 	}
 
 private:
@@ -120,12 +141,15 @@ private:
 	float	mGain;
 	float	mDelay;
 	float	mCutoff;
+	float	mTremolo;
 	bool	mBypass;
 
 	float *	mDelayLine;
 	size_t	mDelayLineCur;
 	float	mZ1;
 	float	mCutoffK;
+	float	mBPM;
+	float	mPhase;
 	float	mYZ1;
 };
 
@@ -187,6 +211,11 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
 	(void)index;
 	instance->p.midiMsgIn(data);
+}
+
+static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
+	if ((transport->changed & PLUGIN_TRANSPORT_BPM) && (transport->valid & PLUGIN_TRANSPORT_BPM))
+		instance->p.setBPM(transport->bpm);
 }
 
 #ifdef PLUGIN_HAS_STATE

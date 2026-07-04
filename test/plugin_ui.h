@@ -23,23 +23,28 @@
 #include <string.h>
 
 typedef struct {
-	void   *widget;
+	void *			widget;
 
-	vinci  *ui;
-	window *w;
-	int     param_down;
+	vinci *			ui;
+	window *		w;
+	int     		param_down;
 
-	float gain;
-	float delay;
-	float cutoff;
-	char  bypass;
-	float y_z1;
+	float			gain;
+	float			delay;
+	float			cutoff;
+	float			tremolo;
+	char			bypass;
+	float			y_z1;
 
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
 #define WIDTH		600.0
-#define HEIGHT		400.0
+#define HEIGHT		600.0
+
+#define NUM_PARAMS	6
+
+#define SPACES		(NUM_PARAMS + NUM_PARAMS + 1)
 
 static void plugin_ui_get_default_size(uint32_t *width, uint32_t *height) {
 	*width = WIDTH;
@@ -59,59 +64,68 @@ static void draw_rect(window *w, uint32_t x, uint32_t y, uint32_t width, uint32_
 static void draw_slider(plugin_ui *pui, int id, float value) {
 	const int w = window_get_width(pui->w);
 	const int h = window_get_height(pui->w);
-	draw_rect(pui->w, 0.1 * w, 0.15 * (id + 1) * h, 0.8 * w * value, 0.1 * h, 0x6789ab);
-	draw_rect(pui->w, 0.1 * w + 0.8 * w * value, 0.15 * (id + 1) * h, 0.8 * w * (1.f - value), 0.1 * h, 0x1223bc);
+	const double sh = h / SPACES;
+	draw_rect(pui->w, 0.1 * w, (2 * id + 1) * sh, 0.8 * w * value, sh, 0x6789ab);
+	draw_rect(pui->w, 0.1 * w + 0.8 * w * value, (2 * id + 1) * sh, 0.8 * w * (1.f - value), sh, 0x1223bc);
 }
 
 static void draw_button(plugin_ui *pui, int id, char value) {
 	const int w = window_get_width(pui->w);
 	const int h = window_get_height(pui->w);
-	draw_rect(pui->w, 0.4 * w, 0.15 * (id + 1) * h, 0.2 * w, 0.1 * h, value ? 0x6789ab : 0x1223bc);
+	const double sh = h / SPACES;
+	draw_rect(pui->w, 0.4 * w, (2 * id + 1) * sh, 0.2 * w, sh, value ? 0x6789ab : 0x1223bc);
 }
 
 static void on_close(window *w) {
 	printf("on_close %p \n", (void*)w); fflush(stdout);
 }
 
-static void on_mouse_press (window *win, int32_t x, int32_t y, uint32_t state) {
+static void on_mouse_press(window *win, int32_t x, int32_t y, uint32_t state) {
 	(void) state;
 
 	plugin_ui *pui = (plugin_ui*) window_get_data(win);
 	const int w = window_get_width(win);
 	const int h = window_get_height(win);
+	const double sh = h / SPACES;
 
-	if (x >= 0.1 * w && x <= 0.9 * w && y >= 0.15 * h && y <= 0.25 * h) {
+	if (x >= 0.1 * w && x <= 0.9 * w && y >= sh && y <= 2 * sh) {
 		pui->param_down = 0;
 		pui->gain = (float)((x - (0.1 * w)) / (0.8 * w));
 		pui->cbs.set_parameter_begin(pui->cbs.handle, 0, -60.f + 80.f * pui->gain);
 		draw_slider(pui, 0, pui->gain);
-	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 0.3 * h && y <= 0.4 * h) {
+	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 3 * sh && y <= 4 * sh) {
 		pui->param_down = 1;
 		pui->delay = (float)((x - (0.1 * w)) / (0.8 * w));
 		pui->cbs.set_parameter_begin(pui->cbs.handle, 1, 1000.f * pui->delay);
 		draw_slider(pui, 1, pui->delay);
-	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 0.45 * h && y <= 0.55 * h) {
+	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 5 * sh && y <= 6 * sh) {
 		pui->param_down = 2;
 		pui->cutoff = (float)((x - (0.1 * w)) / (0.8 * w));
 		pui->cbs.set_parameter_begin(pui->cbs.handle, 2, (632.4555320336746f * pui->cutoff + 20.653108640674372f) / (1.0326554320337158f - pui->cutoff));
 		draw_slider(pui, 2, pui->cutoff);
-	} else if (x >= 0.4 * w && x <= 0.6 * w && y >= 0.6 * h && y <= 0.7 * h) {
+	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 7 * sh && y <= 8 * sh) {
+		pui->param_down = 3;
+		pui->tremolo = (float)((x - (0.1 * w)) / (0.8 * w));
+		pui->cbs.set_parameter_begin(pui->cbs.handle, 1, 100.f * pui->tremolo);
+		draw_slider(pui, 3, pui->tremolo);
+	} else if (x >= 0.4 * w && x <= 0.6 * w && y >= 9 * sh && y <= 10 * sh) {
 		pui->param_down = 4;
 	}
 }
 
-static void on_mouse_release (window *win, int32_t x, int32_t y, uint32_t state) {
+static void on_mouse_release(window *win, int32_t x, int32_t y, uint32_t state) {
 	(void) state;
 
 	plugin_ui *pui = (plugin_ui*) window_get_data(win);
 	const int w = window_get_width(win);
 	const int h = window_get_height(win);
+	const double sh = h / SPACES;
 
 	if (pui->param_down == 4)
-		if (x >= 0.4 * w && x <= 0.6 * w && y >= 0.6 * h && y <= 0.7 * h) {
+		if (x >= 0.4 * w && x <= 0.6 * w && y >= 9 * sh && y <= 10 * sh) {
 			pui->bypass = !pui->bypass;
-			pui->cbs.set_parameter(pui->cbs.handle, 3, pui->bypass ? 1.f : 0.f);
-			draw_button(pui, 3, pui->bypass);
+			pui->cbs.set_parameter(pui->cbs.handle, 4, pui->bypass ? 1.f : 0.f);
+			draw_button(pui, 4, pui->bypass);
 		}
 
 	if (pui->param_down != -1) {
@@ -132,12 +146,17 @@ static void on_mouse_release (window *win, int32_t x, int32_t y, uint32_t state)
 			pui->cbs.set_parameter_end(pui->cbs.handle, 2, (632.4555320336746f * pui->cutoff + 20.653108640674372f) / (1.0326554320337158f - pui->cutoff));
 			draw_slider(pui, 2, pui->cutoff);
 			break;
+		case 3:
+			pui->tremolo = v;
+			pui->cbs.set_parameter_end(pui->cbs.handle, 3, 100.f * pui->tremolo);
+			draw_slider(pui, 3, pui->tremolo);
+			break;
 		}
 		pui->param_down = -1;
 	}
 }
 
-static void on_mouse_move (window *win, int32_t x, int32_t y, uint32_t state) {
+static void on_mouse_move(window *win, int32_t x, int32_t y, uint32_t state) {
 	(void) y;
 	(void) state;
 
@@ -162,10 +181,14 @@ static void on_mouse_move (window *win, int32_t x, int32_t y, uint32_t state) {
 		pui->cbs.set_parameter(pui->cbs.handle, 2, (632.4555320336746f * pui->cutoff + 20.653108640674372f) / (1.0326554320337158f - pui->cutoff));
 		draw_slider(pui, 2, pui->cutoff);
 		break;
+	case 3:
+		pui->tremolo = v;
+		pui->cbs.set_parameter(pui->cbs.handle, 3, 100.f * pui->tremolo);
+		draw_slider(pui, 3, pui->tremolo);
 	}
 }
 
-static void on_window_resize (window *w, int32_t width, int32_t height) {
+static void on_window_resize(window *w, int32_t width, int32_t height) {
 	draw_rect(w, 0, 0, width, height, 0xff9999);
 
 	plugin_ui *pui = (plugin_ui*) window_get_data(w);
@@ -173,8 +196,9 @@ static void on_window_resize (window *w, int32_t width, int32_t height) {
 	draw_slider(pui, 0, pui->gain);
 	draw_slider(pui, 1, pui->delay);
 	draw_slider(pui, 2, pui->cutoff);
-	draw_button(pui, 3, pui->bypass);
-	draw_slider(pui, 4, pui->y_z1);
+	draw_slider(pui, 3, pui->tremolo);
+	draw_button(pui, 4, pui->bypass);
+	draw_slider(pui, 5, pui->y_z1);
 }
 
 static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
@@ -200,6 +224,7 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	instance->gain = 0.f;
 	instance->delay = 0.f;
 	instance->cutoff = 0.f;
+	instance->tremolo = 0.f;
 	instance->bypass = 0;
 	instance->y_z1 = 0.f;
 
@@ -235,12 +260,16 @@ static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float val
 		draw_slider(instance, 2, instance->cutoff);
 		break;
 	case 3:
-		instance->bypass = value >= 0.5f;
-		draw_button(instance, 3, instance->bypass);
+		instance->tremolo = 0.01f * value;
+		draw_slider(instance, 3, instance->tremolo);
 		break;
 	case 4:
+		instance->bypass = value >= 0.5f;
+		draw_button(instance, 4, instance->bypass);
+		break;
+	case 5:
 		instance->y_z1 = 0.5f * value + 0.5f;
-		draw_slider(instance, 4, instance->y_z1);
+		draw_slider(instance, 5, instance->y_z1);
 		break;
 	}
 }

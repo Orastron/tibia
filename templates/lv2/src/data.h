@@ -95,6 +95,10 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 #define DATA_STATE_DSP_CUSTOM
 {{?}}
 
+{{?(it.product.transport && it.product.transport.sync)}}
+#define DATA_TRANSPORT_SYNC
+{{?}}
+
 {{~it.tibia.lv2.extraIncludes :p}}
 #include "{{=p}}"
 {{~}}

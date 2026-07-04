@@ -44,3 +44,7 @@ static size_t param_out_index[DATA_PRODUCT_PARAMETERS_OUTPUT_N] = {
 	{{~it.product.parameters :p:i}}{{?p.direction == "output"}}{{=i}}, {{?}}{{~}}
 };
 #endif
+
+{{?(it.product.transport && it.product.transport.sync)}}
+#define DATA_TRANSPORT_SYNC
+{{?}}

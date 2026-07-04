@@ -87,6 +87,13 @@ instance * processor_new(float sample_rate) {
 
 	plugin_reset(&i->p);
 
+#ifdef DATA_TRANSPORT_SYNC
+	plugin_transport t;
+	t.changed = 0xffffffff;
+	t.valid = 0;
+	plugin_set_transport(&i->p, &t);
+#endif
+
 #if DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N > 0
 	memset(i->zero_buf, 0, 128 * sizeof(float));
 #endif
