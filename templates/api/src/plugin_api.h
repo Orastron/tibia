@@ -68,7 +68,7 @@ enum {
 {{?(it.product.transport && it.product.transport.sync)}}
 #include <stdint.h>
 
-#define PLUGIN_TRANSPORT_BPM	1
+#define PLUGIN_TRANSPORT_BPM	((uint32_t)1)
 
 typedef struct {
 	uint32_t	changed;

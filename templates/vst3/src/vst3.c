@@ -259,6 +259,11 @@ typedef struct pluginInstance {
 #if DATA_PRODUCT_BUSES_MIDI_OUTPUT_N > 0
 	char						midiOutputsActive[DATA_PRODUCT_BUSES_MIDI_OUTPUT_N];
 #endif
+#ifdef DATA_TRANSPORT_SYNC
+	char						firstRun;
+	uint32_t					transportValid;
+	float						transportBpm;
+#endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
 } pluginInstance;
@@ -600,10 +605,7 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 		plugin_reset(&p->p);
 
 #ifdef DATA_TRANSPORT_SYNC
-		plugin_transport t;
-		t.changed = 0xffffffff;
-		t.valid = 0;
-		plugin_set_transport(&p->p, &t);
+		p->firstRun = 1;
 #endif
 	} else
 		p->curSampleRate = 0.f;
@@ -957,6 +959,28 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 #endif
 
 	pluginInstance *p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIAudioProcessor));
+
+#ifdef DATA_TRANSPORT_SYNC
+	struct Steinberg_Vst_ProcessContext *ctx = data->processContext;
+	plugin_transport t;
+	t.changed = 0;
+	char ctx_bpm = (ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTempoValid) ? 1 : 0;
+	char transport_bpm = (p->transportValid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
+	if (ctx_bpm != transport_bpm || (ctx_bpm && ctx->tempo != p->transportBpm)) {
+		if (ctx_bpm) {
+			p->transportValid |= PLUGIN_TRANSPORT_BPM;
+			p->transportBpm = (float)ctx->tempo;
+			t.bpm = (float)ctx->tempo;
+		} else
+			p->transportValid &= ~PLUGIN_TRANSPORT_BPM;
+		t.changed |= PLUGIN_TRANSPORT_BPM;
+	}
+	if (t.changed || p->firstRun) {
+		t.valid = p->transportValid;
+		plugin_set_transport(&p->p, &t);
+		p->firstRun = 0;
+	}
+#endif
 
 	processParams(p, data, 1);
 
