@@ -173,14 +173,7 @@ typedef struct {
 #endif
 #ifdef DATA_TRANSPORT_SYNC
 	char				first_run;
-	uint32_t			transport_valid;
-	float				transport_speed;
-	float				transport_bpm;
-	double				transport_beat;
-	float				transport_time_sig_num;
-	uint32_t			transport_time_sig_denom;
-	uint64_t			transport_bar;
-	float				transport_bar_beat;
+	plugin_transport		transport;
 	LV2_URID			uri_atom_Blank;
 	LV2_URID			uri_atom_Object;
 	LV2_URID			uri_time_Position;
@@ -437,7 +430,7 @@ static void activate(LV2_Handle instance) {
 	plugin_reset(&i->p);
 #ifdef DATA_TRANSPORT_SYNC
 	i->first_run = 1;
-	i->transport_valid = 0;
+	i->transport.valid = 0;
 #endif
 }
 
@@ -594,67 +587,58 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 
 	// should we take into account that the transport port might have been disconnected and thus invalidate values???
-	plugin_transport t;
-	t.changed = 0;
-	if (has_speed && (!(i->transport_valid & PLUGIN_TRANSPORT_SPEED) || speed != i->transport_speed)) {
+	i->transport.changed = 0;
+	if (has_speed && (!(i->transport.valid & PLUGIN_TRANSPORT_SPEED) || speed != i->transport.speed)) {
 		// LV2 hosts (Ardour, REAPER) set speed = 0 to inidicate transport stop, which IMO is bad but what can I do
-		char playing_changed =
-			!(i->transport_valid & PLUGIN_TRANSPORT_SPEED)
-			|| (speed != i->transport_speed && speed * i->transport_speed == 0.f);
-		i->transport_valid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
-		i->transport_speed = speed;
-		t.playing = speed != 0.f ? 1 : 0;
-		t.speed = speed;
-		t.changed |= (playing_changed ? PLUGIN_TRANSPORT_PLAYING : 0) | PLUGIN_TRANSPORT_SPEED;
+		const char playing_changed =
+			!(i->transport.valid & PLUGIN_TRANSPORT_SPEED)
+			|| (speed != i->transport.speed && speed * i->transport.speed == 0.f);
+		i->transport.changed |= (playing_changed ? PLUGIN_TRANSPORT_PLAYING : 0) | PLUGIN_TRANSPORT_SPEED;
+		i->transport.valid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+		i->transport.playing = speed != 0.f ? 1 : 0;
+		i->transport.speed = speed;
 	}
-	if (has_bpm && (!(i->transport_valid & PLUGIN_TRANSPORT_BPM) || bpm != i->transport_bpm)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_BPM;
-		i->transport_bpm = bpm;
-		t.bpm = bpm;
-		t.changed |= PLUGIN_TRANSPORT_BPM;
+	if (has_bpm && (!(i->transport.valid & PLUGIN_TRANSPORT_BPM) || bpm != i->transport.bpm)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BPM;
+		i->transport.valid |= PLUGIN_TRANSPORT_BPM;
+		i->transport.bpm = bpm;
 	}
-	if (has_bpb && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_NUM) || bpb != i->transport_time_sig_num)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
-		i->transport_time_sig_num = bpb;
-		t.time_sig_num = bpb;
-		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+	if (has_bpb && (!(i->transport.valid & PLUGIN_TRANSPORT_TIME_SIG_NUM) || bpb != i->transport.time_sig_num)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+		i->transport.valid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+		i->transport.time_sig_num = bpb;
 	}
-	if (has_beat_unit && (!(i->transport_valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat_unit != i->transport_time_sig_denom)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
-		i->transport_time_sig_denom = beat_unit;
-		t.time_sig_denom = beat_unit;
-		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+	if (has_beat_unit && (!(i->transport.valid & PLUGIN_TRANSPORT_TIME_SIG_DENOM) || beat_unit != i->transport.time_sig_denom)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+		i->transport.valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+		i->transport.time_sig_denom = beat_unit;
 	}
-	if (has_beat && (!(i->transport_valid & PLUGIN_TRANSPORT_BEAT) || beat != i->transport_beat)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_BEAT;
-		i->transport_beat = beat;
-		t.beat = beat;
-		t.changed |= PLUGIN_TRANSPORT_BEAT;
-	} else if (i->transport_valid & PLUGIN_TRANSPORT_BEAT && !has_beat) {
-		i->transport_valid &= ~PLUGIN_TRANSPORT_BEAT;
-		t.changed |= PLUGIN_TRANSPORT_BEAT;
+	if (has_beat && (!(i->transport.valid & PLUGIN_TRANSPORT_BEAT) || beat != i->transport.beat)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BEAT;
+		i->transport.valid |= PLUGIN_TRANSPORT_BEAT;
+		i->transport.beat = beat;
+	} else if (!has_beat && (i->transport.valid & PLUGIN_TRANSPORT_BEAT)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BEAT;
+		i->transport.valid &= ~PLUGIN_TRANSPORT_BEAT;
 	}
-	if (has_bar && (!(i->transport_valid & PLUGIN_TRANSPORT_BAR) || bar != i->transport_bar)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_BAR;
-		i->transport_bar = bar;
-		t.bar = bar;
-		t.changed |= PLUGIN_TRANSPORT_BAR;
-	} else if (i->transport_valid & PLUGIN_TRANSPORT_BAR && !has_bar) {
-		i->transport_valid &= ~PLUGIN_TRANSPORT_BAR;
-		t.changed |= PLUGIN_TRANSPORT_BAR;
+	if (has_bar && (!(i->transport.valid & PLUGIN_TRANSPORT_BAR) || bar != i->transport.bar)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BAR;
+		i->transport.valid |= PLUGIN_TRANSPORT_BAR;
+		i->transport.bar = bar;
+	} else if (!has_bar && (i->transport.valid & PLUGIN_TRANSPORT_BAR)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BAR;
+		i->transport.valid &= ~PLUGIN_TRANSPORT_BAR;
 	}
-	if (has_bar_beat && (!(i->transport_valid & PLUGIN_TRANSPORT_BAR_BEAT) || bar != i->transport_bar_beat)) {
-		i->transport_valid |= PLUGIN_TRANSPORT_BAR_BEAT;
-		i->transport_bar_beat = bar_beat;
-		t.bar_beat = bar_beat;
-		t.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
-	} else if (i->transport_valid & PLUGIN_TRANSPORT_BAR_BEAT && !has_bar_beat) {
-		i->transport_valid &= ~PLUGIN_TRANSPORT_BAR_BEAT;
-		t.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
+	if (has_bar_beat && (!(i->transport.valid & PLUGIN_TRANSPORT_BAR_BEAT) || bar_beat != i->transport.bar_beat)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
+		i->transport.valid |= PLUGIN_TRANSPORT_BAR_BEAT;
+		i->transport.bar_beat = bar_beat;
+	} else if (!has_bar_beat && (i->transport.valid & PLUGIN_TRANSPORT_BAR_BEAT)) {
+		i->transport.changed |= PLUGIN_TRANSPORT_BAR_BEAT;
+		i->transport.valid &= ~PLUGIN_TRANSPORT_BAR_BEAT;
 	}
-	if (t.changed || i->first_run) {
-		t.valid = i->transport_valid;
-		plugin_set_transport(&i->p, &t);
+	if (i->transport.changed || i->first_run) {
+		plugin_set_transport(&i->p, &i->transport);
 		i->first_run = 0;
 	}
 #endif

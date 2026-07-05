@@ -79,17 +79,17 @@ enum {
 #define PLUGIN_TRANSPORT_BAR_BEAT	((uint32_t)(1 << 8))
 
 typedef struct {
-	uint32_t	changed;
-	uint32_t	valid;
-	char		playing;
-	float		speed;
-	float		bpm;
-	double		quarter;
-	double		beat;
-	float		time_sig_num;
-	uint32_t	time_sig_denom;
-	uint64_t	bar;
-	float		bar_beat;
+	uint32_t	changed;		// what changed, flag mask
+	uint32_t	valid;			// waht is valid, flag mask
+	char		playing;		// 0 = stopped, non-0 = playing
+	float		speed;			// playback speed ratio
+	float		bpm;			// beats per minute
+	double		quarter;		// quarter notes since "origin"
+	double		beat;			// beats since "origin"
+	float		time_sig_num;		// time signature numerator
+	uint32_t	time_sig_denom;		// time signature denominator
+	uint64_t	bar;			// bars since "origin"
+	float		bar_beat;		// beats since beginning of the current bar
 } plugin_transport;
 {{?}}
 

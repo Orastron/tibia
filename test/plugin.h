@@ -34,7 +34,9 @@ typedef struct {
 	size_t	delay_line_cur;
 	float	z1;
 	float	cutoff_k;
+	char	playing;
 	float	speed;
+	float	speed_k;
 	float	bpm;
 	float	phase;
 	float	yz1;
@@ -69,7 +71,9 @@ static void plugin_reset(plugin *instance) {
 	instance->delay_line_cur = 0;
 	instance->z1 = 0.f;
 	instance->cutoff_k = 1.f;
+	instance->playing = 0;
 	instance->speed = 1.f;
+	instance->speed_k = 1.f;
 	instance->bpm = 120.f;
 	instance->phase = 0.f;
 	instance->yz1 = 0.f;
@@ -110,7 +114,7 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 	//approx const size_t delay = roundf(instance->sample_rate * 0.001f * instance->delay);
 	const size_t delay = (size_t)(instance->sample_rate * 0.001f * instance->delay + 0.5f);
 	const float mA1 = instance->sample_rate / (instance->sample_rate + 6.283185307179586f * instance->cutoff * instance->cutoff_k);
-	const float phase_inc = (1.f / 60.f) * (instance->speed * instance->bpm) / instance->sample_rate;
+	const float phase_inc = (1.f / 60.f) * (instance->speed_k * instance->bpm) / instance->sample_rate;
 	const float kt = 0.01f * instance->tremolo;
 	for (size_t i = 0; i < n_samples; i++) {
 		instance->delay_line[instance->delay_line_cur] = inputs[0][i];
@@ -138,24 +142,31 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
-	if ((transport->changed & PLUGIN_TRANSPORT_SPEED) && (transport->valid & PLUGIN_TRANSPORT_SPEED))
-		instance->speed =
-			transport->speed != 0.f ? transport->speed
-			: ((transport->valid & PLUGIN_TRANSPORT_PLAYING && transport->playing) ? 0.f : 1.f);
-	if ((transport->changed & PLUGIN_TRANSPORT_BPM) && (transport->valid & PLUGIN_TRANSPORT_BPM))
+	if (transport->valid & PLUGIN_TRANSPORT_SPEED)
+		instance->speed = transport->speed;
+	if (transport->valid & PLUGIN_TRANSPORT_PLAYING)
+		instance->playing = transport->playing;
+	else if (transport->valid & PLUGIN_TRANSPORT_SPEED)
+		instance->playing = transport->speed != 0.f;
+	instance->speed_k = instance->speed != 0.f ? instance->speed : (instance->playing ? 0.f : 1.f);
+
+	if (transport->valid & PLUGIN_TRANSPORT_BPM)
 		instance->bpm = transport->bpm;
-	if (transport->valid & PLUGIN_TRANSPORT_QUARTER)
-		instance->phase = transport->quarter - (uint32_t)transport->quarter;
-	else if ((transport->valid & (PLUGIN_TRANSPORT_BEAT | PLUGIN_TRANSPORT_TIME_SIG_DENOM))
-		 == (PLUGIN_TRANSPORT_BEAT | PLUGIN_TRANSPORT_TIME_SIG_DENOM)) {
-		// incorrect in case of time signature changes but that is the best LV2 supports
-		double q = transport->beat * (4.0 / transport->time_sig_denom);
-		instance->phase = q - (uint32_t)q;
-	} else if ((transport->valid & (PLUGIN_TRANSPORT_TIME_SIG_NUM | PLUGIN_TRANSPORT_TIME_SIG_DENOM | PLUGIN_TRANSPORT_BAR | PLUGIN_TRANSPORT_BAR_BEAT))
-		   == (PLUGIN_TRANSPORT_TIME_SIG_NUM | PLUGIN_TRANSPORT_TIME_SIG_DENOM | PLUGIN_TRANSPORT_BAR | PLUGIN_TRANSPORT_BAR_BEAT)) {
-		// even worse but that's the best we can do in Ardour/LV2
-		double q = (transport->bar * transport->time_sig_num + transport->bar_beat) * (4.0 / transport->time_sig_denom);
-		instance->phase = q - (uint32_t)q;
+
+	if (instance->playing) {
+		if (transport->valid & PLUGIN_TRANSPORT_QUARTER)
+			instance->phase = transport->quarter - (uint32_t)transport->quarter;
+		else if ((transport->valid & (PLUGIN_TRANSPORT_BEAT | PLUGIN_TRANSPORT_TIME_SIG_DENOM))
+			== (PLUGIN_TRANSPORT_BEAT | PLUGIN_TRANSPORT_TIME_SIG_DENOM)) {
+			// incorrect in case of time signature changes but that is the best LV2 supports
+			double q = transport->beat * (4.0 / transport->time_sig_denom);
+			instance->phase = q - (uint32_t)q;
+		} else if ((transport->valid & (PLUGIN_TRANSPORT_TIME_SIG_NUM | PLUGIN_TRANSPORT_TIME_SIG_DENOM | PLUGIN_TRANSPORT_BAR | PLUGIN_TRANSPORT_BAR_BEAT))
+			== (PLUGIN_TRANSPORT_TIME_SIG_NUM | PLUGIN_TRANSPORT_TIME_SIG_DENOM | PLUGIN_TRANSPORT_BAR | PLUGIN_TRANSPORT_BAR_BEAT)) {
+			// even worse but that's the best we can do in Ardour/LV2
+			double q = (transport->bar * transport->time_sig_num + transport->bar_beat) * (4.0 / transport->time_sig_denom);
+			instance->phase = q - (uint32_t)q;
+		}
 	}
 }
 

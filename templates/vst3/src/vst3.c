@@ -261,13 +261,7 @@ typedef struct pluginInstance {
 #endif
 #ifdef DATA_TRANSPORT_SYNC
 	char						firstRun;
-	uint32_t					transportValid;
-	char						transportPlaying;
-	float						transportSpeed;
-	float						transportBpm;
-	double						transportQuarter;
-	uint32_t					transportTimeSigNum;
-	uint32_t					transportTimeSigDenom;
+	plugin_transport				transport;
 #endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
@@ -611,7 +605,7 @@ static Steinberg_tresult pluginSetActive(void* thisInterface, Steinberg_TBool st
 
 #ifdef DATA_TRANSPORT_SYNC
 		p->firstRun = 1;
-		p->transportValid = 0;
+		p->transport.valid = 0;
 #endif
 	} else
 		p->curSampleRate = 0.f;
@@ -1001,67 +995,59 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 
 #ifdef DATA_TRANSPORT_SYNC
 	struct Steinberg_Vst_ProcessContext *ctx = data->processContext;
-	plugin_transport t;
-	t.changed = 0;
-	p->transportValid |= PLUGIN_TRANSPORT_PLAYING;
-	char ctx_playing = ctx ? 1 : 0;
-	char ctx_playing_value = ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kPlaying ? 1 : 0;
-	char transport_playing = (p->transportValid & PLUGIN_TRANSPORT_PLAYING) ? 1 : 0;
-	if (ctx_playing != transport_playing || (ctx_playing && ctx_playing_value != p->transportPlaying)) {
-		if (ctx_playing) {
-			p->transportValid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
-			p->transportPlaying = ctx_playing_value;
-			t.playing = ctx_playing_value;
-			t.speed = ctx_playing_value ? 1.f : 0.f;
-		} else
-			p->transportValid &= ~(PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED);
-		t.changed |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+	p->transport.changed = 0;
+	if (ctx) {
+		char v = ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kPlaying ? 1 : 0;
+		if (!(p->transport.valid & PLUGIN_TRANSPORT_PLAYING) || v != p->transport.playing) {
+			p->transport.changed |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+			p->transport.playing = v;
+			p->transport.speed = v ? 1.f : 0.f;
+		}
+		p->transport.valid |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+	} else if (p->transport.valid & PLUGIN_TRANSPORT_PLAYING) {
+		p->transport.changed |= PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED;
+		p->transport.valid &= ~(PLUGIN_TRANSPORT_PLAYING | PLUGIN_TRANSPORT_SPEED);
 	}
 	char ctx_bpm = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTempoValid) ? 1 : 0;
-	char transport_bpm = (p->transportValid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
-	if (ctx_bpm != transport_bpm || (ctx_bpm && (float)ctx->tempo != p->transportBpm)) {
+	char transport_bpm = (p->transport.valid & PLUGIN_TRANSPORT_BPM) ? 1 : 0;
+	if (ctx_bpm != transport_bpm || (ctx_bpm && (float)ctx->tempo != p->transport.bpm)) {
+		p->transport.changed |= PLUGIN_TRANSPORT_BPM;
 		if (ctx_bpm) {
-			p->transportValid |= PLUGIN_TRANSPORT_BPM;
-			p->transportBpm = (float)ctx->tempo;
-			t.bpm = (float)ctx->tempo;
+			p->transport.valid |= PLUGIN_TRANSPORT_BPM;
+			p->transport.bpm = (float)ctx->tempo;
 		} else
-			p->transportValid &= ~PLUGIN_TRANSPORT_BPM;
-		t.changed |= PLUGIN_TRANSPORT_BPM;
+			p->transport.valid &= ~PLUGIN_TRANSPORT_BPM;
 	}
 	char ctx_quarter = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kProjectTimeMusicValid) ? 1 : 0;
-	char transport_quarter = (p->transportValid & PLUGIN_TRANSPORT_QUARTER) ? 1 : 0;
-	if (ctx_quarter != transport_quarter || (ctx_quarter && ctx->projectTimeMusic != p->transportQuarter)) {
+	char transport_quarter = (p->transport.valid & PLUGIN_TRANSPORT_QUARTER) ? 1 : 0;
+	if (ctx_quarter != transport_quarter || (ctx_quarter && ctx->projectTimeMusic != p->transport.quarter)) {
+		p->transport.changed |= PLUGIN_TRANSPORT_QUARTER;
 		if (ctx_quarter) {
-			p->transportValid |= PLUGIN_TRANSPORT_QUARTER;
-			p->transportQuarter = ctx->projectTimeMusic;
-			t.quarter = ctx->projectTimeMusic;
+			p->transport.valid |= PLUGIN_TRANSPORT_QUARTER;
+			p->transport.quarter = ctx->projectTimeMusic;
 		} else
-			p->transportValid &= ~PLUGIN_TRANSPORT_QUARTER;
-		t.changed |= PLUGIN_TRANSPORT_QUARTER;
+			p->transport.valid &= ~PLUGIN_TRANSPORT_QUARTER;
 	}
 	char ctx_time_sig = (ctx && ctx->state & Steinberg_Vst_ProcessContext_StatesAndFlags_kTimeSigValid) ? 1 : 0;
-	char transport_time_sig = (p->transportValid & PLUGIN_TRANSPORT_TIME_SIG_NUM) ? 1 : 0;
-	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigNumerator != p->transportTimeSigNum)) {
+	char transport_time_sig = (p->transport.valid & PLUGIN_TRANSPORT_TIME_SIG_NUM) ? 1 : 0;
+	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigNumerator != p->transport.time_sig_num)) {
+		p->transport.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
 		if (ctx_time_sig) {
-			p->transportValid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
-			p->transportTimeSigNum = (uint32_t)ctx->timeSigNumerator;
-			t.time_sig_num = (float)ctx->timeSigNumerator; // yes, float
+			p->transport.valid |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+			p->transport.time_sig_num = (float)ctx->timeSigNumerator;
 		} else
-			p->transportValid &= ~PLUGIN_TRANSPORT_TIME_SIG_NUM;
-		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_NUM;
+			p->transport.valid &= ~PLUGIN_TRANSPORT_TIME_SIG_NUM;
 	}
-	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigDenominator != p->transportTimeSigDenom)) {
+	if (ctx_time_sig != transport_time_sig || (ctx_time_sig && (uint32_t)ctx->timeSigDenominator != p->transport.time_sig_denom)) {
+		p->transport.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
 		if (ctx_time_sig) {
-			p->transportValid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
-			p->transportTimeSigDenom = (uint32_t)ctx->timeSigDenominator;
-			t.time_sig_denom = (uint32_t)ctx->timeSigDenominator;
+			p->transport.valid |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+			p->transport.time_sig_denom = (uint32_t)ctx->timeSigDenominator;
 		} else
-			p->transportValid &= ~PLUGIN_TRANSPORT_TIME_SIG_DENOM;
-		t.changed |= PLUGIN_TRANSPORT_TIME_SIG_DENOM;
+			p->transport.valid &= ~PLUGIN_TRANSPORT_TIME_SIG_DENOM;
 	}
-	if (t.changed || p->firstRun) {
-		t.valid = p->transportValid;
-		plugin_set_transport(&p->p, &t);
+	if (p->transport.changed || p->firstRun) {
+		plugin_set_transport(&p->p, &p->transport);
 		p->firstRun = 0;
 	}
 #endif
