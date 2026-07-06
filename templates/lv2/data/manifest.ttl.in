@@ -134,6 +134,9 @@
 {{?p.list}}
 		lv2:portProperty lv2:enumeration ;
 {{?}}
+{{?p.extraPortProperties}}
+		lv2:portProperty {{=p.extraPortProperties.map(x => it.tibia.lv2.ttlURI(x)).join(" , ")}} ;
+{{?}}
 {{?p.unit && p.unit in it.tibia.lv2.units}}
 		units:unit	{{=it.tibia.lv2.ttlURI(it.tibia.lv2.units[p.unit])}} ;
 {{?}}

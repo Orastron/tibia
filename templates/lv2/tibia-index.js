@@ -142,6 +142,11 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 			data.tibia.lv2.ports.push(e);
 		}
 
+		if (options && options.extraPortProperties)
+			for (var id in options.extraPortProperties) {
+				var p = ports.find(x => x.id == id);
+				p.extraPortProperties = options.extraPortProperties[id];
+			}
 		if (options && options.extraDesignations)
 			for (var id in options.extraDesignations) {
 				var p = ports.find(x => x.id == id);
