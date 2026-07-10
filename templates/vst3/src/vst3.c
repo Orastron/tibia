@@ -1550,7 +1550,7 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		/* .copyDescription	= */ NULL
 	};
 	v->timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(), 20.0 / 1000.0, 0, 0, plugViewTimerCb, &ctx);
-	CFRunLoopAddTimer(CFRunLoopGetCurrent(), v->timer, kCFRunLoopCommonModes);
+	CFRunLoopAddTimer(CFRunLoopGetMain(), v->timer, kCFRunLoopCommonModes);
 # elif defined(_WIN32) || defined(__CYGWIN__)
 	v->timer = SetTimer((HWND)*((char **)v->ui), (UINT_PTR)v, 20, (TIMERPROC)plugViewTimerCb);
 	if (v->timer == 0) {
