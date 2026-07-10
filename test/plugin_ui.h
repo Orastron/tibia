@@ -106,7 +106,7 @@ static void on_mouse_press(window *win, int32_t x, int32_t y, uint32_t state) {
 	} else if (x >= 0.1 * w && x <= 0.9 * w && y >= 7 * sh && y <= 8 * sh) {
 		pui->param_down = 3;
 		pui->tremolo = (float)((x - (0.1 * w)) / (0.8 * w));
-		pui->cbs.set_parameter_begin(pui->cbs.handle, 1, 100.f * pui->tremolo);
+		pui->cbs.set_parameter_begin(pui->cbs.handle, 3, 100.f * pui->tremolo);
 		draw_slider(pui, 3, pui->tremolo);
 	} else if (x >= 0.4 * w && x <= 0.6 * w && y >= 9 * sh && y <= 10 * sh) {
 		pui->param_down = 4;
