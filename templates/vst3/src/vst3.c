@@ -1631,7 +1631,11 @@ static Steinberg_tresult plugViewGetSize(void* thisInterface, struct Steinberg_V
 		size->bottom = attr.height;
 # elif defined(__APPLE__)
 		SEL boundsSelector = sel_registerName("bounds");
+#  if defined(__x86_64__)
+		CGRect (*boundsMsgSend)(id, SEL) = (CGRect (*)(id, SEL))objc_msgSend_stret;
+#  else
 		CGRect (*boundsMsgSend)(id, SEL) = (CGRect (*)(id, SEL))objc_msgSend;
+#  endif
 		CGRect bounds = boundsMsgSend((id)(*((char **)v->ui)), boundsSelector);
 		CGFloat width = bounds.size.width;
 		CGFloat height = bounds.size.height;
