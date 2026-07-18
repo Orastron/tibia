@@ -75,6 +75,14 @@ using namespace std;
 #  include <sched.h>
 #  define yield sched_yield
 # endif
+# if defined(__aarch64__)
+#  define CPU_PAUSE __asm__ __volatile__("yield" ::: "memory");
+# elif defined(__i386__) || defined(__x86_64__)
+#  define CPU_PAUSE __builtin_ia32_pause();
+# else
+#  define CPU_PAUSE
+# endif
+# define SPIN_LIMIT 100
 #endif
 
 // COM in C doc:
@@ -269,8 +277,14 @@ typedef struct pluginInstance {
 
 static void pluginStateLockCb(void *handle) {
 	pluginInstance *p = (pluginInstance *)handle;
+	for (int j = 0; j < SPIN_LIMIT; j++) {
+		if (!atomic_flag_test_and_set(&p->syncLockFlag))
+			goto end;
+		CPU_PAUSE
+	}
 	while (atomic_flag_test_and_set(&p->syncLockFlag))
 		yield();
+end:
 	p->synced = 0;
 }
 

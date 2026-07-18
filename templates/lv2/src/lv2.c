@@ -88,6 +88,14 @@
 #  include <sched.h>
 #  define yield sched_yield
 # endif
+# if defined(__aarch64__)
+#  define CPU_PAUSE __asm__ __volatile__("yield" ::: "memory");
+# elif defined(__i386__) || defined(__x86_64__)
+#  define CPU_PAUSE __builtin_ia32_pause();
+# else
+#  define CPU_PAUSE
+# endif
+# define SPIN_LIMIT 100
 #endif
 
 #ifdef DATA_TRANSPORT_SYNC
@@ -198,12 +206,22 @@ static const char * get_bundle_path_cb(void *handle) {
 #ifdef DATA_STATE_DSP_CUSTOM
 static void state_lock_cb(void *handle) {
 	plugin_instance * i = (plugin_instance *)handle;
+	for (int j = 0; j < SPIN_LIMIT; j++) {
+# ifdef __cplusplus
+		if (!i->sync_lock_flag.test_and_set())
+# else
+		if (!atomic_flag_test_and_set(&i->sync_lock_flag))
+# endif
+			goto end;
+		CPU_PAUSE
+	}
 # ifdef __cplusplus
 	while (i->sync_lock_flag.test_and_set())
 # else
 	while (atomic_flag_test_and_set(&i->sync_lock_flag))
 # endif
 		yield();
+end:
 	i->synced = 0;
 }
 
