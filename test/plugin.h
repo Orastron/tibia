@@ -192,18 +192,20 @@ static float parse_float(const uint8_t *data) {
 
 static int plugin_state_save(plugin *instance, const plugin_state_callbacks *cbs, float last_sample_rate) {
 	(void)last_sample_rate;
-	uint8_t data[13];
+	uint8_t data[17];
 	cbs->lock(cbs->handle);
 	const float gain = instance->gain;
 	const float delay = instance->delay;
 	const float cutoff = instance->cutoff;
+	const float tremolo = instance->tremolo;
 	const char bypass = instance->bypass;
 	cbs->unlock(cbs->handle);
 	serialize_float(data, gain);
 	serialize_float(data + 4, delay);
 	serialize_float(data + 8, cutoff);
-	data[12] = bypass ? 1 : 0;
-	return cbs->write(cbs->handle, (const char *)data, 13);
+	serialize_float(data + 12, tremolo);
+	data[16] = bypass ? 1 : 0;
+	return cbs->write(cbs->handle, (const char *)data, 17);
 }
 
 static char x_isnan(float x) {
@@ -214,19 +216,21 @@ static char x_isnan(float x) {
 
 static int plugin_state_load(const plugin_state_callbacks *cbs, float cur_sample_rate, const char *data, size_t length) {
 	(void)cur_sample_rate;
-	if (length != 13)
+	if (length != 17)
 		return -1;
 	const uint8_t *d = (const uint8_t *)data;
 	const float gain = parse_float(d);
 	const float delay = parse_float(d + 4);
 	const float cutoff = parse_float(d + 8);
-	const float bypass = d[12] ? 1.f : 0.f;
-	if (x_isnan(gain) || x_isnan(delay) || x_isnan(cutoff))
+	const float tremolo = parse_float(d + 12);
+	const float bypass = d[16] ? 1.f : 0.f;
+	if (x_isnan(gain) || x_isnan(delay) || x_isnan(cutoff) || x_isnan(tremolo))
 		return -1;
 	cbs->lock(cbs->handle);
 	cbs->set_parameter(cbs->handle, plugin_parameter_gain, gain);
 	cbs->set_parameter(cbs->handle, plugin_parameter_delay, delay);
 	cbs->set_parameter(cbs->handle, plugin_parameter_cutoff, cutoff);
+	cbs->set_parameter(cbs->handle, plugin_parameter_tremolo, tremolo);
 	cbs->set_parameter(cbs->handle, plugin_parameter_bypass, bypass);
 	cbs->unlock(cbs->handle);
 	return 0;
