@@ -35,10 +35,10 @@ ifeq ($(TEMPLATE), lv2)
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
 			M_SRCS_EXTRA  := $(VINCI_DIR)/vinci-cocoa.m
-			LDFLAGS_EXTRA := -framework Cocoa -lobjc
+			LDLIBS_EXTRA := -framework Cocoa -lobjc
 		else
 			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
-			LDFLAGS_EXTRA := -lxcb
+			LDLIBS_EXTRA := -lxcb
 		endif
 	endif
 	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I$(VINCI_DIR)
@@ -53,10 +53,10 @@ ifeq ($(TEMPLATE), vst3)
 		UNAME_S := $(shell uname -s)
 		ifeq ($(UNAME_S), Darwin)
 			M_SRCS_EXTRA  := $(VINCI_DIR)/vinci-cocoa.m
-			LDFLAGS_EXTRA := -framework Cocoa -lobjc
+			LDLIBS_EXTRA := -framework Cocoa -lobjc
 		else
 			C_SRCS_EXTRA  := $(VINCI_DIR)/vinci-xcb.c
-			LDFLAGS_EXTRA := -lxcb
+			LDLIBS_EXTRA := -lxcb
 		endif
 	endif
 	CFLAGS_EXTRA := $(CFLAGS_EXTRA) -I../../../../vst3_c_api -I$(VINCI_DIR)

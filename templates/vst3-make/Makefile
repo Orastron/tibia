@@ -69,6 +69,7 @@ STRIP := strip
 C_SRCS := $(C_SRCS_EXTRA)
 M_SRCS := $(M_SRCS_EXTRA)
 CXX_SRCS := $(CXX_SRCS_EXTRA)
+MM_SRCS := $(MM_SRCS_EXTRA)
 ifeq ($(wildcard $(PLUGIN_DIR)/plugin_cxx.h)$(wildcard $(PLUGIN_DIR)/plugin_ui_cxx.h),)
 	C_SRCS := $(COMMON_DIR)/src/vst3.c $(C_SRCS)
 else
@@ -84,24 +85,34 @@ endif
 C_OBJS := $(addprefix build/obj/, $(notdir $(C_SRCS:.c=.o)))
 M_OBJS := $(addprefix build/obj/, $(notdir $(M_SRCS:.m=.o)))
 CXX_OBJS := $(addprefix build/obj/, $(notdir $(CXX_SRCS:.cpp=.o)))
+MM_OBJS := $(addprefix build/obj/, $(notdir $(MM_SRCS:.mm=.o)))
 
 LIBS := $(LIBS_EXTRA)
 
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS) $(CFLAGS_POST)
 
-LDFLAGS :=
-LDFLAGS_ALL := -shared -lm $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+OBJCFLAGS :=
+OBJCFLAGS_ALL := $(OBJCFLAGS_EXTRA) $(OBJCFLAGS) $(OBJCFLAGS_POST)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
 
+OBJCXXFLAGS :=
+OBJCXXFLAGS_ALL := $(OBJCXXFLAGS_EXTRA) $(OBJCXXFLAGS) $(OBJCXXFLAGS_POST)
+
+LDFLAGS :=
+LDFLAGS_ALL := -shared $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+
+LDLIBS :=
+LDLIBS_ALL := -lm $(LDLIBS_EXTRA) $(LDLIBS) $(LDLIBS_POST)
+
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
-	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	ifeq ($(HAS_UI), yes)
-		LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
+		LDLIBS_ALL := $(LDLIBS_ALL) -Wl,-framework,Foundation -Wl,-framework,Cocoa -Wl,-framework,Corevideo
 	endif
 endif
 
@@ -109,8 +120,9 @@ ifeq ($(UNAME_S), Linux)
 	CFLAGS_ALL := $(CFLAGS_ALL) -D_GNU_SOURCE
 	ifeq ($(HAS_UI), yes)
 		CFLAGS_ALL := $(CFLAGS_ALL) $(shell pkg-config --cflags x11)
-		LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs x11)
 		CXXFLAGS_ALL := $(CXXFLAGS_ALL) $(shell pkg-config --cflags x11)
+		LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs-only-L --libs-only-other x11)
+		LDLIBS_ALL := $(LDLIBS_ALL) $(shell pkg-config --libs-only-l x11)
 	endif
 endif
 
@@ -143,10 +155,10 @@ build/src/vst3.cpp: $(COMMON_DIR)/src/vst3.c | build/src
 
 ifeq ($(CXX_OBJS),)
 build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(LIBS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
-	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CC) $^ -o $@ $(LDFLAGS_ALL) $(LDLIBS_ALL)
 else
-build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) $(LIBS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
-	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
+build/$(BUNDLE_DIR)/$(DLL_FILE): $(C_OBJS) $(M_OBJS) $(CXX_OBJS) $(MM_OBJS) $(LIBS) | build/$(BUNDLE_DIR)/$(DLL_DIR)
+	$(CXX) $^ -o $@ $(LDFLAGS_ALL) $(LDLIBS_ALL)
 endif
 
 ifeq ($(UNAME_S), Darwin)
@@ -206,10 +218,13 @@ $(C_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).c,$$
 	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
 
 $(M_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).m,$$(M_SRCS)) | build/obj
-	$(CC) $^ -o $@ -c $(CFLAGS_ALL)
+	$(CC) $^ -o $@ -c $(CFLAGS_ALL) $(OBJCFLAGS_ALL)
 
 $(CXX_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).cpp,$$(CXX_SRCS)) | build/obj
 	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL)
+
+$(MM_OBJS): build/obj/%.o: $$(filter $$(PERCENT)/$$(basename $$(notdir $$@)).mm,$$(MM_SRCS)) | build/obj
+	$(CXX) $^ -o $@ -c $(CXXFLAGS_ALL) $(OBJCXXFLAGS_ALL)
 
 -include $(MKINC_DIR)/rules-secondexp-extra.mk
 

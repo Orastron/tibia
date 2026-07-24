@@ -65,7 +65,7 @@ endif
 
 CC := $(NDK_BIN_DIR)/armv7a-linux-androideabi$(MIN_API)-clang
 CXX := $(NDK_BIN_DIR)/armv7a-linux-androideabi$(MIN_API)-clang++
-JC := javac
+JAVAC := javac
 
 APKSIGNER := $(BUILD_TOOLS_DIR)/apksigner
 ZIPALIGN := $(BUILD_TOOLS_DIR)/zipalign
@@ -109,14 +109,13 @@ CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -fPIC -fvisibility=hidden -std=c++11 $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
 
 LDFLAGS :=
-LDFLAGS_ALL := -shared -static-libstdc++ -landroid
-ifeq ($(HAS_MIDI_IN), yes)
-	LDFLAGS += -lamidi
-endif
-LDFLAGS_ALL += $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+LDFLAGS_ALL := -shared -static-libstdc++ $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
 
-JFLAGS :=
-JFLAGS_ALL := $(JFLAGS_EXTRA) $(JFLAGS) $(JFLAGS_POST)
+LDLIBS :=
+LDLIBS_ALL := -landroid $(if $(filter yes,$(HAS_MIDI_IN)), -lamidi) $(LDLIBS_EXTRA) $(LDLIBS) $(LDLIBS_POST)
+
+JAVACFLAGS :=
+JAVACFLAGS_ALL := $(JAVACFLAGS_EXTRA) $(JAVACFLAGS) $(JAVACFLAGS_POST)
 
 DIRS := build build/gen build/apk build/obj build/apk/lib build/apk/lib/armeabi-v7a build/assets
 
@@ -145,10 +144,10 @@ build/apk/my_classes.jar: $(foreach class,$(CLASSES),build/obj/$(CLASSES_PATH)/$
 	$(D8) $(foreach class,$(CLASSES),'build/obj/$(CLASSES_PATH)/$(class).class') --min-api $(MIN_API) --output $@ --no-desugaring
 
 build/obj/$(CLASSES_PATH)/MainActivity.class: $(DATA_DIR)/src/MainActivity.java | build/obj
-	$(JC) $(JFLAGS_ALL) -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
+	$(JAVAC) $(JAVACFLAGS_ALL) -classpath "$(subst $() $(),:,$(JARS))" -d build/obj $^
 
 build/apk/lib/armeabi-v7a/lib$(BUNDLE_NAME).so: $(C_OBJS) $(CXX_OBJS) $(LIBS) | build/apk/lib/armeabi-v7a
-	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL) $(LDLIBS_ALL)
 
 build/assets/index.html: $(DATA_DIR)/src/index.html | build/assets
 	cp $^ $@

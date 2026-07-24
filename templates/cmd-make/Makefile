@@ -71,16 +71,19 @@ LIBS := $(LIBS_EXTRA)
 CFLAGS := -O3 -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS) $(CFLAGS_POST)
 
-LDFLAGS :=
-LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
-
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) -I$(TINYWAV_DIR) -I$(MIDI_PARSER_DIR)/include $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
 
+LDFLAGS :=
+LDFLAGS_ALL := $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+
+LDLIBS :=
+LDLIBS_ALL := $(LDLIBS_EXTRA) $(LDLIBS) $(LDLIBS_POST)
+
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS_ALL := $(CFLAGS_ALL) -arch arm64 -arch x86_64
-	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 	CXXFLAGS_ALL := $(CXXFLAGS_ALL) -arch arm64 -arch x86_64
+	LDFLAGS_ALL := $(LDFLAGS_ALL) -arch arm64 -arch x86_64
 endif
 ifeq ($(OS), Windows_NT)
 ifneq ($(CXX_OBJS),)
@@ -111,10 +114,10 @@ build/src/main.cpp: $(COMMON_DIR)/src/main.c | build/src
 
 ifeq ($(CXX_OBJS),)
 build/$(PROGRAM): $(C_OBJS) build/obj/tinywav.o $(LIBS) | build
-	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL) $(LDLIBS_ALL)
 else
 build/$(PROGRAM): $(C_OBJS) $(CXX_OBJS) build/obj/tinywav.o $(LIBS) | build
-	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL) $(LDLIBS_ALL)
 endif
 
 $(DIRS):

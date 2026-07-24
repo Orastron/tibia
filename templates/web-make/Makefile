@@ -81,12 +81,13 @@ LDFLAGS_ALL := \
 	-Wl,--export=processor_get_out_params \
 	-Wl,--export=processor_process \
 	-Wl,--export=processor_set_parameter \
+	$(if $filter(yes,$(HAS_MIDI_IN)),-Wl,--export=processor_midi_msg_in) \
 	-Wl,-z,stack-size=$$((8*1024*1024)) \
-	-nostdlib
-ifeq ($(HAS_MIDI_IN), yes)
-LDFLAGS_ALL := $(LDFLAGS_ALL) -Wl,--export=processor_midi_msg_in
-endif
-LDFLAGS_ALL := $(LDFLAGS_ALL) $(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+	-nostdlib \
+	$(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)
+
+LDLIBS :=
+LDLIBS_ALL := $(LDLIBS_EXTRA) $(LDLIBS) $(LDLIBS_POST)
 
 CXXFLAGS := $(CFLAGS)
 CXXFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -flto -fvisibility=hidden $(CXXFLAGS_EXTRA) $(CXXFLAGS) $(CXXFLAGS_POST)
@@ -109,10 +110,10 @@ build/src/processor.cpp: $(COMMON_DIR)/src/processor.c | build/src
 
 ifeq ($(CXX_OBJS),)
 build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) $(LIBS) | build/web/$(BUNDLE_NAME)
-	$(CC) $^ -o $@ $(CFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CC) $^ -o $@ $(LDFLAGS_ALL) $(LDLIBS_ALL)
 else
 build/web/$(BUNDLE_NAME)/module.wasm: $(C_OBJS) $(CXX_OBJS) $(LIBS) | build/web/$(BUNDLE_NAME)
-	$(CXX) $^ -o $@ $(CFLAGS_ALL) $(CXXFLAGS_ALL) $(LDFLAGS_ALL)
+	$(CXX) $^ -o $@ $(LDFLAGS_ALL) $(LDLIBS_ALL)
 endif
 
 build/web/$(BUNDLE_NAME)/processor.js: $(DATA_DIR)/src/processor.js | build/web/$(BUNDLE_NAME)
