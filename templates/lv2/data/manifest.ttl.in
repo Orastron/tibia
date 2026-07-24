@@ -158,7 +158,7 @@
 	ui:binary <{{=it.product.bundleName}}@DLL_SUFFIX@> ;
 {{?!it.product.ui.userResizable}}
 	lv2:optionalFeature ui:noUserResize ; # doesn't work as lv2:requiredFeature, don't ask me why
-{{?!it.product.ui.selfResizable}}
+{{?true /* !it.product.ui.selfResizable, not supported yet */}}
 	lv2:optionalFeature ui:fixedSize ;
 {{?}}
 {{?}}
