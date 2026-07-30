@@ -162,7 +162,7 @@ static void on_mouse_move(window *win, int32_t x, int32_t y, uint32_t state) {
 
 	plugin_ui *pui = (plugin_ui*) window_get_data(win);
 	const int w = window_get_width(win);
-	
+
 	float v = x < 0.1 * w ? 0.f : (x > 0.9 * w ? 1.f : (float)((x - (0.1 * w)) / (0.8 * w)));
 
 	switch (pui->param_down) {
@@ -272,4 +272,8 @@ static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float val
 		draw_slider(instance, 5, instance->y_z1);
 		break;
 	}
+}
+
+static void plugin_ui_msg_in(plugin_ui *instance, size_t size, const void * data) {
+
 }

@@ -104,12 +104,25 @@
 # define CONTROL_INPUT_INDEX_OFFSET_TRANSPORT 0
 #endif
 
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+# define CONTROL_INPUT_INDEX_OFFSET_UI_TO_DSP 1
+#else
+# define CONTROL_INPUT_INDEX_OFFSET_UI_TO_DSP 0
+#endif
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+# define CONTROL_INPUT_INDEX_OFFSET_DSP_TO_UI 1
+#else
+# define CONTROL_INPUT_INDEX_OFFSET_DSP_TO_UI 0
+#endif
+
 #define CONTROL_INPUT_INDEX_OFFSET ( \
 		DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N \
 		+ DATA_PRODUCT_AUDIO_OUTPUT_CHANNELS_N \
 		+ DATA_PRODUCT_MIDI_INPUTS_N \
 		+ DATA_PRODUCT_MIDI_OUTPUTS_N \
-		+ CONTROL_INPUT_INDEX_OFFSET_TRANSPORT )
+		+ CONTROL_INPUT_INDEX_OFFSET_TRANSPORT \
+		+ CONTROL_INPUT_INDEX_OFFSET_UI_TO_DSP \
+		+ CONTROL_INPUT_INDEX_OFFSET_DSP_TO_UI )
 #define CONTROL_OUTPUT_INDEX_OFFSET	(CONTROL_INPUT_INDEX_OFFSET + DATA_PRODUCT_CONTROL_INPUTS_N)
 
 #if DATA_PRODUCT_CONTROL_INPUTS_N > 0
@@ -146,6 +159,12 @@ typedef struct {
 #ifdef DATA_TRANSPORT_SYNC
 	LV2_Atom_Sequence *		x_transport;
 #endif
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	LV2_Atom *			x_msg;
+#endif
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	LV2_Atom *			y_msg;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	float *				c[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N];
 #endif
@@ -172,8 +191,10 @@ typedef struct {
 #if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 	LV2_URID			uri_midi_MidiEvent;
 #endif
-#ifdef DATA_STATE_DSP_CUSTOM
+#if defined(DATA_STATE_DSP_CUSTOM) || defined(DATA_MESSAGING)
 	LV2_URID			uri_atom_Chunk;
+#endif
+#ifdef DATA_STATE_DSP_CUSTOM
 	LV2_URID			uri_state_data;
 	plugin_state_callbacks		state_cbs;
 	LV2_State_Store_Function	state_store;
@@ -250,6 +271,16 @@ static void state_set_parameter_cb(void *handle, size_t index, float value) {
 # endif
 #endif
 
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+static void dsp_to_ui_write_cb(void *handle, size_t size, const void *data) {
+	plugin_instance * i = (plugin_instance *)handle;
+	if (i->y_msg) {
+		i->y_msg->size = size;
+		memcpy(LV2_ATOM_BODY(i->y_msg), data, size);
+	}
+}
+#endif
+
 static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double sample_rate, const char * bundle_path, const LV2_Feature * const * features) {
 	(void)descriptor;
 	(void)bundle_path;
@@ -276,23 +307,26 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	lv2_log_logger_set_map(&instance->logger, instance->map);
 	if (missing) {
 		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
-#if (defined(DATA_PRODUCT_MIDI_REQUIRED) || defined(DATA_TRANSPORT_SYNC_REQUIRED))
+#if (defined(DATA_PRODUCT_MIDI_REQUIRED) \
+	|| defined(DATA_TRANSPORT_SYNC_REQUIRED) \
+	|| defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) \
+	|| defined(DATA_MESSAGING_DSP_TO_UI_REQUIRED))
 		goto err_urid;
 #endif
 	}
 
-#if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
-	if (instance->map)
+#if (DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0) || defined(DATA_STATE_DSP_CUSTOM) || defined(DATA_MESSAGING) || defined(DATA_TRANSPORT_SYNC)
+	if (instance->map) {
+# if DATA_PRODUCT_MIDI_INPUTS_N + DATA_PRODUCT_MIDI_OUTPUTS_N > 0
 		instance->uri_midi_MidiEvent = instance->map->map(instance->map->handle, LV2_MIDI__MidiEvent);
-#endif
-#ifdef DATA_STATE_DSP_CUSTOM
-	if (instance->map) {
+# endif
+# if defined(DATA_STATE_DSP_CUSTOM) || defined(DATA_MESSAGING)
 		instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
+# endif
+# ifdef DATA_STATE_DSP_CUSTOM
 		instance->uri_state_data = instance->map->map(instance->map->handle, DATA_LV2_URI "#state_data");
-	}
-#endif
-#ifdef DATA_TRANSPORT_SYNC
-	if (instance->map) {
+# endif
+# ifdef DATA_TRANSPORT_SYNC
 		instance->uri_atom_Blank          = instance->map->map(instance->map->handle, LV2_ATOM__Blank);
 		instance->uri_atom_Object         = instance->map->map(instance->map->handle, LV2_ATOM__Object);
 		instance->uri_time_Position       = instance->map->map(instance->map->handle, LV2_TIME__Position);
@@ -303,6 +337,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 		instance->uri_time_beatUnit       = instance->map->map(instance->map->handle, LV2_TIME__beatUnit);
 		instance->uri_time_bar            = instance->map->map(instance->map->handle, LV2_TIME__bar);
 		instance->uri_time_barBeat        = instance->map->map(instance->map->handle, LV2_TIME__barBeat);
+# endif
 	}
 #endif
 
@@ -310,6 +345,9 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 	cbs.format	= "lv2";
 	cbs.get_bindir	= get_bundle_path_cb;
 	cbs.get_datadir	= get_bundle_path_cb;
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	cbs.msg_write   = dsp_to_ui_write_cb;
+#endif
 	plugin_init(&instance->p, &cbs);
 
 	instance->sample_rate = (float)sample_rate;
@@ -344,6 +382,12 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #ifdef DATA_TRANSPORT_SYNC
 	instance->x_transport = NULL;
 #endif
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	instance->x_msg = NULL;
+#endif
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	instance->y_msg = NULL;
+#endif
 #if (DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N) > 0
 	for (uint32_t i = 0; i < DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N; i++)
 		instance->c[i] = NULL;
@@ -366,7 +410,10 @@ err_extra:
 #endif
 err_mem:
 	plugin_fini(&instance->p);
-#ifdef DATA_PRODUCT_MIDI_REQUIRED
+#if (defined(DATA_PRODUCT_MIDI_REQUIRED) \
+	|| defined(DATA_TRANSPORT_SYNC_REQUIRED) \
+	|| defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) \
+	|| defined(DATA_MESSAGING_DSP_TO_UI_REQUIRED))
 err_urid:
 #endif
 	free(instance->bundle_path);
@@ -409,6 +456,20 @@ static void connect_port(LV2_Handle instance, uint32_t port, void * data_locatio
 #ifdef DATA_TRANSPORT_SYNC
 	if (port == 0) {
 		i->x_transport = (LV2_Atom_Sequence *)data_location;
+		return;
+	}
+	port--;
+#endif
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	if (port == 0) {
+		i->x_msg = (LV2_Atom *)data_location;
+		return;
+	}
+	port--;
+#endif
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	if (port == 0) {
+		i->y_msg = (LV2_Atom *)data_location;
 		return;
 	}
 	port--;
@@ -661,6 +722,17 @@ static void run(LV2_Handle instance, uint32_t sample_count) {
 	}
 #endif
 
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	if (i->y_msg) {
+		i->y_msg->size = 0;
+		i->y_msg->type = i->uri_atom_Chunk;
+	}
+#endif
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	if (i->map && i->x_msg != NULL && i->x_msg->size > 0)
+		plugin_msg_in(&i->p, i->x_msg->size, LV2_ATOM_BODY_CONST(i->x_msg));
+#endif
+
 #ifdef LV2_PROCESS_PRE_EXTRA
 	LV2_PROCESS_PRE_EXTRA(i, sample_count);
 #endif
@@ -800,11 +872,18 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 typedef struct {
 	plugin_ui *		ui;
 	char *			bundle_path;
+	LV2_Log_Logger		logger;
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	LV2UI_Write_Function	write;
 	LV2UI_Controller	controller;
 	char			has_touch;
 	LV2UI_Touch		touch;
+# endif
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	LV2_URID_Map *		map;
+	LV2_URID		uri_atom_Chunk;
+	// estimating 16 to be the maximum sizeof(LV2_Atom), also in manifest.ttl
+	uint8_t			msg_atom_data[16 + DATA_MESSAGING_UI_TO_DSP_SIZE];
 # endif
 } ui_instance;
 
@@ -840,11 +919,24 @@ static void ui_set_parameter_end_cb(void *handle, size_t index, float value) {
 }
 # endif
 
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+static void ui_to_dsp_write_cb(void *handle, size_t size, const void *data) {
+	ui_instance *instance = (ui_instance *)handle;
+	if (instance->map) {
+		LV2_Atom *atom = (LV2_Atom *)instance->msg_atom_data;
+		atom->size = size;
+		memcpy(LV2_ATOM_BODY(atom), data, size);
+		instance->write(instance->controller, DATA_MESSAGING_UI_TO_DSP_INDEX, lv2_atom_total_size(atom), instance->uri_atom_Chunk, atom);
+	}
+}
+# endif
+
 static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const char * plugin_uri, const char * bundle_path, LV2UI_Write_Function write_function, LV2UI_Controller controller, LV2UI_Widget * widget, const LV2_Feature * const * features) {
 	(void)descriptor;
 	(void)plugin_uri;
 
 	// make C++ compilers happy
+	const char *missing;
 	char has_parent;
 	void *parent;
 	plugin_ui_callbacks cbs;
@@ -856,6 +948,27 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	instance->bundle_path = strdup(bundle_path);
 	if (instance->bundle_path == NULL)
 		goto err_bundle_path;
+
+	// from https://lv2plug.in/book
+	missing = lv2_features_query(features,
+		LV2_LOG__log,	&instance->logger.log,	false,
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+		LV2_URID__map,	&instance->map,		true,
+# endif
+		NULL);
+
+	lv2_log_logger_set_map(&instance->logger, instance->map);
+	if (missing) {
+		lv2_log_error(&instance->logger, "Missing feature <%s>\n", missing);
+# if (defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) || defined(DATA_MESSAGING_DSP_TO_UI_REQUIRED))
+		goto err_urid;
+# endif
+	}
+
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	if (instance->map)
+		instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
+# endif
 
 	has_parent = 0;
 	parent = NULL;
@@ -884,6 +997,9 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	cbs.set_parameter	= ui_set_parameter_cb;
 	cbs.set_parameter_end	= ui_set_parameter_end_cb;
 # endif
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	cbs.msg_write           = ui_to_dsp_write_cb;
+# endif
 # if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	instance->write = write_function;
 	instance->controller = controller;
@@ -899,6 +1015,9 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	return instance;
 
 err_create:
+# if (defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) || defined(DATA_MESSAGING_DSP_TO_UI_REQUIRED))
+err_urid:
+# endif
 	free(instance->bundle_path);
 err_bundle_path:
 	free(instance);
@@ -914,23 +1033,28 @@ static void ui_cleanup(LV2UI_Handle handle) {
 	free(instance);
 }
 
-# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0 || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buffer_size, uint32_t format, const void * buffer) {
 	(void)buffer_size;
 	(void)format;
 
 	ui_instance *instance = (ui_instance *)handle;
+#  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	if (port_index == DATA_MESSAGING_DSP_TO_UI_INDEX) {
+		const LV2_Atom * atom = (const LV2_Atom *)buffer;
+		plugin_ui_msg_in(instance->ui, atom->size, LV2_ATOM_BODY_CONST(atom));
+		return;
+	}
+#  endif
 #  if DATA_PRODUCT_CONTROL_INPUTS_N > 0
 	if (port_index < CONTROL_OUTPUT_INDEX_OFFSET) {
 		size_t index = port_index - CONTROL_INPUT_INDEX_OFFSET;
 		plugin_ui_set_parameter(instance->ui, param_data[index].index, adjust_param(index, *((float *)buffer)));
+		return;
 	}
 #  endif
 #  if DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
-#   if DATA_PRODUCT_CONTROL_INPUTS_N > 0
-	else
-#   endif
-		plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
+	plugin_ui_set_parameter(instance->ui, param_out_index[port_index - CONTROL_OUTPUT_INDEX_OFFSET], *((float *)buffer));
 #  endif
 }
 # endif
@@ -952,7 +1076,7 @@ static const LV2UI_Descriptor ui_descriptor = {
 	/* .URI			= */ DATA_LV2_UI_URI,
 	/* .instantiate		= */ ui_instantiate,
 	/* .cleanup		= */ ui_cleanup,
-# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0
+# if DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONTROL_OUTPUTS_N > 0 || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 	/* .port_event		= */ ui_port_event,
 # else
 	/* .port_event		= */ NULL,

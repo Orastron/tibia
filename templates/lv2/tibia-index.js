@@ -119,6 +119,10 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 		if (data.product.transport && data.product.transport.sync)
 			data.tibia.lv2.ports.push({ type: "transport" });
+		if (data.product.messaging && data.product.messaging.dspToUiSize)
+			data.tibia.lv2.ports.push({ type: "dspToUi", size: data.product.messaging.dspToUiSize });
+		if (data.product.messaging && data.product.messaging.uiToDspSize)
+			data.tibia.lv2.ports.push({ type: "uiToDsp", size: data.product.messaging.uiToDspSize });
 
 		var ports = [];
 		for (var i = 0, j = 0; i < data.product.parameters.length; i++) {

@@ -245,6 +245,10 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 	instance->p.midiMsgIn(data);
 }
 
+static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
+
+}
+
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
 	if (transport->valid & PLUGIN_TRANSPORT_SPEED)
 		instance->p.setSpeed(transport->speed);

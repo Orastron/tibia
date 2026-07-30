@@ -141,6 +141,10 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 		instance->cutoff_k = data[1] < 64 ? (-0.19558034980097166f * data[1] - 2.361735109225749f) / (data[1] - 75.57552349522389f) : (393.95397927344214f - 7.660826245588588f * data[1]) / (data[1] - 139.0755234952239f);
 }
 
+static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
+
+}
+
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {
 	if (transport->valid & PLUGIN_TRANSPORT_SPEED)
 		instance->speed = transport->speed;

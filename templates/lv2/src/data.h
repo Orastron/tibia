@@ -102,6 +102,24 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 {{?}}
 {{?}}
 
+{{?it.product.messaging}}
+#define DATA_MESSAGING
+{{?it.product.messaging.uiToDspSize}}
+#define DATA_MESSAGING_UI_TO_DSP_SIZE	{{=it.product.messaging.uiToDspSize}}
+#define DATA_MESSAGING_UI_TO_DSP_INDEX	{{=it.tibia.lv2.ports.findIndex(x => x.type == "uiToDsp")}}
+{{?(!it.product.messaging.uiToDspOptional)}}
+#define DATA_MESSAGING_UI_TO_DSP_REQUIRED
+{{?}}
+{{?}}
+{{?it.product.messaging.dspToUiSize}}
+#define DATA_MESSAGING_DSP_TO_UI_SIZE	{{=it.product.messaging.dspToUiSize}}
+#define DATA_MESSAGING_DSP_TO_UI_INDEX	{{=it.tibia.lv2.ports.findIndex(x => x.type == "dspToUi")}}
+{{?(!it.product.messaging.dspToUiOptional)}}
+#define DATA_MESSAGING_DSP_TO_UI_REQUIRED
+{{?}}
+{{?}}
+{{?}}
+
 {{~it.tibia.lv2.extraIncludes :p}}
 #include "{{=p}}"
 {{~}}

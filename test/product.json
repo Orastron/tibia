@@ -164,6 +164,12 @@
 		"transport": {
 			"sync": true,
 			"syncOptional": true
+		},
+		"messaging": {
+			"dspToUiSize": 1024,
+			"dspToUiOptional": false,
+			"uiToDspSize": 1024,
+			"uiToDspOptional": true
 		}
 	}
 }

@@ -20,7 +20,11 @@
 	] ;
 	lv2:minorVersion {{=/^([0-9]+)\./.exec(it.lv2.version)[1]}} ;
 	lv2:microVersion {{=/^[0-9]+\.([0-9]+)/.exec(it.lv2.version)[1]}} ;
-{{?(it.tibia.lv2.ports.find(p => p.type == "midi" && !p.optional) || (it.product.transport && it.product.transport.sync && !it.product.transport.syncOptional))}}
+{{?(it.tibia.lv2.ports.find(p => p.type == "midi" && !p.optional)
+    || (it.product.transport && it.product.transport.sync && !it.product.transport.syncOptional)
+    || (it.product.messaging && (
+        (it.product.messaging.dspToUiSize && !it.product.messaging.dspToUiOptional)
+        || (it.product.messaging.UiToDspSize && !it.product.messaging.uiToDspOptional))))}}
 	lv2:requiredFeature urid:map ;
 {{??}}
 	lv2:optionalFeature urid:map ;
@@ -46,6 +50,28 @@
 		lv2:symbol "transport" ;
 		lv2:name "Transport" ;
 {{?it.product.transport.syncOptional}}
+		lv2:portProperty lv2:connectionOptional ;
+{{?}}
+{{??p.type == "dspToUi"}}
+		a atom:AtomPort ,
+			lv2:OutputPort ;
+		atom:bufferType atom:Chunk ;
+		lv2:symbol "dsp_to_ui" ;
+		lv2:name "DSP to UI messages" ;
+		rsz:minimumSize {{=p.size + 16}} ;
+		lv2:portProperty pprops:notOnGUI ;
+{{?it.product.messaging.dspToUiOptional}}
+		lv2:portProperty lv2:connectionOptional ;
+{{?}}
+{{??p.type == "uiToDsp"}}
+		a atom:AtomPort ,
+			lv2:InputPort ;
+		atom:bufferType atom:Chunk ;
+		lv2:symbol "ui_to_dsp" ;
+		lv2:name "UI to DSP messages" ;
+		rsz:minimumSize {{=p.size + 16}} ;
+		lv2:portProperty pprops:notOnGUI ;
+{{?it.product.messaging.uiToDspOptional}}
 		lv2:portProperty lv2:connectionOptional ;
 {{?}}
 {{??p.isBypass}}
@@ -115,6 +141,7 @@
 {{?p.id == it.lv2.kxReset}}
 		lv2:designation kx:Reset ;
 		lv2:portProperty pprops:trigger ;
+		lv2:portProperty pprops:notOnGUI ;
 		lv2:default 0 ;
 		lv2:minimum 0 ;
 		lv2:maximum 1 ;
@@ -161,6 +188,20 @@
 {{?true /* !it.product.ui.selfResizable, not supported yet */}}
 	lv2:optionalFeature ui:fixedSize ;
 {{?}}
+{{?}}
+{{?(it.product.messaging && it.product.messaging.UiToDspSize)}}
+{{?!it.product.messaging.uiToDspOptional}}
+	lv2:requiredFeature urid:map ;
+{{??}}
+	lv2:optionalFeature urid:map ;
+{{?}}
+{{?}}
+{{?(it.product.messaging && it.product.messaging.dspToUiSize)}}
+	ui:portNotification [
+		ui:plugin {{=it.tibia.lv2.ttlURI(it.lv2.uri)}} ;
+		lv2:symbol "dsp_to_ui" ;
+		ui:protocol atom:atomTransfer
+	] ;
 {{?}}
 	lv2:requiredFeature ui:idleInterface ;
 	lv2:extensionData ui:idleInterface .
