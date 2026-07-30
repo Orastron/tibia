@@ -19,11 +19,15 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 #include <new>
 
 class Plugin {
 public:
-	Plugin() {}
+	Plugin(void * handle, void (*msg_write)(void *handle, size_t size, const void *data)) {
+		mHandle = handle;
+		mMsgWrite = msg_write;
+	}
 
 	void setSampleRate(float value) {
 		mSampleRate = value;
@@ -51,6 +55,7 @@ public:
 		mBPM = 120.f;
 		mPhase = 0.f;
 		mYZ1 = 0.f;
+		mCount = 0;
 	}
 
 	void setGain(float value) {
@@ -120,7 +125,14 @@ public:
 			y *= 1.f + kt * lfo;
 			out[i] = mBypass ? in[i] : gain * y;
 			mYZ1 = out[i];
+			mCount++;
 		}
+		int len = sprintf(mMsgBuf, "%.2f", mCount / mSampleRate); // possibly not RT-safe, for testing purposes only
+		mMsgWrite(mHandle, len, mMsgBuf);
+	}
+
+	void resetCount() {
+		mCount = 0;
 	}
 
 	void midiMsgIn(const uint8_t * data) {
@@ -164,25 +176,30 @@ private:
 		return (cur < delay ? cur + len : cur) - delay;
 	}
 
-	float	mSampleRate;
-	size_t	mDelayLineLength;
+	float		mSampleRate;
+	size_t		mDelayLineLength;
 
-	float	mGain;
-	float	mDelay;
-	float	mCutoff;
-	float	mTremolo;
-	bool	mBypass;
+	float		mGain;
+	float		mDelay;
+	float		mCutoff;
+	float		mTremolo;
+	bool		mBypass;
 
-	float *	mDelayLine;
-	size_t	mDelayLineCur;
-	float	mZ1;
-	float	mCutoffK;
-	bool	mPlaying;
-	float	mSpeed;
-	float	mSpeedK;
-	float	mBPM;
-	float	mPhase;
-	float	mYZ1;
+	float *		mDelayLine;
+	size_t		mDelayLineCur;
+	float		mZ1;
+	float		mCutoffK;
+	bool		mPlaying;
+	float		mSpeed;
+	float		mSpeedK;
+	float		mBPM;
+	float		mPhase;
+	float		mYZ1;
+
+	uint64_t	mCount;
+	char		mMsgBuf[1024];
+	void *		mHandle;
+	void (*mMsgWrite)(void *handle, size_t size, const void *data);
 };
 
 typedef struct {
@@ -190,8 +207,7 @@ typedef struct {
 } plugin;
 
 static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
-	(void)cbs;
-	new(&instance->p) Plugin();
+	new(&instance->p) Plugin(cbs->handle, cbs->msg_write);
 }
 
 static void plugin_fini(plugin *instance) {
@@ -246,7 +262,8 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 }
 
 static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
-
+	instance->p.resetCount();
+	printf("%.*s\n", (int)size, (const char *)data); // yeah, not RT-safe, I know
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {

@@ -36,6 +36,8 @@ typedef struct {
 	char			bypass;
 	float			y_z1;
 
+	float			count;
+
 	plugin_ui_callbacks	cbs;
 } plugin_ui;
 
@@ -76,6 +78,16 @@ static void draw_button(plugin_ui *pui, int id, char value) {
 	draw_rect(pui->w, 0.4 * w, (2 * id + 1) * sh, 0.2 * w, sh, value ? 0x6789ab : 0x1223bc);
 }
 
+static void draw_count(plugin_ui *pui) {
+	const int w = window_get_width(pui->w);
+	const int h = window_get_height(pui->w);
+	const double sh = h / SPACES;
+	const uint8_t r = (1 * pui->count - (int)(1 * pui->count)) * 0xff;
+	const uint8_t g = (0.5f * pui->count - (int)(0.5f * pui->count)) * 0xff;
+	const uint8_t b = ((1.f / 3.f) * pui->count - (int)((1.f / 3.f) * pui->count)) * 0xff;
+	draw_rect(pui->w, 0.8 * w, (2 * 4 + 1) * sh, 0.1 * w, sh, (r << 16) | (g << 8) | b);
+}
+
 static void on_close(window *w) {
 	printf("on_close %p \n", (void*)w); fflush(stdout);
 }
@@ -110,6 +122,8 @@ static void on_mouse_press(window *win, int32_t x, int32_t y, uint32_t state) {
 		draw_slider(pui, 3, pui->tremolo);
 	} else if (x >= 0.4 * w && x <= 0.6 * w && y >= 9 * sh && y <= 10 * sh) {
 		pui->param_down = 4;
+	} else if (x >= 0.8 * w && x <= 0.9 * w && y >= 9 * sh && y <= 10 * sh) {
+		pui->param_down = 5;
 	}
 }
 
@@ -127,6 +141,9 @@ static void on_mouse_release(window *win, int32_t x, int32_t y, uint32_t state) 
 			pui->cbs.set_parameter(pui->cbs.handle, 4, pui->bypass ? 1.f : 0.f);
 			draw_button(pui, 4, pui->bypass);
 		}
+	if (pui->param_down == 5)
+		if (x >= 0.8 * w && x <= 0.9 * w && y >= 9 * sh && y <= 10 * sh)
+			pui->cbs.msg_write(pui->cbs.handle, 5, "reset");
 
 	if (pui->param_down != -1) {
 		float v = x < 0.1 * w ? 0.f : (x > 0.9 * w ? 1.f : (float)((x - (0.1 * w)) / (0.8 * w)));
@@ -199,6 +216,7 @@ static void on_window_resize(window *w, int32_t width, int32_t height) {
 	draw_slider(pui, 3, pui->tremolo);
 	draw_button(pui, 4, pui->bypass);
 	draw_slider(pui, 5, pui->y_z1);
+	draw_count(pui);
 }
 
 static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
@@ -275,5 +293,11 @@ static void plugin_ui_set_parameter(plugin_ui *instance, size_t index, float val
 }
 
 static void plugin_ui_msg_in(plugin_ui *instance, size_t size, const void * data) {
-
+	(void)instance;
+	char *s = (char *)alloca(size + 1);
+	memcpy(s, data, size);
+	s[size] = '\0';
+	sscanf(s, "%f", &instance->count);
+	printf("%.*s -> %g\n", (int)size, (const char *)data, instance->count);
+	draw_count(instance);
 }

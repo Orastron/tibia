@@ -18,33 +18,39 @@
  * File author: Stefano D'Angelo
  */
 
+#include <stdio.h>
 #include <stdint.h>
 
 typedef struct {
-	float	sample_rate;
-	size_t	delay_line_length;
+	float		sample_rate;
+	size_t		delay_line_length;
 
-	float	gain;
-	float	delay;
-	float	cutoff;
-	float	tremolo;
-	char	bypass;
+	float		gain;
+	float		delay;
+	float		cutoff;
+	float		tremolo;
+	char		bypass;
 
-	float *	delay_line;
-	size_t	delay_line_cur;
-	float	z1;
-	float	cutoff_k;
-	char	playing;
-	float	speed;
-	float	speed_k;
-	float	bpm;
-	float	phase;
-	float	yz1;
+	float *		delay_line;
+	size_t		delay_line_cur;
+	float		z1;
+	float		cutoff_k;
+	char		playing;
+	float		speed;
+	float		speed_k;
+	float		bpm;
+	float		phase;
+	float		yz1;
+
+	uint64_t	count;
+	char		msg_buf[1024];
+	void *		handle;
+	void (*msg_write)(void *handle, size_t size, const void *data);
 } plugin;
 
 static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
-	(void)instance;
-	(void)cbs;
+	instance->handle = cbs->handle;
+	instance->msg_write = cbs->msg_write;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -77,6 +83,7 @@ static void plugin_reset(plugin *instance) {
 	instance->bpm = 120.f;
 	instance->phase = 0.f;
 	instance->yz1 = 0.f;
+	instance->count = 0;
 }
 
 static void plugin_set_parameter(plugin *instance, size_t index, float value) {
@@ -131,7 +138,10 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 		y *= 1.f + kt * lfo;
 		outputs[0][i] = instance->bypass ? inputs[0][i] : gain * y;
 		instance->yz1 = outputs[0][i];
+		instance->count++;
 	}
+	int len = sprintf(instance->msg_buf, "%.2f", instance->count / instance->sample_rate); // possibly not RT-safe, for testing purposes only
+	instance->msg_write(instance->handle, len, instance->msg_buf);
 }
 
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
@@ -142,7 +152,8 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 }
 
 static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
-
+	instance->count = 0;
+	printf("%.*s\n", (int)size, (const char *)data); // yeah, not RT-safe, I know
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {

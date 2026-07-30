@@ -35,6 +35,7 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 				{ id: "pprops",	uri: "http://lv2plug.in/ns/ext/port-props#" },
 				{ id: "rdf",	uri: "http://www.w3.org/1999/02/22-rdf-syntax-ns#" },
 				{ id: "rdfs",	uri: "http://www.w3.org/2000/01/rdf-schema#" },
+				{ id: "rsz",	uri: "http://lv2plug.in/ns/ext/resize-port#" },
 				{ id: "state",	uri: "http://lv2plug.in/ns/extensions/state#" },
 				{ id: "time",	uri: "http://lv2plug.in/ns/ext/time#" },
 				{ id: "ui",	uri: "http://lv2plug.in/ns/extensions/ui#" },
@@ -119,10 +120,10 @@ module.exports = function (data, api, outputCommon, outputData, options) {
 		data.tibia.lv2.ports.push.apply(data.tibia.lv2.ports, midiPorts);
 		if (data.product.transport && data.product.transport.sync)
 			data.tibia.lv2.ports.push({ type: "transport" });
-		if (data.product.messaging && data.product.messaging.dspToUiSize)
-			data.tibia.lv2.ports.push({ type: "dspToUi", size: data.product.messaging.dspToUiSize });
 		if (data.product.messaging && data.product.messaging.uiToDspSize)
 			data.tibia.lv2.ports.push({ type: "uiToDsp", size: data.product.messaging.uiToDspSize });
+		if (data.product.messaging && data.product.messaging.dspToUiSize)
+			data.tibia.lv2.ports.push({ type: "dspToUi", size: data.product.messaging.dspToUiSize });
 
 		var ports = [];
 		for (var i = 0, j = 0; i < data.product.parameters.length; i++) {

@@ -55,10 +55,11 @@
 {{??p.type == "dspToUi"}}
 		a atom:AtomPort ,
 			lv2:OutputPort ;
-		atom:bufferType atom:Chunk ;
+		atom:bufferType atom:Sequence ;
+		atom:supports atom:Chunk ;
 		lv2:symbol "dsp_to_ui" ;
 		lv2:name "DSP to UI messages" ;
-		rsz:minimumSize {{=p.size + 16}} ;
+		rsz:minimumSize {{=p.size + 40}} ;
 		lv2:portProperty pprops:notOnGUI ;
 {{?it.product.messaging.dspToUiOptional}}
 		lv2:portProperty lv2:connectionOptional ;
@@ -66,10 +67,11 @@
 {{??p.type == "uiToDsp"}}
 		a atom:AtomPort ,
 			lv2:InputPort ;
-		atom:bufferType atom:Chunk ;
+		atom:bufferType atom:Sequence ;
+		atom:supports atom:Chunk ;
 		lv2:symbol "ui_to_dsp" ;
 		lv2:name "UI to DSP messages" ;
-		rsz:minimumSize {{=p.size + 16}} ;
+		rsz:minimumSize {{=p.size + 40}} ;
 		lv2:portProperty pprops:notOnGUI ;
 {{?it.product.messaging.uiToDspOptional}}
 		lv2:portProperty lv2:connectionOptional ;
@@ -189,18 +191,16 @@
 	lv2:optionalFeature ui:fixedSize ;
 {{?}}
 {{?}}
-{{?(it.product.messaging && it.product.messaging.UiToDspSize)}}
-{{?!it.product.messaging.uiToDspOptional}}
+{{?(it.product.messaging && it.product.messaging.UiToDspSize && !!it.product.messaging.uiToDspOptional)}}
 	lv2:requiredFeature urid:map ;
 {{??}}
 	lv2:optionalFeature urid:map ;
-{{?}}
 {{?}}
 {{?(it.product.messaging && it.product.messaging.dspToUiSize)}}
 	ui:portNotification [
 		ui:plugin {{=it.tibia.lv2.ttlURI(it.lv2.uri)}} ;
 		lv2:symbol "dsp_to_ui" ;
-		ui:protocol atom:atomTransfer
+		ui:protocol atom:eventTransfer
 	] ;
 {{?}}
 	lv2:requiredFeature ui:idleInterface ;
