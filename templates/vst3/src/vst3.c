@@ -61,7 +61,7 @@
 #include <pmmintrin.h>
 #endif
 
-#if DATA_PRODUCT_PARAMETERS_IN_N > 0 || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0 || defined(DATA_MESSAGING_UI_TO_DSP_SIZE) || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 # ifdef __cplusplus
 #  include <atomic>
 using namespace std;
@@ -90,7 +90,7 @@ using namespace std;
 #   define ATOMIC_FLAG	atomic_flag
 #  endif
 # endif
-# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+# if defined(DATA_MESSAGING_UI_TO_DSP_SIZE) || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 #  ifdef __cplusplus
 typedef std::atomic<char> atomic_char;
 #  else
@@ -251,13 +251,23 @@ static void sendMessage(Steinberg_Vst_IConnectionPoint *connectionPoint, Steinbe
 	}
 	msg->lpVtbl->release(msg);
 }
-#endif
 
-typedef struct msgBuffer {
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+typedef struct uiToDspBuffer {
+	size_t	size;		// number of bytes in data
+	char	newData;	// non-0 = new data, to be transmitted
+	void *	data[DATA_MESSAGING_UI_TO_DSP_SIZE];
+} uiToDspBuffer;
+# endif
+
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+typedef struct dspToUiBuffer {
 	size_t	size;		// number of bytes in data
 	char	newData;	// non-0 = new data, to be transmitted
 	void *	data[DATA_MESSAGING_DSP_TO_UI_SIZE];
-} msgBuffer;
+} dspToUiBuffer;
+# endif
+#endif
 
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent; // must stay first
@@ -313,11 +323,17 @@ typedef struct pluginInstance {
 #ifdef DATA_MESSAGING
 	Steinberg_Vst_IHostApplication *		host;
 	Steinberg_Vst_IConnectionPoint *		connectionPoint;
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	uiToDspBuffer					uiToDspBuf[3];
+	char						uiToDspReadIdx;
+	char						uiToDspWriteIdx;
+	atomic_char					uiToDspFreeIdx;
+# endif
 # ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
-	msgBuffer					msgBuf[3];
-	char						msgReadIdx;
-	char						msgWriteIdx;
-	atomic_char					msgFreeIdx;
+	dspToUiBuffer					dspToUiBuf[3];
+	char						dspToUiReadIdx;
+	char						dspToUiWriteIdx;
+	atomic_char					dspToUiFreeIdx;
 # endif
 #endif
 } pluginInstance;
@@ -429,11 +445,11 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 #ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
 static void dspToUiWriteCb(void *handle, size_t size, const void *data) {
 	pluginInstance *p = (pluginInstance *)handle;
-	msgBuffer * b = p->msgBuf + p->msgWriteIdx;
+	dspToUiBuffer * b = p->dspToUiBuf + p->dspToUiWriteIdx;
 	b->size = size;
 	b->newData = 1;
 	memcpy(&b->data, data, size);
-	p->msgWriteIdx = atomic_exchange(&p->msgFreeIdx, p->msgWriteIdx);
+	p->dspToUiWriteIdx = atomic_exchange(&p->dspToUiFreeIdx, p->dspToUiWriteIdx);
 }
 #endif
 
@@ -457,11 +473,24 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 # endif
 	}
 	p->connectionPoint = NULL;
-	p->msgReadIdx = 0;
-	p->msgWriteIdx = 1;
-	atomic_init(&p->msgFreeIdx, 2);
-	for (int i = 0; i < 3; i++)
-		memset(p->msgBuf + i, 0, sizeof(msgBuffer));
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	p->uiToDspReadIdx = 0;
+	p->uiToDspWriteIdx = 1;
+	atomic_init(&p->uiToDspFreeIdx, 2);
+	for (int i = 0; i < 3; i++) {
+		p->uiToDspBuf[i].size = 0;
+		p->uiToDspBuf[i].newData = 0;
+	}
+# endif
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	p->dspToUiReadIdx = 0;
+	p->dspToUiWriteIdx = 1;
+	atomic_init(&p->dspToUiFreeIdx, 2);
+	for (int i = 0; i < 3; i++) {
+		p->dspToUiBuf[i].size = 0;
+		p->dspToUiBuf[i].newData = 0;
+	}
+# endif
 #endif
 
 	plugin_callbacks cbs = {
@@ -1140,6 +1169,15 @@ static Steinberg_tresult pluginProcess(void* thisInterface, struct Steinberg_Vst
 	if (p->transport.changed || p->firstRun) {
 		plugin_set_transport(&p->p, &p->transport);
 		p->firstRun = 0;
+	}
+#endif
+
+#ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	p->uiToDspReadIdx = atomic_exchange(&p->uiToDspFreeIdx, p->uiToDspReadIdx);
+	uiToDspBuffer * b = p->uiToDspBuf + p->uiToDspReadIdx;
+	if (b->newData) {
+		b->newData = 0;
+		plugin_msg_in(&p->p, b->size, b->data);
 	}
 #endif
 
@@ -2583,11 +2621,11 @@ static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struc
 #  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
 	if (strcmp(id, "poll") == 0) {
 		pluginInstance * p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
-		p->msgReadIdx = atomic_exchange(&p->msgFreeIdx, p->msgReadIdx);
-		msgBuffer * b = p->msgBuf + p->msgReadIdx;
+		p->dspToUiReadIdx = atomic_exchange(&p->dspToUiFreeIdx, p->dspToUiReadIdx);
+		dspToUiBuffer * b = p->dspToUiBuf + p->dspToUiReadIdx;
 		if (b->newData) {
-			sendMessage(p->connectionPoint, p->host, "msg", &b->data, b->size);
 			b->newData = 0;
+			sendMessage(p->connectionPoint, p->host, "msg", &b->data, b->size);
 		}
 		return Steinberg_kResultOk;
 	}
@@ -2598,8 +2636,13 @@ static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struc
 		Steinberg_Vst_IAttributeList* attrs = message->lpVtbl->getAttributes(message);
 		const void *data;
 		Steinberg_uint32 size;
-		if (attrs->lpVtbl->getBinary(attrs, "data", &data, &size) == Steinberg_kResultOk)
-			plugin_msg_in(&p->p, size, data);
+		if (attrs->lpVtbl->getBinary(attrs, "data", &data, &size) == Steinberg_kResultOk) {
+			uiToDspBuffer * b = p->uiToDspBuf + p->uiToDspWriteIdx;
+			b->size = size;
+			b->newData = 1;
+			memcpy(&b->data, data, size);
+			p->uiToDspWriteIdx = atomic_exchange(&p->uiToDspFreeIdx, p->uiToDspWriteIdx);
+		}
 	}
 #  endif
 # else
