@@ -271,3 +271,16 @@ static size_t parameterInfoToDataIndex[DATA_PRODUCT_PARAMETERS_N] = {
 {{?(it.product.transport && it.product.transport.sync)}}
 #define DATA_TRANSPORT_SYNC
 {{?}}
+
+{{?it.product.messaging}}
+#define DATA_MESSAGING
+{{?it.product.messaging.uiToDspSize}}
+#define DATA_MESSAGING_UI_TO_DSP_SIZE	{{=it.product.messaging.uiToDspSize}}
+{{?}}
+{{?it.product.messaging.dspToUiSize}}
+#define DATA_MESSAGING_DSP_TO_UI_SIZE	{{=it.product.messaging.dspToUiSize}}
+{{?}}
+{{?(!it.product.messaging.uiToDspOptional || !it.product.messaging.dspToUiOptional)}}
+#define DATA_MESSAGING_REQUIRED
+{{?}}
+{{?}}

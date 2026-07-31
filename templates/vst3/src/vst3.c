@@ -61,28 +61,42 @@
 #include <pmmintrin.h>
 #endif
 
-#if DATA_PRODUCT_PARAMETERS_IN_N > 0
+#if DATA_PRODUCT_PARAMETERS_IN_N > 0 || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 # ifdef __cplusplus
 #  include <atomic>
 using namespace std;
 # else
 #  include <stdatomic.h>
 # endif
-# if defined(_WIN32) || defined(__CYGWIN__)
-#  include <processthreadsapi.h>
-#  define yield SwitchToThread
-# else
-#  include <sched.h>
-#  define yield sched_yield
+# if DATA_PRODUCT_PARAMETERS_IN_N > 0
+#  if defined(_WIN32) || defined(__CYGWIN__)
+#   include <processthreadsapi.h>
+#   define yield SwitchToThread
+#  else
+#   include <sched.h>
+#   define yield sched_yield
+#  endif
+#  if defined(__aarch64__)
+#   define CPU_PAUSE __asm__ __volatile__("yield" ::: "memory");
+#  elif defined(__i386__) || defined(__x86_64__)
+#   define CPU_PAUSE __builtin_ia32_pause();
+#  else
+#   define CPU_PAUSE
+#  endif
+#  define SPIN_LIMIT 100
+#  ifdef __cplusplus
+#   define ATOMIC_FLAG	std::atomic_flag
+#  else
+#   define ATOMIC_FLAG	atomic_flag
+#  endif
 # endif
-# if defined(__aarch64__)
-#  define CPU_PAUSE __asm__ __volatile__("yield" ::: "memory");
-# elif defined(__i386__) || defined(__x86_64__)
-#  define CPU_PAUSE __builtin_ia32_pause();
-# else
-#  define CPU_PAUSE
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+#  ifdef __cplusplus
+typedef std::atomic<char> atomic_char;
+#  else
+typedef _Atomic(char) atomic_char;
+#  endif
 # endif
-# define SPIN_LIMIT 100
 #endif
 
 // COM in C doc:
@@ -222,12 +236,35 @@ static int stateRead(struct Steinberg_IBStream * state, char ** data, Steinberg_
 	return 0;
 }
 
+#ifdef DATA_MESSAGING
+static void sendMessage(Steinberg_Vst_IConnectionPoint *connectionPoint, Steinberg_Vst_IHostApplication *host, const char *id, const void *data, size_t size) {
+	if (connectionPoint == NULL || host == NULL)
+		return;
+	Steinberg_Vst_IMessage *msg;
+	if (host->lpVtbl->createInstance(host, (char *)Steinberg_Vst_IMessage_iid, (char *)Steinberg_Vst_IMessage_iid, (void**)&msg) != Steinberg_kResultOk)
+		return;
+	msg->lpVtbl->setMessageID(msg, id);
+	Steinberg_Vst_IAttributeList *attrs = msg->lpVtbl->getAttributes(msg);
+	if (attrs != NULL) {
+		attrs->lpVtbl->setBinary(attrs, "data", data, (Steinberg_uint32)size);
+		connectionPoint->lpVtbl->notify(connectionPoint, msg);
+	}
+	msg->lpVtbl->release(msg);
+}
+#endif
+
+typedef struct msgBuffer {
+	size_t	size;		// number of bytes in data
+	char	newData;	// non-0 = new data, to be transmitted
+	void *	data[DATA_MESSAGING_DSP_TO_UI_SIZE];
+} msgBuffer;
+
 typedef struct pluginInstance {
 	Steinberg_Vst_IComponentVtbl *			vtblIComponent; // must stay first
 	Steinberg_Vst_IAudioProcessorVtbl *		vtblIAudioProcessor;
 	Steinberg_Vst_IProcessContextRequirementsVtbl *	vtblIProcessContextRequirements;
 #ifdef DATA_UI
-	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // stub, but Cakewalk Sonar wants it anyway
+	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // Cakewalk Sonar always wants it
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -273,6 +310,16 @@ typedef struct pluginInstance {
 #endif
 	void *						mem;
 	struct Steinberg_IBStream *			state;
+#ifdef DATA_MESSAGING
+	Steinberg_Vst_IHostApplication *		host;
+	Steinberg_Vst_IConnectionPoint *		connectionPoint;
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	msgBuffer					msgBuf[3];
+	char						msgReadIdx;
+	char						msgWriteIdx;
+	atomic_char					msgFreeIdx;
+# endif
+#endif
 } pluginInstance;
 
 static void pluginStateLockCb(void *handle) {
@@ -379,6 +426,17 @@ static Steinberg_uint32 pluginIComponentRelease(void *thisInterface) {
 	return pluginRelease((pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIComponent)));
 }
 
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+static void dspToUiWriteCb(void *handle, size_t size, const void *data) {
+	pluginInstance *p = (pluginInstance *)handle;
+	msgBuffer * b = p->msgBuf + p->msgWriteIdx;
+	b->size = size;
+	b->newData = 1;
+	memcpy(&b->data, data, size);
+	p->msgWriteIdx = atomic_exchange(&p->msgFreeIdx, p->msgWriteIdx);
+}
+#endif
+
 static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_FUnknown *context) {
 	TRACE("plugin initialize\n");
 
@@ -389,12 +447,31 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 	p->lastSampleRate = 0.f;
 	p->curSampleRate = 0.f;
 	p->nextSampleRate = 0.f;
+#ifdef DATA_MESSAGING
+	if (context->lpVtbl->queryInterface(context, Steinberg_Vst_IHostApplication_iid, (void**)&p->host) != Steinberg_kResultTrue) {
+# ifdef DATA_MESSAGING_REQUIRED
+		free(p);
+		return Steinberg_kResultFalse;
+# else
+		p->host = NULL; // I belive queryInterface should set this already, but let's not risk it
+# endif
+	}
+	p->connectionPoint = NULL;
+	p->msgReadIdx = 0;
+	p->msgWriteIdx = 1;
+	atomic_init(&p->msgFreeIdx, 2);
+	for (int i = 0; i < 3; i++)
+		memset(p->msgBuf + i, 0, sizeof(msgBuffer));
+#endif
 
 	plugin_callbacks cbs = {
 		/* .handle		= */ (void *)p,
 		/* .format		= */ "vst3",
 		/* .get_bindir		= */ getBindirCb,
-		/* .get_datadir		= */ getDatadirCb
+		/* .get_datadir		= */ getDatadirCb,
+#ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+		/* .msg_write		= */ dspToUiWriteCb
+#endif
 	};
 	plugin_init(&p->p, &cbs);
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
@@ -1196,7 +1273,7 @@ typedef struct controller {
 	Steinberg_Vst_IEditControllerVtbl *		vtblIEditController; // must stay first
 	Steinberg_Vst_IMidiMappingVtbl *		vtblIMidiMapping;
 #ifdef DATA_UI
-	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // stub, but Cakewalk Sonar wants it anyway
+	Steinberg_Vst_IConnectionPointVtbl *		vtblIConnectionPoint; // Cakewalk Sonar always wants it
 #endif
 	Steinberg_uint32				refs;
 	Steinberg_FUnknown *				context;
@@ -1213,6 +1290,10 @@ typedef struct controller {
 #ifdef DATA_UI
 	plugView **					views;
 	size_t						viewsCount;
+# ifdef DATA_MESSAGING
+	Steinberg_Vst_IHostApplication *		host;
+	Steinberg_Vst_IConnectionPoint *		connectionPoint;
+# endif
 #endif
 } controller;
 
@@ -1500,11 +1581,22 @@ static void plugViewSetParameterEndCb(void *handle, size_t index, float value) {
 
 # endif
 
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+static void pollDspToUi(plugView * v) {
+	char data = 0;
+	sendMessage(v->ctrl->connectionPoint, v->ctrl->host, "poll", &data, 1);
+}
+# endif
+
 # ifdef __APPLE__
 static void plugViewTimerCb(CFRunLoopTimerRef timer, void *info) {
 	(void)timer;
 
-	plugin_ui_idle(((plugView *)info)->ui);
+	plugView * v = (plugView *)info;
+	plugin_ui_idle(v->ui);
+#  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	pollDspToUi(v);
+#  endif
 }
 # elif defined(_WIN32) || defined(__CYGWIN__)
 static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
@@ -1512,7 +1604,18 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 	(void)p2;
 	(void)p4;
 
-	plugin_ui_idle(((plugView *)p3)->ui);
+	plugView * v = (plugView *)info;
+	plugin_ui_idle(v->ui);
+#  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	pollDspToUi(v);
+#  endif
+}
+# endif
+
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+static void uiToDspWriteCb(void *handle, size_t size, const void *data) {
+	plugView *v = (plugView *)handle;
+	sendMessage(v->ctrl->connectionPoint, v->ctrl->host, "msg", data, size);
 }
 # endif
 
@@ -1535,7 +1638,10 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 # if DATA_PRODUCT_PARAMETERS_N > 0
 		/* .set_parameter_begin	= */ plugViewSetParameterBeginCb,
 		/* .set_parameter	= */ plugViewSetParameterCb,
-		/* .set_parameter_end	= */ plugViewSetParameterEndCb
+		/* .set_parameter_end	= */ plugViewSetParameterEndCb,
+# endif
+# ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+		/* .msg_write		= */ uiToDspWriteCb
 # endif
 	};
 	v->ui = plugin_ui_create(1, parent, &cbs);
@@ -1766,6 +1872,9 @@ static void plugViewOnTimer(void *thisInterface) {
 	}
 
 	plugin_ui_idle(v->ui);
+#  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	pollDspToUi(v);
+#  endif
 }
 # endif
 
@@ -1861,6 +1970,17 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 	if (c->context != NULL)
 		return Steinberg_kResultFalse;
 	c->context = context;
+#ifdef DATA_MESSAGING
+	if (context->lpVtbl->queryInterface(context, Steinberg_Vst_IHostApplication_iid, (void**)&c->host) != Steinberg_kResultTrue) {
+# ifdef DATA_MESSAGING_REQUIRED
+		free(c);
+		return Steinberg_kResultFalse;
+# else
+		c->host = NULL; // I belive queryInterface should set this already, but let's not risk it
+# endif
+	}
+	c->connectionPoint = NULL;
+#endif
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (int i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++)
 		c->parametersIn[i] = parameterInData[i].def;
@@ -2353,22 +2473,52 @@ static Steinberg_uint32 controllerIConnectionPointRelease(void* thisInterface) {
 }
 
 static Steinberg_tresult controllerIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	TRACE("controller IConnectionPoint connect %p %p\n", thisInterface, other);
+	if (other == NULL)
+		return Steinberg_kInvalidArgument;
+# ifdef DATA_MESSAGING
+	controller * c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+	c->connectionPoint = other;
+# else
 	(void)thisInterface;
-
-	return other ? Steinberg_kResultOk : Steinberg_kInvalidArgument;
+# endif
+	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult controllerIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	TRACE("controller IConnectionPoint disconnect %p %p\n", thisInterface, other);
+# ifdef DATA_MESSAGING
+	controller * c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+	if (other != c->connectionPoint)
+		return Steinberg_kInvalidArgument;
+	c->connectionPoint = NULL;
+# else
 	(void)thisInterface;
 	(void)other;
-
+# endif
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult controllerIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
+	TRACE("controller IConnectionPoint notify %p\n", thisInterface);
+# ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	Steinberg_FIDString id = message->lpVtbl->getMessageID(message);
+	if (strcmp(id, "msg") == 0) {
+		controller * c = (controller *)((char *)thisInterface - offsetof(controller, vtblIConnectionPoint));
+		Steinberg_Vst_IAttributeList* attrs = message->lpVtbl->getAttributes(message);
+		const void *data;
+		Steinberg_uint32 size;
+		if (attrs->lpVtbl->getBinary(attrs, "data", &data, &size) == Steinberg_kResultOk)
+			for (size_t i = 0; i < c->viewsCount; i++)
+				if (c->views[i])
+					plugin_ui_msg_in(c->views[i]->ui, size, data);
+
+
+	}
+# else
 	(void)thisInterface;
 	(void)message;
-
+# endif
 	return Steinberg_kResultOk;
 }
 
@@ -2400,22 +2550,62 @@ static Steinberg_uint32 pluginIConnectionPointRelease(void* thisInterface) {
 }
 
 static Steinberg_tresult pluginIConnectionPointConnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	TRACE("plugin IConnectionPoint connect %p %p\n", thisInterface, other);
+	if (other == NULL)
+		return Steinberg_kInvalidArgument;
+# ifdef DATA_MESSAGING
+	pluginInstance * p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+	p->connectionPoint = other;
+# else
 	(void)thisInterface;
-
-	return other ? Steinberg_kResultOk : Steinberg_kInvalidArgument;
+# endif
+	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult pluginIConnectionPointDisconnect(void* thisInterface, struct Steinberg_Vst_IConnectionPoint* other) {
+	TRACE("plugin IConnectionPoint disconnect %p %p\n", thisInterface, other);
+# ifdef DATA_MESSAGING
+	pluginInstance * p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+	if (other != p->connectionPoint)
+		return Steinberg_kInvalidArgument;
+	p->connectionPoint = NULL;
+# else
 	(void)thisInterface;
 	(void)other;
-
+# endif
 	return Steinberg_kResultOk;
 }
 
 static Steinberg_tresult pluginIConnectionPointNotify(void* thisInterface, struct Steinberg_Vst_IMessage* message) {
+	TRACE("plugin IConnectionPoint notify %p\n", thisInterface);
+# if defined(DATA_MESSAGING_UI_TO_DSP_SIZE) || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
+	Steinberg_FIDString id = message->lpVtbl->getMessageID(message);
+#  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
+	if (strcmp(id, "poll") == 0) {
+		pluginInstance * p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+		p->msgReadIdx = atomic_exchange(&p->msgFreeIdx, p->msgReadIdx);
+		msgBuffer * b = p->msgBuf + p->msgReadIdx;
+		if (b->newData) {
+			sendMessage(p->connectionPoint, p->host, "msg", &b->data, b->size);
+			b->newData = 0;
+		}
+		return Steinberg_kResultOk;
+	}
+#  endif
+#  ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
+	if (strcmp(id, "msg") == 0) {
+		pluginInstance * p = (pluginInstance *)((char *)thisInterface - offsetof(pluginInstance, vtblIConnectionPoint));
+		Steinberg_Vst_IAttributeList* attrs = message->lpVtbl->getAttributes(message);
+		const void *data;
+		Steinberg_uint32 size;
+		if (attrs->lpVtbl->getBinary(attrs, "data", &data, &size) == Steinberg_kResultOk)
+			plugin_msg_in(&p->p, size, data);
+	}
+#  endif
+# else
 	(void)thisInterface;
 	(void)message;
-
+# endif
 	return Steinberg_kResultOk;
 }
 
@@ -2692,7 +2882,7 @@ EXPORT APIENTRY BOOL
 DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
 	(void)hInstance;
 	(void)lpReserved;
-	
+
 	char * path;
 
 	if (dwReason == DLL_PROCESS_ATTACH) {
