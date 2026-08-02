@@ -1642,7 +1642,7 @@ static void plugViewTimerCb(HWND p1, UINT p2, UINT_PTR p3, DWORD p4) {
 	(void)p2;
 	(void)p4;
 
-	plugView * v = (plugView *)info;
+	plugView * v = (plugView *)p3;
 	plugin_ui_idle(v->ui);
 #  ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
 	pollDspToUi(v);
