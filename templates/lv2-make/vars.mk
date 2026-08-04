@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2024 Orastron Srl unipersonale
+# Copyright (C) 2024, 2026 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@ API_DIR := {{=it.lv2_make?.apiDir ?? (it.make?.apiDir ?? "")}}
 {{?(it.lv2_make?.mkincDir || it.make?.mkincDir)}}
 MKINC_DIR := {{=it.lv2_make?.mkincDir ?? (it.make?.mkincDir ?? "")}}
 {{?}}
+
+HAS_UI := {{=it.product.ui ? "yes" : "no"}}
 
 {{?it.tibia.lv2Make.noInstall}}
 NO_INSTALL := yes

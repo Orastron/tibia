@@ -888,6 +888,10 @@ LV2_SYMBOL_EXPORT const LV2_Descriptor * lv2_descriptor(uint32_t index) {
 }
 
 #ifdef DATA_UI
+# ifdef __linux__
+#  include <X11/Xlib.h>
+# endif
+
 typedef struct {
 	plugin_ui *		ui;
 	char *			bundle_path;
@@ -904,6 +908,9 @@ typedef struct {
 	LV2_URID		uri_atom_Chunk;
 	LV2_URID		uri_atom_eventTransfer;
 	uint8_t			msg_data[sizeof(LV2_Atom) + DATA_MESSAGING_UI_TO_DSP_SIZE];
+# endif
+# ifdef __linux__
+	Display *		display;
 # endif
 } ui_instance;
 
@@ -1010,6 +1017,12 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 # endif
 	}
 
+# ifdef __linux__
+	instance->display = XOpenDisplay(NULL);
+	if (instance->display == NULL)
+		goto err_open_display;
+# endif
+
 	cbs.handle		= (void *)instance;
 	cbs.format		= "lv2";
 	cbs.get_bindir		= ui_get_bundle_path_cb;
@@ -1033,10 +1046,23 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 	if (instance->ui == NULL)
 		goto err_create;
 
+# ifdef __linux__
+	if (!XGrabButton(instance->display, AnyButton, AnyModifier, (Window)instance->ui->widget, False, ButtonPressMask, GrabModeSync, GrabModeAsync, None, None))
+		goto err_grab;
+# endif
+
 	*widget = instance->ui->widget;
 	return instance;
 
+# ifdef __linux__
+err_grab:
+	plugin_ui_free(instance->ui);
+# endif
 err_create:
+# ifdef __linux__
+	XCloseDisplay(instance->display);
+err_open_display:
+# endif
 # if (defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) || defined(DATA_MESSAGING_DSP_TO_UI_REQUIRED))
 err_urid:
 # endif
@@ -1051,6 +1077,9 @@ err_instance:
 static void ui_cleanup(LV2UI_Handle handle) {
 	ui_instance *instance = (ui_instance *)handle;
 	plugin_ui_free(instance->ui);
+# ifdef __linux__
+	XCloseDisplay(instance->display);
+# endif
 	free(instance->bundle_path);
 	free(instance);
 }
@@ -1083,6 +1112,19 @@ static void ui_port_event(LV2UI_Handle handle, uint32_t port_index, uint32_t buf
 
 static int ui_idle(LV2UI_Handle handle) {
 	ui_instance *instance = (ui_instance *)handle;
+
+# ifdef __linux__
+	XEvent ev;
+	while (XPending(instance->display)) {
+		XNextEvent(instance->display, &ev);
+		if (ev.type == ButtonPress) {
+			XSetInputFocus(instance->display, (Window)instance->ui->widget, RevertToParent, CurrentTime);
+			XAllowEvents(instance->display, ReplayPointer, ev.xbutton.time);
+			XSync(instance->display, False);
+		}
+	}
+# endif
+
 	plugin_ui_idle(instance->ui);
 	return 0;
 }

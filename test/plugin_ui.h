@@ -220,10 +220,12 @@ static void on_window_resize(window *w, int32_t width, int32_t height) {
 }
 
 static void on_key_press(window *w, uint32_t keycode, uint32_t state) {
+	(void)state;
 	printf("on_key_press %p %u\n", (void*)w, keycode); fflush(stdout);
 }
 
 static void on_key_release(window *w, uint32_t keycode, uint32_t state) {
+	(void)state;
 	printf("on_key_release %p %u\n", (void*)w, keycode); fflush(stdout);
 }
 

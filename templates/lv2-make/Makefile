@@ -113,6 +113,14 @@ ifneq ($(CXX_OBJS),)
 	LDFLAGS_ALL := -static-libstdc++ $(LDFLAGS_ALL)
 endif
 endif
+ifeq ($(UNAME_S), Linux)
+	ifeq ($(HAS_UI), yes)
+		CFLAGS_ALL := $(CFLAGS_ALL) $(shell pkg-config --cflags x11)
+		CXXFLAGS_ALL := $(CXXFLAGS_ALL) $(shell pkg-config --cflags x11)
+		LDFLAGS_ALL := $(LDFLAGS_ALL) $(shell pkg-config --libs-only-L --libs-only-other x11)
+		LDLIBS_ALL := $(LDLIBS_ALL) $(shell pkg-config --libs-only-l x11)
+	endif
+endif
 
 MANIFEST_EXTRA :=
 

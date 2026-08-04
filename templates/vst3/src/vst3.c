@@ -1465,6 +1465,7 @@ typedef struct plugView {
 	Steinberg_Linux_IRunLoop *	runLoop;
 	timerHandler			timer;
 	Display *			display;
+	Display *			focusDisplay;
 # elif defined(__APPLE__)
 	CFRunLoopTimerRef		timer;
 # elif defined(_WIN32) || defined(__CYGWIN__)
@@ -1693,7 +1694,25 @@ static Steinberg_tresult plugViewAttached(void* thisInterface, void* parent, Ste
 		v->ui = NULL;
 		return Steinberg_kResultFalse;
 	}
+
+	v->focusDisplay = XOpenDisplay(NULL);
+	if (v->focusDisplay == NULL) {
+		XCloseDisplay(v->display);
+		plugin_ui_free(v->ui);
+		v->ui = NULL;
+		return Steinberg_kResultFalse;
+	}
+
+	if (!XGrabButton(v->focusDisplay, AnyButton, AnyModifier, (Window)v->ui->widget, False, ButtonPressMask, GrabModeSync, GrabModeAsync, None, None)) {
+		XCloseDisplay(v->focusDisplay);
+		XCloseDisplay(v->display);
+		plugin_ui_free(v->ui);
+		v->ui = NULL;
+		return Steinberg_kResultFalse;
+	}
+
 	if (v->runLoop->lpVtbl->registerTimer(v->runLoop, (struct Steinberg_Linux_ITimerHandler *)&v->timer, 20) != Steinberg_kResultOk) {
+		XCloseDisplay(v->focusDisplay);
 		XCloseDisplay(v->display);
 		plugin_ui_free(v->ui);
 		v->ui = NULL;
@@ -1728,6 +1747,7 @@ static Steinberg_tresult plugViewRemoved(void* thisInterface) {
 	plugView *v = (plugView *)((char *)thisInterface - offsetof(plugView, vtblIPlugView));
 # ifdef __linux__
 	v->runLoop->lpVtbl->unregisterTimer(v->runLoop, (struct Steinberg_Linux_ITimerHandler *)&v->timer);
+	XCloseDisplay(v->focusDisplay);
 	XCloseDisplay(v->display);
 # elif defined(__APPLE__)
 	CFRunLoopTimerInvalidate(v->timer);
@@ -1907,6 +1927,16 @@ static void plugViewOnTimer(void *thisInterface) {
 		XGetWindowAttributes(v->display, w, &editor_attr);
 		if (parent_attr.width != editor_attr.width || parent_attr.height != editor_attr.height)
 			XResizeWindow(v->display, w, parent_attr.width, parent_attr.height);
+	}
+
+	XEvent ev;
+	while (XPending(v->focusDisplay)) {
+		XNextEvent(v->focusDisplay, &ev);
+		if (ev.type == ButtonPress) {
+			XSetInputFocus(v->focusDisplay, (Window)v->ui->widget, RevertToParent, CurrentTime);
+			XAllowEvents(v->focusDisplay, ReplayPointer, ev.xbutton.time);
+			XSync(v->focusDisplay, False);
+		}
 	}
 
 	plugin_ui_idle(v->ui);
