@@ -219,6 +219,14 @@ static void on_window_resize(window *w, int32_t width, int32_t height) {
 	draw_count(pui);
 }
 
+static void on_key_press(window *w, uint32_t keycode, uint32_t state) {
+	printf("on_key_press %p %u\n", (void*)w, keycode); fflush(stdout);
+}
+
+static void on_key_release(window *w, uint32_t keycode, uint32_t state) {
+	printf("on_key_release %p %u\n", (void*)w, keycode); fflush(stdout);
+}
+
 static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_callbacks *cbs) {
 	plugin_ui *instance = (plugin_ui *) malloc(sizeof(plugin_ui));
 	if (instance == NULL)
@@ -231,6 +239,8 @@ static plugin_ui *plugin_ui_create(char has_parent, void *parent, plugin_ui_call
 	wcbs.on_mouse_release = on_mouse_release;
 	wcbs.on_mouse_move    = on_mouse_move;
 	wcbs.on_window_resize = on_window_resize;
+	wcbs.on_key_press     = on_key_press;
+	wcbs.on_key_release   = on_key_release;
 
 	instance->param_down = -1;
 	instance->ui  = vinci_new();
