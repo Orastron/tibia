@@ -361,7 +361,11 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
 	cbs.msg_write   = dsp_to_ui_write_cb;
 #endif
+#ifdef DATA_PASS_FEATURES
+	plugin_init(&instance->p, &cbs, features);
+#else
 	plugin_init(&instance->p, &cbs);
+#endif
 
 	instance->sample_rate = (float)sample_rate;
 	plugin_set_sample_rate(&instance->p, instance->sample_rate);

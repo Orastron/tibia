@@ -9,6 +9,7 @@
 		"version": "1.0",
 		"ui": {
 			"uri": "@example:tibia_test#ui"
-		}
+		},
+		"passFeatures": false
 	}
 }

@@ -120,6 +120,10 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 {{?}}
 {{?}}
 
+{{?it.lv2.passFeatures}}
+#define DATA_PASS_FEATURES
+{{?}}
+
 {{~it.tibia.lv2.extraIncludes :p}}
 #include "{{=p}}"
 {{~}}
