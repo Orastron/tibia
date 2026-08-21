@@ -222,6 +222,10 @@ typedef struct {
 #endif
 } plugin_instance;
 
+#ifdef LV2_CODE_EXTRA
+LV2_CODE_EXTRA
+#endif
+
 static const char * get_bundle_path_cb(void *handle) {
 	plugin_instance *instance = (plugin_instance *)handle;
 	return instance->bundle_path;
@@ -361,11 +365,10 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #ifdef DATA_MESSAGING_DSP_TO_UI_SIZE
 	cbs.msg_write   = dsp_to_ui_write_cb;
 #endif
-#ifdef DATA_PASS_FEATURES
-	plugin_init(&instance->p, &cbs, features);
-#else
-	plugin_init(&instance->p, &cbs);
+#ifdef LV2_CALLBACKS_EXTRA
+	LV2_CALLBACKS_EXTRA(instance, descriptor, sample_rate, bundle_path, features, cbs)
 #endif
+	plugin_init(&instance->p, &cbs);
 
 	instance->sample_rate = (float)sample_rate;
 	plugin_set_sample_rate(&instance->p, instance->sample_rate);
@@ -414,7 +417,7 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #endif
 
 #ifdef LV2_INSTANTIATE_EXTRA
-	if (LV2_INSTANTIATE_EXTRA(instance, description, sample_rate, bundle_path, features) == 0)
+	if (LV2_INSTANTIATE_EXTRA(instance, descriptor, sample_rate, bundle_path, features) == 0)
 		goto err_extra;
 #endif
 

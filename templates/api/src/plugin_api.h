@@ -29,6 +29,9 @@ typedef struct {
 {{?(it.product.messaging && it.product.messaging.dspToUiSize)}}
 	void (*msg_write)(void *handle, size_t size, const void *data);
 {{?}}
+#ifdef PLUGIN_CALLBACKS_EXTRA
+	PLUGIN_CALLBACKS_EXTRA
+#endif
 } plugin_callbacks;
 
 {{?it.product.state && it.product.state.dspCustom}}
@@ -40,6 +43,9 @@ typedef struct {
 {{?it.product.parameters.find(x => x.direction == "input")}}
 	void (*set_parameter)(void *handle, size_t index, float value);
 {{?}}
+#ifdef PLUGIN_STATE_CALLBACKS_EXTRA
+	PLUGIN_STATE_CALLBACKS_EXTRA
+#endif
 } plugin_state_callbacks;
 {{?}}
 
@@ -56,6 +62,9 @@ typedef struct {
 {{?(it.product.messaging && it.product.messaging.uiToDspSize)}}
 	void (*msg_write)(void *handle, size_t size, const void *data);
 {{?}}
+#ifdef PLUGIN_UI_CALLBACKS_EXTRA
+	PLUGIN_UI_CALLBACKS_EXTRA
+#endif
 } plugin_ui_callbacks;
 
 {{?it.product.parameters.length > 0}}
