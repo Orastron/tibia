@@ -237,7 +237,10 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 		/* .get_bindir		= */ NULL,
 		/* .get_datadir		= */ NULL
 	};
-	plugin_init(&instance, &cbs);
+	if (plugin_init(&instance, &cbs) != 0) {
+		ma_device_uninit(&device);
+		return false;
+	}
 
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++) {
@@ -304,7 +307,7 @@ JNI_FUNC(nativeAudioStart)(JNIEnv* env, jobject thiz) {
 				y[j] = y_buf + BLOCK_SIZE * k;
 				k++;
 			} else
-				y[j] = NULL; 
+				y[j] = NULL;
 		}
 	}
 #else

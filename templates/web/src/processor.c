@@ -65,7 +65,10 @@ instance * processor_new(float sample_rate) {
 		/* .get_bindir		= */ NULL,
 		/* .get_datadir		= */ NULL
 	};
-	plugin_init(&i->p, &cbs);
+	if (plugin_init(&i->p, &cbs) != 0) {
+		free(i);
+		return NULL;
+	}
 
 #if DATA_PRODUCT_PARAMETERS_N > 0
 	for (size_t j = 0; j < DATA_PRODUCT_PARAMETERS_N; j++)
@@ -79,6 +82,7 @@ instance * processor_new(float sample_rate) {
 		i->mem = malloc(req);
 		if (i->mem == NULL) {
 			plugin_fini(&i->p);
+			free(i);
 			return NULL;
 		}
 		plugin_mem_set(&i->p, i->mem);

@@ -67,6 +67,11 @@ ifeq ($(TEMPLATE), daisy-seed)
 	LIBDAISY_DIR := ../../../../libDaisy
 endif
 
+ifeq ($(TEMPLATE), web)
+	CFLAGS_EXTRA := -DWEB
+	CXXFLAGS_EXTRA := -DWEB
+endif
+
 ifeq ($(TEMPLATE), android)
 	CXXFLAGS_EXTRA := -I../../../../miniaudio
 	KEY_STORE := keystore.jks

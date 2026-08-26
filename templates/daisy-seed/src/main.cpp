@@ -180,7 +180,7 @@ int main() {
 		/* .get_bindir		= */ NULL,
 		/* .get_datadir		= */ NULL
 	};
-	plugin_init(&instance, &cbs);
+	plugin_init(&instance, &cbs); // ignoring return value, it should either always work or not
 
 	plugin_set_sample_rate(&instance, sample_rate);
 	if (plugin_mem_req(&instance) != 0)
@@ -246,7 +246,7 @@ int main() {
 				y[j] = y_buf + BLOCK_SIZE * k;
 				k++;
 			} else
-				y[j] = NULL; 
+				y[j] = NULL;
 		}
 	}
 #else

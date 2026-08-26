@@ -18,7 +18,9 @@
  * File author: Stefano D'Angelo
  */
 
-#include <stdio.h>
+#ifndef WEB
+# include <stdio.h>
+#endif
 #include <stdint.h>
 
 typedef struct {
@@ -48,9 +50,10 @@ typedef struct {
 	void (*msg_write)(void *handle, size_t size, const void *data);
 } plugin;
 
-static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
+static int plugin_init(plugin *instance, const plugin_callbacks *cbs) {
 	instance->handle = cbs->handle;
 	instance->msg_write = cbs->msg_write;
+	return 0;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -140,8 +143,12 @@ static void plugin_process(plugin *instance, const float **inputs, float **outpu
 		instance->yz1 = outputs[0][i];
 		instance->count++;
 	}
+#ifdef WEB
+	// TBD
+#else
 	int len = sprintf(instance->msg_buf, "%.2f", instance->count / instance->sample_rate); // possibly not RT-safe, for testing purposes only
 	instance->msg_write(instance->handle, len, instance->msg_buf);
+#endif
 }
 
 static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * data) {
@@ -153,7 +160,9 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 
 static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
 	instance->count = 0;
+#ifndef WEB
 	printf("%.*s\n", (int)size, (const char *)data); // yeah, not RT-safe, I know
+#endif
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {

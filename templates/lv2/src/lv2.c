@@ -368,7 +368,10 @@ static LV2_Handle instantiate(const struct LV2_Descriptor * descriptor, double s
 #ifdef LV2_CALLBACKS_EXTRA
 	LV2_CALLBACKS_EXTRA(instance, descriptor, sample_rate, bundle_path, features, cbs)
 #endif
-	plugin_init(&instance->p, &cbs);
+	if (plugin_init(&instance->p, &cbs) != 0) {
+		lv2_log_error(&instance->logger, "Init failed\n");
+		goto err_init;
+	}
 
 	instance->sample_rate = (float)sample_rate;
 	plugin_set_sample_rate(&instance->p, instance->sample_rate);
@@ -430,6 +433,7 @@ err_extra:
 #endif
 err_mem:
 	plugin_fini(&instance->p);
+err_init:
 #if (defined(DATA_PRODUCT_MIDI_REQUIRED) \
 	|| defined(DATA_TRANSPORT_SYNC_REQUIRED) \
 	|| defined(DATA_MESSAGING_UI_TO_DSP_REQUIRED) \

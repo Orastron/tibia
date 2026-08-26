@@ -471,7 +471,8 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 # else
 		p->host = NULL; // I belive queryInterface should set this already, but let's not risk it
 # endif
-	}
+	} else
+		context->lpVtbl->release(context);
 	p->connectionPoint = NULL;
 # ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
 	p->uiToDspReadIdx = 0;
@@ -502,7 +503,10 @@ static Steinberg_tresult pluginInitialize(void *thisInterface, struct Steinberg_
 		/* .msg_write		= */ dspToUiWriteCb
 #endif
 	};
-	plugin_init(&p->p, &cbs);
+	if (plugin_init(&p->p, &cbs) != 0) {
+		free(p);
+		return Steinberg_kResultFalse;
+	}
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0
 	for (size_t i = 0; i < DATA_PRODUCT_PARAMETERS_IN_N; i++) {
 		p->parametersIn[i] = parameterInData[i].def;
@@ -2046,7 +2050,8 @@ static Steinberg_tresult controllerInitialize(void* thisInterface, struct Steinb
 # else
 		c->host = NULL; // I belive queryInterface should set this already, but let's not risk it
 # endif
-	}
+	} else
+		context->lpVtbl->release(context);
 	c->connectionPoint = NULL;
 #endif
 #if DATA_PRODUCT_PARAMETERS_IN_N > 0

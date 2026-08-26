@@ -190,7 +190,7 @@ int main(int argc, char * argv[]) {
 				char * e;
 				ssize_t v = strtol(c + 1, &e, 10);
 				if (errno || v <= 0 || *e != '\0') {
-					fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+					fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 					usage(argv[0]);
 					return EXIT_FAILURE;
 				}
@@ -200,7 +200,7 @@ int main(int argc, char * argv[]) {
 				char * e;
 				float v = strtof(c + 1, &e);
 				if (errno || !isfinite(v) || v <= 0.f || *e != '\0') {
-					fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+					fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 					usage(argv[0]);
 					return EXIT_FAILURE;
 				}
@@ -209,14 +209,14 @@ int main(int argc, char * argv[]) {
 				char * e;
 				float v = strtof(c + 1, &e);
 				if (errno || !isfinite(v) || v <= 0.f || *e != '\0') {
-					fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+					fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 					usage(argv[0]);
 					return EXIT_FAILURE;
 				}
 				length = v;
 #endif
 			} else {
-				fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+				fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 			}
@@ -227,7 +227,7 @@ int main(int argc, char * argv[]) {
 			char * c = strchr(argv[i], '=');
 			if (c != NULL) {
 #if PARAMETERS_N == 0
-				fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+				fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 #endif
@@ -249,7 +249,7 @@ int main(int argc, char * argv[]) {
 				next = &midifile;
 #endif
 			if (next == NULL) {
-				fprintf(stderr, "invalid argument '%s' (in/out files already specified)\n", argv[i]);
+				fprintf(stderr, "Invalid argument '%s' (in/out files already specified)\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 			}
@@ -261,14 +261,14 @@ int main(int argc, char * argv[]) {
 		{
 			char * c = strchr(argv[i], '=');
 			if (c == NULL) {
-				fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+				fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 			}
 			char * e;
 			float v = strtof(c + 1, &e);
 			if (errno || !isfinite(v) || *e != '\0') {
-				fprintf(stderr, "invalid format of argument '%s'\n", argv[i]);
+				fprintf(stderr, "Invalid format of argument '%s'\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 			}
@@ -279,7 +279,7 @@ int main(int argc, char * argv[]) {
 					break;
 			}
 			if (j == PARAMETERS_N) {
-				fprintf(stderr, "parameter for '%s' not found\n", argv[i]);
+				fprintf(stderr, "Parameter for '%s' not found\n", argv[i]);
 				usage(argv[0]);
 				return EXIT_FAILURE;
 			}
@@ -369,7 +369,10 @@ int main(int argc, char * argv[]) {
 	cbs.format = "cmd";
 	cbs.get_bindir = NULL;
 	cbs.get_datadir = NULL;
-	plugin_init(&instance, &cbs);
+	if (plugin_init(&instance, &cbs) != 0) {
+		fprintf(stderr, "Init failed\n");
+		goto err_init;
+	}
 
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++)
@@ -387,7 +390,7 @@ int main(int argc, char * argv[]) {
 		}
 		plugin_mem_set(&instance, mem);
 	} else
-	       mem = NULL;	
+	       mem = NULL;
 
 	plugin_reset(&instance);
 
@@ -455,7 +458,7 @@ int main(int argc, char * argv[]) {
 				y[j] = y_buf + bufsize * k;
 				k++;
 			} else
-				y[j] = NULL; 
+				y[j] = NULL;
 		}
 	}
 #else
@@ -608,6 +611,7 @@ err_zero:
 		free(mem);
 err_mem_alloc:
 	plugin_fini(&instance);
+err_init:
 #if NUM_CHANNELS_IN > 0
 err_num_channels_in:
 	tinywav_close_read(&tw_in);

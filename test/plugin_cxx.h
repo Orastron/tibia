@@ -18,12 +18,16 @@
  * File author: Stefano D'Angelo
  */
 
+#ifndef WEB
+# include <stdio.h>
+#endif
 #include <stdint.h>
-#include <stdio.h>
 #include <new>
 
 class Plugin {
 public:
+	Plugin() : Plugin(nullptr, nullptr) {} // just to avoid C++ errors
+
 	Plugin(void * handle, void (*msg_write)(void *handle, size_t size, const void *data)) {
 		mHandle = handle;
 		mMsgWrite = msg_write;
@@ -127,8 +131,12 @@ public:
 			mYZ1 = out[i];
 			mCount++;
 		}
+#ifdef WEB
+		// TBD
+#else
 		int len = sprintf(mMsgBuf, "%.2f", mCount / mSampleRate); // possibly not RT-safe, for testing purposes only
 		mMsgWrite(mHandle, len, mMsgBuf);
+#endif
 	}
 
 	void resetCount() {
@@ -206,8 +214,9 @@ typedef struct {
 	Plugin	p;
 } plugin;
 
-static void plugin_init(plugin *instance, const plugin_callbacks *cbs) {
+static int plugin_init(plugin *instance, const plugin_callbacks *cbs) {
 	new(&instance->p) Plugin(cbs->handle, cbs->msg_write);
+	return 0;
 }
 
 static void plugin_fini(plugin *instance) {
@@ -263,7 +272,9 @@ static void plugin_midi_msg_in(plugin *instance, size_t index, const uint8_t * d
 
 static void plugin_msg_in(plugin *instance, size_t size, const void * data) {
 	instance->p.resetCount();
+#ifndef WEB
 	printf("%.*s\n", (int)size, (const char *)data); // yeah, not RT-safe, I know
+#endif
 }
 
 static void plugin_set_transport(plugin *instance, const plugin_transport *transport) {

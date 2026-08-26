@@ -89,7 +89,7 @@ int			midiBuffer_i = 0;
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pDevice;
-	
+
 #if defined(__aarch64__)
 	uint64_t fpcr;
 	__asm__ __volatile__ ("mrs %0, fpcr" : "=r"(fpcr));
@@ -120,7 +120,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 		mutex.unlock();
 	}
 #endif
-	
+
 #if NUM_CHANNELS_IN > 0
 	const float * in_buf = reinterpret_cast<const float *>(pInput);
 	size_t ix = 0;
@@ -178,7 +178,7 @@ void (^midiReceiveBlock)(const MIDIEventList *evtlist, void *srcConnRefCon) = ^(
 		for (UInt32 j = 0; j < p->wordCount; j++) {
 			const UInt32 w = p->words[j];
 			const uint8_t* t = (uint8_t*) &(w);
-			
+
 			if ((t[3] & 0xf0) != 32)
 				continue; // We only support MIDI 1.0
 			if ((t[2] & 0xF0) == 0xF0)
@@ -268,7 +268,10 @@ char audioStart() {
 		/* .get_bindir		= */ NULL,
 		/* .get_datadir		= */ NULL
 	};
-	plugin_init(&instance, &cbs);
+	if (plugin_init(&instance, &cbs) != 0) {
+		ma_device_uninit(&device);
+		return false;
+	}
 
 #if PARAMETERS_N > 0
 	for (size_t i = 0; i < PARAMETERS_N; i++) {
@@ -277,7 +280,7 @@ char audioStart() {
 		param_values_prev[i] = param_values[i] = param_data[i].def;
 	}
 #endif
-	
+
 	plugin_set_sample_rate(&instance, (float)device.sampleRate);
 
 	size_t req = plugin_mem_req(&instance);
@@ -335,7 +338,7 @@ char audioStart() {
 				y[j] = y_buf + BLOCK_SIZE * k;
 				k++;
 			} else
-				y[j] = NULL; 
+				y[j] = NULL;
 		}
 	}
 #else
