@@ -92,8 +92,12 @@ using namespace std;
 # endif
 # if defined(DATA_MESSAGING_UI_TO_DSP_SIZE) || defined(DATA_MESSAGING_DSP_TO_UI_SIZE)
 #  ifdef __cplusplus
+static_assert(std::atomic<char>::is_always_lock_free, "std::atomic<char> is not always lock-free");
 typedef std::atomic<char> atomic_char;
 #  else
+#   if ATOMIC_CHAR_LOCK_FREE != 2
+#    error _Atomic(char) is not always lock-free
+#   endif
 typedef _Atomic(char) atomic_char;
 #  endif
 # endif
