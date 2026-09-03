@@ -915,7 +915,6 @@ typedef struct {
 	LV2UI_Touch		touch;
 # endif
 # ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
-	LV2_URID		uri_atom_Sequence;
 	LV2_URID		uri_atom_Chunk;
 	LV2_URID		uri_atom_eventTransfer;
 	uint8_t			msg_data[sizeof(LV2_Atom) + DATA_MESSAGING_UI_TO_DSP_SIZE];
@@ -1004,7 +1003,6 @@ static LV2UI_Handle ui_instantiate(const LV2UI_Descriptor * descriptor, const ch
 
 # ifdef DATA_MESSAGING_UI_TO_DSP_SIZE
 	if (instance->map) {
-		instance->uri_atom_Sequence = instance->map->map(instance->map->handle, LV2_ATOM__Sequence);
 		instance->uri_atom_Chunk = instance->map->map(instance->map->handle, LV2_ATOM__Chunk);
 		instance->uri_atom_eventTransfer = instance->map->map(instance->map->handle, LV2_ATOM__eventTransfer);
 	}
