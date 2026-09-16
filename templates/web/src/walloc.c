@@ -1,7 +1,7 @@
 /*
  * Tibia
  *
- * Copyright (C) 2021, 2022, 2024 Orastron Srl unipersonale
+ * Copyright (C) 2021, 2022, 2024, 2026 Orastron Srl unipersonale
  *
  * Tibia is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,18 +31,20 @@ typedef struct _header {
 	char free;
 } header;
 
+#define PAD8(x)	(((((x) - 1) >> 3) + 1) << 3)
+
 static char inited = 0;
 
 static size_t get_size(header *h) {
 	char *n = (char *)h->next;
-	return (n ? n : (char *)(__builtin_wasm_memory_size(0) << 16)) - (char *)h - sizeof(header);
+	return (n ? n : (char *)(__builtin_wasm_memory_size(0) << 16)) - (char *)h - PAD8(sizeof(header));
 }
 
 static void split_if_possible(header *h, size_t s, size_t size) {
-	if (s <= size + sizeof(header) + sizeof(header))
+	if (s <= size + PAD8(sizeof(header)) + PAD8(sizeof(header)))
 		return;
 
-	header *hn = (header *)((char *)h + sizeof(header) + size);
+	header *hn = (header *)((char *)h + PAD8(sizeof(header)) + size);
 	hn->prev = h;
 	hn->next = h->next;
 	hn->free = 1;
@@ -55,7 +57,8 @@ void *malloc(size_t size) {
 	if (size == 0)
 		return NULL;
 
-	header *h = (header *)&__heap_base;
+	header *h = (header *)PAD8((uintptr_t)&__heap_base);
+	size = PAD8(size);
 
 	if (!inited) {
 		h->next = NULL;
@@ -76,10 +79,10 @@ void *malloc(size_t size) {
 		split_if_possible(h, s, size);
 
 		h->free = 0;
-		return (char *)h + sizeof(header);
+		return (char *)h + PAD8(sizeof(header));
 	}
 
-	int32_t n = __builtin_wasm_memory_grow(0, ((size + sizeof(header) - 1) >> 16) + 1);
+	int32_t n = __builtin_wasm_memory_grow(0, ((size + PAD8(sizeof(header)) - 1) >> 16) + 1);
 	if (n < 0)
 		return NULL;
 
@@ -95,7 +98,7 @@ void *malloc(size_t size) {
 	split_if_possible(h, get_size(h), size);
 
 	h->free = 0;
-	return (char *)h + sizeof(header);
+	return (char *)h + PAD8(sizeof(header));
 }
 
 void *realloc(void *ptr, size_t size) {
@@ -107,7 +110,7 @@ void *realloc(void *ptr, size_t size) {
 		return NULL;
 	}
 	
-	header *h = (header *)((char *)ptr - sizeof(header));
+	header *h = (header *)((char *)ptr - PAD8(sizeof(header)));
 	size_t s = get_size(h);
 	if (s >= size)
 		return ptr;
@@ -138,7 +141,7 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void free(void *ptr) {
-	header *h = (header *)((char *)ptr - sizeof(header));
+	header *h = (header *)((char *)ptr - PAD8(sizeof(header)));
 	h->free = 1;
 
 	if (h->next && h->next->free) {
