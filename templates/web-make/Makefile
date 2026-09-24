@@ -60,6 +60,7 @@ LIBS := $(LIBS_EXTRA)
 CFLAGS := -O3 -ffast-math -Wall -Wpedantic -Wextra
 CFLAGS_ALL := -I$(COMMON_DIR)/src -I$(DATA_DIR)/src -I$(PLUGIN_DIR) -I$(API_DIR) --target=wasm32 -fvisibility=hidden $(CFLAGS_EXTRA) $(CFLAGS) $(CFLAGS_POST)
 
+COMMA := ,
 LDFLAGS_ALL := \
 	--target=wasm32 \
 	-flto \
@@ -83,7 +84,7 @@ LDFLAGS_ALL := \
 	-Wl,--export=processor_get_out_params \
 	-Wl,--export=processor_process \
 	-Wl,--export=processor_set_parameter \
-	$(if $filter(yes,$(HAS_MIDI_IN)),-Wl,--export=processor_midi_msg_in) \
+	$(if $(filter yes, $(HAS_MIDI_IN)), -Wl$(COMMA)--export=processor_midi_msg_in) \
 	-Wl,-z,stack-size=$$((8*1024*1024)) \
 	-nostdlib \
 	$(LDFLAGS_EXTRA) $(LDFLAGS) $(LDFLAGS_POST)

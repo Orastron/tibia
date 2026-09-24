@@ -141,6 +141,9 @@ void *calloc(size_t nmemb, size_t size) {
 }
 
 void free(void *ptr) {
+	if (ptr == NULL)
+		return;
+
 	header *h = (header *)((char *)ptr - PAD8(sizeof(header)));
 	h->free = 1;
 
