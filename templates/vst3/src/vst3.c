@@ -2989,7 +2989,6 @@ static char vstExit(void) {
 	if (refs == 0) {
 		free(bindir);
 		free(datadir);
-		return 0;
 	}
 	return 1;
 }
