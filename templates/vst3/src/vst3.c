@@ -2985,11 +2985,12 @@ Steinberg_IPluginFactory * GetPluginFactory(void) {
 static int refs = 0;
 
 static char vstExit(void) {
+	if (refs == 0)
+		return 0;
 	refs--;
 	if (refs == 0) {
 		free(bindir);
 		free(datadir);
-		return 0;
 	}
 	return 1;
 }
