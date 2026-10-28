@@ -18,10 +18,6 @@
  * File author: Stefano D'Angelo
  */
 
-{{~it.tibia.lv2.extraIncludes :p}}
-#include "{{=p}}"
-{{~}}
-
 #define DATA_LV2_URI				"{{=it.tibia.CGetUTF8StringLiteral(it.tibia.lv2.expandURI(it.lv2.uri))}}"
 
 #define DATA_PRODUCT_AUDIO_INPUT_CHANNELS_N	{{=it.product.buses.filter(x => x.type == "audio" && x.direction == "input").reduce((s, x) => s += x.channels == "mono" ? 1 : 2, 0)}}
@@ -123,3 +119,8 @@ static uint32_t index_to_param[DATA_PRODUCT_CONTROL_INPUTS_N + DATA_PRODUCT_CONT
 {{?}}
 {{?}}
 {{?}}
+
+{{~it.tibia.lv2.extraIncludes :p}}
+#include "{{=p}}"
+{{~}}
+
