@@ -1,7 +1,7 @@
 #
 # Tibia
 #
-# Copyright (C) 2023-2025 Orastron Srl unipersonale
+# Copyright (C) 2023-2026 Orastron Srl unipersonale
 #
 # Tibia is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,6 +28,6 @@ build/web/cert.pem: | build
 
 strip-web-demo: build/web/index.html
 	$(eval TMP := $(shell mktemp /tmp/index.XXXXXX))
-	html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-script-type-attributes --minify-css true --minify-js true build/web/index.html > $(TMP) || (rm $(TMP) && exit 1)
+	html-minifier --collapse-whitespace --remove-comments --remove-redundant-attributes --remove-default-type-attributes --minify-css true --minify-js true build/web/index.html > $(TMP) || (rm $(TMP) && exit 1)
 	cp $(TMP) build/web/index.html || (rm $(TMP) && exit 1)
 	rm $(TMP)
